@@ -63,6 +63,10 @@ class BasePlugin(ABC):
         """Return a human-readable explanation of what this plugin does."""
         return f"{self.name} (v{self.version}): {self.description}"
 
+    def ai_explain(self, analysis_result: dict, goal: str, llm_reason: str) -> str:
+        """Return a human-readable explanation of why this plugin is applied under AI guidance."""
+        return f"{self.name} - AI Reason: {llm_reason}"
+
     def estimate_runtime(self, df: pl.DataFrame) -> float:
         """Estimate runtime in seconds based on dataset size."""
         rows = df.height

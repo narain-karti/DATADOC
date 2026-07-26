@@ -42,6 +42,7 @@ DATADOC eliminates the 80%.
 - **Save Hundreds of Hours:** Stop writing boilerplate code to impute nulls, one-hot encode categorical variables, or clip outliers. DATADOC does it in one command.
 - **Zero Black-Box AI:** Every transformation is strictly mathematical (IQR, medians, mode). It is 100% deterministic, explainable, and safe for enterprise production environments.
 - **Lightning Fast:** By utilizing `polars` (written in Rust) instead of `pandas`, DATADOC processes millions of rows with minimal memory overhead.
+- **Agentic AI Integration:** DATADOC features a built-in AI Planner and an interactive Chat Assistant that can autonomously analyze your dataset, generate engineering plans, and execute plugins using tool-calling!
 - **Avoid Data Leakage:** Built-in safeguards ensure that data scaling and imputation are handled correctly.
 
 ---
@@ -77,6 +78,11 @@ datadoc compare raw_data.csv clean_raw_data.csv
 
 # 5. Export a standalone Python script to automate this in the future
 datadoc pipeline raw_data.csv
+
+# 6. Have an interactive AI session where the LLM engineers your data via chat!
+datadoc chat raw_data.csv
+
+*(Pro Tip: Add `--ai` to `analyze`, `recommend`, or `engineer` for AI-driven insights and orchestration!)*
 ```
 
 ---
@@ -113,11 +119,14 @@ with open("my_pipeline.py", "w") as f:
 | `datadoc analyze <file>` | Scans dataset and shows a health report with status indicators |
 | `datadoc recommend <file>` | Lists suggested engineering steps without modifying data |
 | `datadoc engineer <file>` | Automatically applies all recommended transformations |
+| `datadoc chat <file>` | Starts an interactive AI session with autonomous tool-calling |
 | `datadoc compare <file>` | Shows a before/after diff of the raw vs engineered dataset |
 | `datadoc pipeline <file>` | Exports a standalone `.py` script with the exact Polars code |
 | `datadoc visualize <file>` | Renders stunning terminal-based charts for numeric distributions |
 | `datadoc plugin` | Lists all registered plugins with priority and descriptions |
 | `datadoc version` | Displays the DATADOC version |
+
+*(Note: Use the `--ai` flag on `analyze`, `recommend`, or `engineer` for LLM-powered execution!)*
 
 ---
 
@@ -147,7 +156,8 @@ Want to build your own? See [CONTRIBUTING.md](CONTRIBUTING.md) to learn how to c
 - [x] Pipeline export capability
 - [x] **Polars Backend Migration (100x Performance Boost)**
 - [x] PyPI Release (`pip install datadoc-cli`)
-- [ ] Phase 2: Agentic AI Planner (LLM Orchestration)
+- [x] Phase 2: Agentic AI Planner (LLM Orchestration)
+- [x] Interactive AI Chat with Tool-Calling capabilities
 - [ ] Export targets for `dbt` and Apache Airflow
 - [ ] REST API (FastAPI) wrapper
 

@@ -8,6 +8,12 @@ import os
 import time
 from dotenv import load_dotenv
 
+# Load environment variables (including .env) at startup
+load_dotenv()
+
+# Determine the default model from the environment, fallback to Gemini
+DEFAULT_MODEL = os.getenv("DATADOC_MODEL", "gemini/gemini-2.0-flash")
+
 from datadoc.core.engine import DATADOC
 
 app = typer.Typer(
@@ -16,9 +22,7 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 console = Console()
-
-VERSION = "0.1.0"
-
+VERSION = "0.2.0"
 BANNER = r"""
  ____    _  _____  _    ____   ___   ____
 |  _ \  / \|_   _|/ \  |  _ \ / _ \ / ___|
@@ -60,11 +64,38 @@ def load_dataset(file_path: str) -> DATADOC:
     return doc
 
 
+def _get_api_key(model: str) -> str:
+    api_key = None
+    if model.startswith("gemini"):
+        api_key = os.getenv("GEMINI_API_KEY")
+        key_name = "GEMINI_API_KEY"
+    elif model.startswith("gpt") or model.startswith("openai"):
+        api_key = os.getenv("OPENAI_API_KEY")
+        key_name = "OPENAI_API_KEY"
+    elif model.startswith("claude") or model.startswith("anthropic"):
+        api_key = os.getenv("ANTHROPIC_API_KEY")
+        key_name = "ANTHROPIC_API_KEY"
+    elif model.startswith("groq"):
+        api_key = os.getenv("GROQ_API_KEY")
+        key_name = "GROQ_API_KEY"
+    else:
+        api_key = os.getenv("OPENAI_API_KEY") # Default fallback
+        key_name = "API_KEY"
+        
+    if not api_key:
+        console.print(f"\n  [bold yellow][!][/bold yellow] {key_name} not found in environment or .env file.")
+        api_key = typer.prompt(f"Please enter your {key_name}", hide_input=True)
+    return api_key
+
 # ──────────────────────────────────────────────────────────────
 # COMMAND: analyze
 # ──────────────────────────────────────────────────────────────
 @app.command()
-def analyze(file_path: str):
+def analyze(
+    file_path: str,
+    ai: bool = typer.Option(False, "--ai", help="Use AI to generate an Executive Summary of the dataset health."),
+    model: str = typer.Option(DEFAULT_MODEL, "--model", help="The LiteLLM model string to use.")
+):
     """
     Scans the dataset and returns a rich health report.
     """
@@ -125,17 +156,71 @@ def analyze(file_path: str):
     console.print(table)
     console.print()
 
+    if ai:
+        api_key = _get_api_key(model)
+        with console.status(f"[bold cyan]Generating AI Executive Summary ({model})...", spinner="dots"):
+            summary = doc.ai_analyze(model=model, api_key=api_key)
+        
+        from rich.markdown import Markdown
+        console.print(Panel(
+            Markdown(summary),
+            title="[bold blue]AI Executive Summary[/bold blue]",
+            border_style="blue"
+        ))
+        console.print()
+
 
 # ──────────────────────────────────────────────────────────────
 # COMMAND: recommend
 # ──────────────────────────────────────────────────────────────
 @app.command()
-def recommend(file_path: str):
+def recommend(
+    file_path: str,
+    ai: bool = typer.Option(False, "--ai", help="Use AI to generate a custom execution plan without applying it."),
+    goal: str = typer.Option("Clean the dataset for machine learning", "--goal", help="The semantic goal for the AI Planner."),
+    model: str = typer.Option(DEFAULT_MODEL, "--model", help="The LiteLLM model string to use.")
+):
     """
     Outputs a list of suggested engineering steps without applying them.
     """
     print_banner()
     doc = load_dataset(file_path)
+
+    if ai:
+        api_key = _get_api_key(model)
+        with console.status(f"[bold cyan]Generating AI Recommendations ({model})...", spinner="dots"):
+            recs = doc.ai_recommend(model=model, goal=goal, api_key=api_key)
+        
+        print_step("[OK]", "AI Recommendations ready.", "bold green")
+        console.print()
+        
+        if not recs:
+            console.print(Panel(
+                "[bold green][OK] AI determined no steps are necessary for this goal.[/bold green]",
+                border_style="green",
+            ))
+            return
+
+        rec_table = Table(
+            title=f"[bold]AI Recommended Plan for: {goal}[/bold]",
+            box=box.ROUNDED,
+            title_style="bold yellow",
+            header_style="bold bright_white",
+            border_style="yellow",
+            show_lines=True,
+        )
+        rec_table.add_column("#", justify="center", style="bold yellow", width=4)
+        rec_table.add_column("Plugin", style="bold cyan")
+        rec_table.add_column("AI Reason", style="white")
+
+        from rich.markdown import Markdown
+        for i, rec in enumerate(recs, 1):
+            rec_table.add_row(str(i), rec["plugin"], Markdown(rec["reason"]))
+
+        console.print(rec_table)
+        console.print()
+        console.print(f"  [dim]Run [bold cyan]datadoc engineer \"{file_path}\" --ai --goal \"{goal}\"[/bold cyan] to apply this plan.[/dim]\n")
+        return
 
     with console.status("[bold cyan]Generating recommendations...", spinner="dots"):
         recommendations = doc.recommend()
@@ -176,37 +261,17 @@ def engineer(
     file_path: str,
     ai: bool = typer.Option(False, "--ai", help="Use the AI Planner to dynamically orchestrate the pipeline."),
     goal: str = typer.Option("Clean the dataset for machine learning", "--goal", help="The semantic goal for the AI Planner."),
-    model: str = typer.Option("gemini/gemini-2.0-flash", "--model", help="The LiteLLM model string to use.")
+    model: str = typer.Option(DEFAULT_MODEL, "--model", help="The LiteLLM model string to use.")
 ):
     """
     Automatically applies best-practice pipelines or uses AI to plan.
     """
-    load_dotenv()  # Load .env variables
-
     print_banner()
     doc = load_dataset(file_path)
 
     console.print()
     if ai:
-        # Check for API key logic
-        api_key = None
-        # Let's try to detect based on model prefix
-        if model.startswith("gemini"):
-            api_key = os.getenv("GEMINI_API_KEY")
-            key_name = "GEMINI_API_KEY"
-        elif model.startswith("gpt") or model.startswith("openai"):
-            api_key = os.getenv("OPENAI_API_KEY")
-            key_name = "OPENAI_API_KEY"
-        elif model.startswith("claude") or model.startswith("anthropic"):
-            api_key = os.getenv("ANTHROPIC_API_KEY")
-            key_name = "ANTHROPIC_API_KEY"
-        else:
-            api_key = os.getenv("OPENAI_API_KEY") # Default fallback
-            key_name = "API_KEY"
-            
-        if not api_key:
-            console.print(f"\n  [bold yellow][!][/bold yellow] {key_name} not found in environment or .env file.")
-            api_key = typer.prompt(f"Please enter your {key_name}", hide_input=True)
+        api_key = _get_api_key(model)
 
         with console.status(f"[bold cyan]Running AI Planner ({model})...", spinner="dots") as status:
             def on_progress(plugin_name, p_status, details):
@@ -580,6 +645,175 @@ def version():
     """
     print_banner()
 
+
+# ──────────────────────────────────────────────────────────────
+# COMMAND: chat
+# ──────────────────────────────────────────────────────────────
+@app.command()
+def chat(
+    file_path: str,
+    model: str = typer.Option(DEFAULT_MODEL, "--model", help="The LiteLLM model string to use.")
+):
+    """
+    Start an interactive AI chat session with tool-calling capabilities.
+    """
+    import litellm
+    import json
+    from rich.markdown import Markdown
+    from rich.prompt import Prompt
+
+    print_banner()
+    doc = load_dataset(file_path)
+    api_key = _get_api_key(model)
+
+    console.print()
+    console.print(Panel(
+        f"You are now chatting with the AI Assistant ({model}).\n"
+        f"The AI has access to your dataset and can run plugins autonomously.\n"
+        f"Type [bold cyan]exit[/bold cyan] or [bold cyan]quit[/bold cyan] to leave.",
+        title="[bold green]Interactive Chat Session[/bold green]",
+        border_style="green"
+    ))
+
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "analyze_dataset",
+                "description": "Returns the current health report and metadata of the dataset.",
+                "parameters": {"type": "object", "properties": {}}
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "apply_plugin",
+                "description": "Applies a specific dataset engineering plugin to the current dataset. You must use this to transform data.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "plugin_name": {
+                            "type": "string",
+                            "description": "Name of the plugin.",
+                            "enum": ["MissingValuePlugin", "OutlierPlugin", "DatetimePlugin", "CategoricalEncoderPlugin", "ScalingPlugin"]
+                        }
+                    },
+                    "required": ["plugin_name"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "revert_dataset",
+                "description": "Reverts the dataset to its original loaded state, undoing all plugin transformations.",
+                "parameters": {"type": "object", "properties": {}}
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "save_dataset",
+                "description": "Saves the current state of the dataset to a CSV file.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "filename": {
+                            "type": "string",
+                            "description": "The name of the file to save (e.g., 'cleaned_data.csv')"
+                        }
+                    },
+                    "required": ["filename"]
+                }
+            }
+        }
+    ]
+
+    messages = [
+        {
+            "role": "system",
+            "content": f"""You are a Principal Data Scientist assisting a user in an interactive chat session.
+You have the ability to run dataset engineering tools.
+Current dataset metadata: {doc._extract_metadata()}
+
+When the user asks you to perform an action, use the appropriate tool.
+Always explain what you did after using a tool. 
+Be helpful, analytical, and concise. Format your responses with markdown."""
+        }
+    ]
+
+    while True:
+        try:
+            user_input = Prompt.ask("\n[bold cyan]You[/bold cyan]")
+            if user_input.strip().lower() in ['exit', 'quit']:
+                console.print("\n[bold green]Ending chat session. Goodbye![/bold green]\n")
+                break
+                
+            messages.append({"role": "user", "content": user_input})
+            
+            with console.status("[bold cyan]AI is thinking...", spinner="dots"):
+                response = litellm.completion(
+                    model=model,
+                    messages=messages,
+                    tools=tools,
+                    api_key=api_key
+                )
+                
+                response_msg = response.choices[0].message
+                messages.append(response_msg.model_dump(exclude_none=True))
+
+                # Handle tool calls if any
+                while response_msg.tool_calls:
+                    for tool_call in response_msg.tool_calls:
+                        func_name = tool_call.function.name
+                        args = json.loads(tool_call.function.arguments)
+                        
+                        console.print(f"  [dim]>[/dim] AI called tool: [bold yellow]{func_name}[/bold yellow]({args})")
+                        
+                        tool_result = ""
+                        try:
+                            if func_name == "analyze_dataset":
+                                tool_result = json.dumps(doc.analyze(), indent=2)
+                            elif func_name == "apply_plugin":
+                                tool_result = doc.apply_plugin_by_name(args["plugin_name"])
+                            elif func_name == "revert_dataset":
+                                doc.revert()
+                                tool_result = "Dataset reverted to original state."
+                            elif func_name == "save_dataset":
+                                doc.df.write_csv(args["filename"])
+                                tool_result = f"Dataset successfully saved to {args['filename']}."
+                            else:
+                                tool_result = f"Error: Unknown function {func_name}"
+                        except Exception as e:
+                            tool_result = f"Error executing {func_name}: {e}"
+                            
+                        messages.append({
+                            "role": "tool",
+                            "tool_call_id": tool_call.id,
+                            "name": func_name,
+                            "content": tool_result
+                        })
+                        
+                    # Call LLM again with tool results
+                    response = litellm.completion(
+                        model=model,
+                        messages=messages,
+                        tools=tools,
+                        api_key=api_key
+                    )
+                    response_msg = response.choices[0].message
+                    messages.append(response_msg.model_dump(exclude_none=True))
+                
+            # Print final assistant message
+            if response_msg.content:
+                console.print("\n[bold purple]DATADOC AI[/bold purple]:")
+                console.print(Panel(Markdown(response_msg.content), border_style="purple"))
+
+        except KeyboardInterrupt:
+            console.print("\n[bold green]Ending chat session. Goodbye![/bold green]\n")
+            break
+        except Exception as e:
+            console.print(f"\n[bold red]Error:[/] {e}")
 
 if __name__ == "__main__":
     app()

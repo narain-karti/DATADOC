@@ -144,6 +144,18 @@ class DATADOC:
             })
         return info
 
+    def revert(self) -> None:
+        """Reverts the dataset to its original loaded state."""
+        self.df = self._original_df.clone()
+
+    def apply_plugin_by_name(self, plugin_name: str) -> str:
+        """Applies a specific plugin by name and updates the internal dataframe."""
+        for plugin in self.plugins:
+            if plugin.name == plugin_name:
+                self.df = plugin.apply(self.df)
+                return f"Successfully applied {plugin_name}."
+        return f"Error: Plugin {plugin_name} not found."
+
     def _extract_metadata(self) -> str:
         """Safely extracts dataset metadata without exposing raw rows."""
         meta = {
@@ -155,59 +167,73 @@ class DATADOC:
         }
         return json.dumps(meta, indent=2)
 
-    def ai_engineer(self, model: str, goal: str, api_key: str = None, progress_callback=None) -> pl.DataFrame:
-        """Uses an LLM to plan and execute a custom pipeline based on a user goal."""
-        import os
-        if api_key:
-            # For litellm, we can just set the env var for the provider, 
-            # but litellm handles api_key directly in completion if specified.
-            # However, litellm often expects the specific provider key (e.g., GEMINI_API_KEY).
-            # To be safe, we pass api_key to completion.
-            pass
-        
+    def _generate_ai_plan(self, model: str, goal: str, api_key: str = None):
+        """Helper to generate an AI plan."""
         class PluginExecution(BaseModel):
             plugin_name: str = Field(description="The exact class name of the plugin to execute.")
-            reason: str = Field(description="Why this plugin is needed for the user's goal.")
+            reason: str = Field(description="A highly detailed, in-depth analytical explanation of exactly why this transformation is necessary given the specific dataset metadata and how it directly supports the user's goal. Explain the 'why' thoroughly.")
             
         class AIPlannerResponse(BaseModel):
             plan: List[PluginExecution]
 
         metadata = self._extract_metadata()
         
-        prompt = f"""You are an expert Data Scientist building a dataset engineering pipeline.
-You have the following dataset metadata:
+        prompt = f"""You are a Principal Data Scientist building a robust dataset engineering pipeline.
+You have the following detailed dataset metadata:
 {metadata}
 
 The user's specific goal is: "{goal}"
 
 Based on the metadata and the goal, create an execution plan selecting ONLY from the `available_plugins`.
+You must provide deep analytical reasoning for every plugin you select. Do not be vague. Explain exactly what data health issues are present and how the selected plugin solves them in the context of the user's goal (e.g. XGBoost handles missing values differently than standard Regression, scaling is vital for distance-based models but not trees, etc.).
 You may skip plugins if they are not relevant to the goal. You may order them logically.
 Respond strictly with a JSON object matching the requested schema.
 """
 
+        response = litellm.completion(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            api_key=api_key,
+            response_format=AIPlannerResponse
+        )
+        
+        plan_data = json.loads(response.choices[0].message.content)
+        return AIPlannerResponse(**plan_data)
+
+    def ai_analyze(self, model: str, api_key: str = None) -> str:
+        """Uses an LLM to generate an in-depth Executive Summary of the dataset's health."""
+        metadata = self._extract_metadata()
+        prompt = f"""You are a Principal Data Scientist performing a rigorous dataset health audit. Review the following dataset metadata:
+{metadata}
+
+Provide an in-depth, detailed diagnostic report of the dataset's health. 
+Analyze the schema, identify any architectural problems, explicitly call out critical issues (like missing values, outliers, high cardinality, or scaling imbalances), and explain the potential downstream impact on Machine Learning models if left untreated.
+Do not be vague. Be extremely specific based on the provided metadata. 
+Respond in plain text formatted nicely with bullet points and paragraphs where appropriate.
+"""
+        response = litellm.completion(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            api_key=api_key
+        )
+        return response.choices[0].message.content.strip()
+
+    def ai_recommend(self, model: str, goal: str, api_key: str = None) -> List[Dict[str, str]]:
+        """Uses an LLM to generate an execution plan for recommendations."""
+        planner_response = self._generate_ai_plan(model, goal, api_key)
+        return [{"plugin": step.plugin_name, "reason": step.reason} for step in planner_response.plan]
+
+    def ai_engineer(self, model: str, goal: str, api_key: str = None, progress_callback=None) -> pl.DataFrame:
+        """Uses an LLM to plan and execute a custom pipeline based on a user goal."""
         if progress_callback:
             progress_callback("AI Planner", "running", ["Consulting LLM..."])
             
         try:
-            response = litellm.completion(
-                model=model,
-                messages=[{"role": "user", "content": prompt}],
-                api_key=api_key,
-                response_format=AIPlannerResponse
-            )
+            planner_response = self._generate_ai_plan(model, goal, api_key)
         except Exception as e:
             if progress_callback:
-                progress_callback("AI Planner", "error", [f"LLM API Error ({e.__class__.__name__}): {e}"])
+                progress_callback("AI Planner", "error", [f"LLM API Error: {e}"])
             raise RuntimeError(f"AI Planner failed: {e}")
-        
-        # Parse the JSON response
-        try:
-            plan_data = json.loads(response.choices[0].message.content)
-            planner_response = AIPlannerResponse(**plan_data)
-        except Exception as e:
-            if progress_callback:
-                progress_callback("AI Planner", "error", [f"Failed to parse LLM response: {e}"])
-            raise ValueError(f"Invalid AI response format: {e}")
 
         df_transformed = self.df.clone()
         self._applied_plugins = []
