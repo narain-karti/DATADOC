@@ -264,6 +264,50 @@ def compare(file_path: str):
 
 
 # ──────────────────────────────────────────────────────────────
+# COMMAND: visualize
+# ──────────────────────────────────────────────────────────────
+@app.command()
+def visualize(file_path: str):
+    """
+    Generates a massive, interactive HTML dashboard comparing the before and after states.
+    """
+    import webbrowser
+    print_banner()
+    
+    # We delay importing visualizer to avoid importing plotly if they just run --help
+    from datadoc.core.visualizer import DashboardGenerator
+    
+    if not os.path.exists(file_path):
+        console.print(f"\n  [bold red][X] File not found:[/] {file_path}")
+        raise typer.Exit(code=1)
+
+    print_step("[>>]", f"Loading [cyan]{file_path}[/cyan]...")
+    
+    with console.status("[bold cyan]Generating visual dashboard...", spinner="dots"):
+        dashboard = DashboardGenerator(file_path)
+        html_content = dashboard.render()
+        
+        output_path = f"dashboard_{os.path.basename(file_path).split('.')[0]}.html"
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(html_content)
+            
+    print_step("[OK]", "Dashboard generated.", "bold green")
+
+    console.print()
+    console.print(Panel(
+        f"[bold green][OK] Dashboard Ready![/bold green]\n\n"
+        f"  Saved to: [bold cyan]{output_path}[/bold cyan]\n\n"
+        f"  Opening in your default web browser...",
+        title="[bold]Visual Dashboard[/bold]",
+        border_style="cyan",
+    ))
+    console.print()
+    
+    # Open the HTML file in the default web browser
+    webbrowser.open(f"file://{os.path.abspath(output_path)}")
+
+
+# ──────────────────────────────────────────────────────────────
 # COMMAND: pipeline
 # ──────────────────────────────────────────────────────────────
 @app.command()
