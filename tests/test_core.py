@@ -1,7 +1,5 @@
 import pytest
 import polars as pl
-import os
-import tempfile
 
 from datadoc.core.engine import DATADOC
 from datadoc.plugins.missing_values import MissingValuePlugin
