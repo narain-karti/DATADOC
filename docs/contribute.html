@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contribute | DATADOC</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="nav-brand">
+            <a href="index.html">[<span>DATADOC</span>]</a>
+        </div>
+        <div class="nav-links">
+            <a href="index.html">FEATURES</a>
+            <a href="api-docs.html">API DOCS</a>
+            <a href="sdk.html">PYTHON SDK</a>
+            <a href="contribute.html" class="active">CONTRIBUTE</a>
+            <a href="license.html">LICENSE</a>
+        </div>
+        <a href="index.html#install" class="brutal-btn nav-cta">GET STARTED</a>
+    </nav>
+
+    <!-- Docs Layout -->
+    <main class="container docs-layout">
+        <aside class="sidebar">
+            <div class="brutal-card">
+                <h3 style="margin-bottom: 1rem; border-bottom: var(--border-thick); padding-bottom: 0.5rem;">CONTRIBUTING</h3>
+                <ul>
+                    <li><a href="#rules">Rules</a></li>
+                    <li><a href="#custom-plugins">Custom Plugins</a></li>
+                    <li><a href="#github">GitHub Workflow</a></li>
+                </ul>
+            </div>
+        </aside>
+        
+        <section class="content">
+            <div class="brutal-card">
+                <h1>GITHUB CONTRIBUTIONS</h1>
+                <p>DATADOC is an open-source project and we welcome contributions! Before creating a Pull Request, please ensure you follow our core tenets.</p>
+
+                <h2 id="rules">Core Tenets</h2>
+                <ul>
+                    <li><strong>No Black Boxes:</strong> Data cleaning must be deterministic. Do not propose plugins that use generative AI to alter dataset rows blindly. Mathematical standardizations only.</li>
+                    <li><strong>Polars First:</strong> The engine runs entirely on <code>polars</code>. Do not import <code>pandas</code>. Do not convert to pandas and back. All transformations must use Polars Expressions for zero-copy efficiency.</li>
+                    <li><strong>Zero Leakage:</strong> If building scaling or encoding plugins, ensure logic is strictly applied per-column without row-wise leakage.</li>
+                </ul>
+
+                <h2 id="custom-plugins">Building Custom Plugins</h2>
+                <p>To add a new feature to the DATADOC pipeline, you must create a class that inherits from <code>BasePlugin</code>.</p>
+                <pre><code>from datadoc.plugins.base import BasePlugin
+import polars as pl
+
+class MyCustomPlugin(BasePlugin):
+    @property
+    def name(self) -> str:
+        return "MyCustomPlugin"
+
+    @property
+    def priority(self) -> int:
+        return 50 # Execution order
+
+    def analyze(self, df: pl.DataFrame) -> dict:
+        # Diagnostic logic
+        return {"has_work": True}
+
+    def apply(self, df: pl.DataFrame) -> pl.DataFrame:
+        # Transformation logic
+        return df</code></pre>
+
+                <h2 id="github">GitHub Workflow</h2>
+                <ol>
+                    <li>Fork the repository.</li>
+                    <li>Create a new branch (<code>git checkout -b feat/my-plugin</code>).</li>
+                    <li>Write tests in the <code>tests/</code> directory.</li>
+                    <li>Run <code>pytest tests/</code> and ensure 100% pass rate.</li>
+                    <li>Submit a Pull Request.</li>
+                </ol>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-grid">
+            <div class="footer-brand">
+                <h3 style="font-size: 2rem; font-family: var(--font-display);">[DATADOC]</h3>
+                <p style="margin-top: 1rem; font-family: monospace; color: #888;">The OS for Dataset Engineering.</p>
+            </div>
+            
+            <div>
+                <h4>RESOURCES</h4>
+                <ul>
+                    <li><a href="api-docs.html">API Docs</a></li>
+                    <li><a href="sdk.html">Python SDK</a></li>
+                    <li><a href="contribute.html">Contributions</a></li>
+                    <li><a href="license.html">License</a></li>
+                </ul>
+            </div>
+            
+            <div>
+                <h4>PROJECT</h4>
+                <ul>
+                    <li><a href="https://github.com/narain-karti/DATADOC">GitHub Repo</a></li>
+                    <li><a href="https://pypi.org/project/datadoc-cli/">PyPI Package</a></li>
+                </ul>
+            </div>
+            
+            <div>
+                <h4>STAY UPDATED</h4>
+                <div class="newsletter">
+                    <input type="email" placeholder="Enter your email">
+                    <button class="brutal-btn" style="width: 100%; font-size: 1rem;">SUBSCRIBE &rarr;</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="copyright">
+            &copy; 2026 DATADOC Contributors. All rights reserved. Licensed under MIT.
+        </div>
+    </footer>
+
+</body>
+</html>

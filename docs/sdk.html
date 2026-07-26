@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python SDK | DATADOC</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="nav-brand">
+            <a href="index.html">[<span>DATADOC</span>]</a>
+        </div>
+        <div class="nav-links">
+            <a href="index.html">FEATURES</a>
+            <a href="api-docs.html">API DOCS</a>
+            <a href="sdk.html" class="active">PYTHON SDK</a>
+            <a href="contribute.html">CONTRIBUTE</a>
+            <a href="license.html">LICENSE</a>
+        </div>
+        <a href="index.html#install" class="brutal-btn nav-cta">GET STARTED</a>
+    </nav>
+
+    <!-- Scrolling Ticker -->
+    <div class="ticker-wrap">
+        <div class="ticker">
+            <span>• LIGHTNING FAST</span>
+            <span>• POLARS BACKEND</span>
+            <span>• ZERO BLACK-BOX AI</span>
+            <span>• DETERMINISTIC</span>
+            <span>• NO DATA LEAKAGE</span>
+            <span>• AGENTIC ORCHESTRATOR</span>
+            <span>• LIGHTNING FAST</span>
+            <span>• POLARS BACKEND</span>
+            <span>• ZERO BLACK-BOX AI</span>
+            <span>• DETERMINISTIC</span>
+            <span>• NO DATA LEAKAGE</span>
+            <span>• AGENTIC ORCHESTRATOR</span>
+        </div>
+    </div>
+
+    <!-- Docs Layout -->
+    <main class="container docs-layout">
+        <aside class="sidebar">
+            <div class="brutal-card">
+                <h3 style="margin-bottom: 1rem; border-bottom: var(--border-thick); padding-bottom: 0.5rem;">SDK SETUP</h3>
+                <ul>
+                    <li><a href="#install">Installation</a></li>
+                    <li><a href="#quickstart">Quickstart</a></li>
+                    <li><a href="#env">Environment Variables</a></li>
+                </ul>
+            </div>
+        </aside>
+        
+        <section class="content">
+            <div class="brutal-card">
+                <h1>PYTHON SDK INSTALLATION</h1>
+                <p>Integrate DATADOC's blazing-fast dataset engineering capabilities directly into your backend services, ML pipelines, or Jupyter Notebooks.</p>
+
+                <h2 id="install">Installation</h2>
+                <p>DATADOC is published on PyPI. Install it using standard package managers:</p>
+                <pre><code># Standard pip installation
+pip install datadoc-cli
+
+# If using uv (recommended for speed)
+uv pip install datadoc-cli</code></pre>
+                
+                <h2 id="quickstart">Quickstart SDK Usage</h2>
+                <pre><code>import polars as pl
+from datadoc.core.engine import DATADOC
+
+# Initialize engine
+doc = DATADOC("your_raw_dataset.csv")
+
+# Autonomously engineer
+clean_dataframe = doc.engineer()
+
+# Save output
+clean_dataframe.write_csv("engineered_dataset.csv")</code></pre>
+
+                <h2 id="env">Environment Variables</h2>
+                <p>If you plan to use the Agentic Orchestrator (<code>--ai</code>) via the Python SDK or CLI, ensure you configure your API keys.</p>
+                <pre><code># Create a .env file in your working directory
+DATADOC_MODEL=groq/llama-3.3-70b-versatile
+GROQ_API_KEY=gsk_your_api_key_here
+GEMINI_API_KEY=AIza_your_api_key_here</code></pre>
+                <p>The SDK automatically loads <code>.env</code> variables at runtime.</p>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-grid">
+            <div class="footer-brand">
+                <h3 style="font-size: 2rem; font-family: var(--font-display);">[DATADOC]</h3>
+                <p style="margin-top: 1rem; font-family: monospace; color: #888;">The OS for Dataset Engineering.</p>
+            </div>
+            
+            <div>
+                <h4>RESOURCES</h4>
+                <ul>
+                    <li><a href="api-docs.html">API Docs</a></li>
+                    <li><a href="sdk.html">Python SDK</a></li>
+                    <li><a href="contribute.html">Contributions</a></li>
+                    <li><a href="license.html">License</a></li>
+                </ul>
+            </div>
+            
+            <div>
+                <h4>PROJECT</h4>
+                <ul>
+                    <li><a href="https://github.com/narain-karti/DATADOC">GitHub Repo</a></li>
+                    <li><a href="https://pypi.org/project/datadoc-cli/">PyPI Package</a></li>
+                </ul>
+            </div>
+            
+            <div>
+                <h4>STAY UPDATED</h4>
+                <div class="newsletter">
+                    <input type="email" placeholder="Enter your email">
+                    <button class="brutal-btn" style="width: 100%; font-size: 1rem;">SUBSCRIBE &rarr;</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="copyright">
+            &copy; 2026 DATADOC Contributors. All rights reserved. Licensed under MIT.
+        </div>
+    </footer>
+
+</body>
+</html>

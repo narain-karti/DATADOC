@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Documentation | DATADOC</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="nav-brand">
+            <a href="index.html">[<span>DATADOC</span>]</a>
+        </div>
+        <div class="nav-links">
+            <a href="index.html">FEATURES</a>
+            <a href="api-docs.html" class="active">API DOCS</a>
+            <a href="sdk.html">PYTHON SDK</a>
+            <a href="contribute.html">CONTRIBUTE</a>
+            <a href="license.html">LICENSE</a>
+        </div>
+        <a href="index.html#install" class="brutal-btn nav-cta">GET STARTED</a>
+    </nav>
+
+    <!-- Scrolling Ticker -->
+    <div class="ticker-wrap">
+        <div class="ticker">
+            <span>• LIGHTNING FAST</span>
+            <span>• POLARS BACKEND</span>
+            <span>• ZERO BLACK-BOX AI</span>
+            <span>• DETERMINISTIC</span>
+            <span>• NO DATA LEAKAGE</span>
+            <span>• AGENTIC ORCHESTRATOR</span>
+            <span>• LIGHTNING FAST</span>
+            <span>• POLARS BACKEND</span>
+            <span>• ZERO BLACK-BOX AI</span>
+            <span>• DETERMINISTIC</span>
+            <span>• NO DATA LEAKAGE</span>
+            <span>• AGENTIC ORCHESTRATOR</span>
+        </div>
+    </div>
+
+    <!-- Docs Layout -->
+    <main class="container docs-layout">
+        <aside class="sidebar">
+            <div class="brutal-card">
+                <h3 style="margin-bottom: 1rem; border-bottom: var(--border-thick); padding-bottom: 0.5rem;">TABLE OF CONTENTS</h3>
+                <ul>
+                    <li><a href="#cli">CLI Commands</a></li>
+                    <li><a href="#python-api">Python API</a></li>
+                    <li><a href="#plugins">Plugins</a></li>
+                    <li><a href="#chat">AI Chat & Tool Calling</a></li>
+                </ul>
+            </div>
+        </aside>
+        
+        <section class="content">
+            <div class="brutal-card">
+                <h1>API DOCUMENTATION</h1>
+                <p>Welcome to the official documentation for DATADOC. This page details the CLI commands and the Python Core Engine API.</p>
+
+                <h2 id="cli">CLI Commands Reference</h2>
+                <p>DATADOC provides a powerful Command Line Interface for rapid dataset engineering.</p>
+                <pre><code>$ datadoc analyze raw_data.csv --ai
+$ datadoc recommend raw_data.csv
+$ datadoc engineer raw_data.csv
+$ datadoc compare raw_data.csv clean_raw_data.csv
+$ datadoc pipeline raw_data.csv
+$ datadoc chat raw_data.csv</code></pre>
+                
+                <h2 id="python-api">Python Core API</h2>
+                <p>You can also use DATADOC directly within your Python scripts or Jupyter Notebooks.</p>
+                <pre><code>from datadoc.core.engine import DATADOC
+
+doc = DATADOC("raw_data.csv")
+report = doc.analyze()
+clean_df = doc.engineer()
+clean_df.write_csv("clean_data.csv")</code></pre>
+
+                <h2 id="plugins">Core Plugins</h2>
+                <p>The DATADOC engine utilizes 5 deterministic plugins to engineer your dataset:</p>
+                <ul>
+                    <li><strong>MissingValuePlugin</strong>: Imputes missing numeric values with median, categorical with mode.</li>
+                    <li><strong>OutlierPlugin</strong>: Detects outliers via IQR and clips them dynamically.</li>
+                    <li><strong>DatetimePlugin</strong>: Extracts temporal features (year, month, day).</li>
+                    <li><strong>CategoricalEncoderPlugin</strong>: One-Hot Encodes low-cardinality strings.</li>
+                    <li><strong>ScalingPlugin</strong>: Standard scales numeric columns when max/min variance is high.</li>
+                </ul>
+
+                <h2 id="chat">AI Chat & Tool Calling</h2>
+                <p>DATADOC incorporates an interactive agentic orchestrator. By running <code>datadoc chat &lt;file&gt;</code>, the AI is granted direct tool-calling access to the underlying Python engine, allowing it to autonomously trigger plugins and clean your data conversationally.</p>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-grid">
+            <div class="footer-brand">
+                <h3 style="font-size: 2rem; font-family: var(--font-display);">[DATADOC]</h3>
+                <p style="margin-top: 1rem; font-family: monospace; color: #888;">The OS for Dataset Engineering.</p>
+            </div>
+            
+            <div>
+                <h4>RESOURCES</h4>
+                <ul>
+                    <li><a href="api-docs.html">API Docs</a></li>
+                    <li><a href="sdk.html">Python SDK</a></li>
+                    <li><a href="contribute.html">Contributions</a></li>
+                    <li><a href="license.html">License</a></li>
+                </ul>
+            </div>
+            
+            <div>
+                <h4>PROJECT</h4>
+                <ul>
+                    <li><a href="https://github.com/narain-karti/DATADOC">GitHub Repo</a></li>
+                    <li><a href="https://pypi.org/project/datadoc-cli/">PyPI Package</a></li>
+                </ul>
+            </div>
+            
+            <div>
+                <h4>STAY UPDATED</h4>
+                <div class="newsletter">
+                    <input type="email" placeholder="Enter your email">
+                    <button class="brutal-btn" style="width: 100%; font-size: 1rem;">SUBSCRIBE &rarr;</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="copyright">
+            &copy; 2026 DATADOC Contributors. All rights reserved. Licensed under MIT.
+        </div>
+    </footer>
+
+</body>
+</html>

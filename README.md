@@ -5,10 +5,11 @@
 | | | |/ _ \ | | / _ \ | | | | | | | |
 | |_| / ___ \| |/ ___ \| |_| | |_| | |___
 |____/_/   \_\_/_/   \_\____/ \___/ \____|
-  </pre>
-</p>
-
 <h3 align="center">The Open Source Operating System for Dataset Engineering.</h3>
+
+<p align="center">
+  <a href="https://narain-karti.github.io/DATADOC/"><b>[ View Official Documentation Website ]</b></a>
+</p>
 
 <p align="center">
   <a href="https://pypi.org/project/datadoc-cli/"><img alt="PyPI version" src="https://img.shields.io/pypi/v/datadoc-cli.svg"></a>
