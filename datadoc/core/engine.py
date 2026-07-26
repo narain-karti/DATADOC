@@ -51,7 +51,7 @@ class DATADOC:
         
         for plugin in self.plugins:
             analysis = plugin.analyze(self.df)
-            should_apply = any(v for k, v in analysis.items() if k.startswith('has_') and v is True)
+            should_apply = any(bool(v) for k, v in analysis.items() if k.startswith('has_'))
             if should_apply:
                 code_snippet = plugin.generate_code(analysis)
                 if code_snippet:
@@ -75,7 +75,7 @@ class DATADOC:
         for plugin in self.plugins:
             analysis = plugin.analyze(df_transformed)
             # Generic rule trigger: if any 'has_' flag is True
-            should_apply = any(v for k, v in analysis.items() if k.startswith('has_') and v is True)
+            should_apply = any(bool(v) for k, v in analysis.items() if k.startswith('has_'))
             if should_apply:
                 df_transformed = plugin.apply(df_transformed)
                 
