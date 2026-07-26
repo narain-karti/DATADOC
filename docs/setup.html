@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DATADOC | Setup & Usage</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="nav-brand">
+            [<span>DATADOC</span>]
+        </div>
+        <div class="nav-links">
+            <a href="index.html">FEATURES</a>
+            <a href="how-it-works.html">HOW IT WORKS</a>
+            <a href="setup.html" class="active">SETUP & USAGE</a>
+            <a href="api-docs.html">API DOCS</a>
+            <a href="sdk.html">PYTHON SDK</a>
+            <a href="contribute.html">CONTRIBUTE</a>
+            <a href="license.html">LICENSE</a>
+        </div>
+        <a href="setup.html" class="brutal-btn nav-cta">GET STARTED</a>
+    </nav>
+
+    <!-- Main Content Grid -->
+    <main class="container bento-grid" style="grid-template-columns: 1fr;">
+        
+        <!-- Setup Section -->
+        <section class="brutal-card card-install" style="margin-top: 2rem;">
+            <div class="card-header">
+                SETUP
+                <span style="font-family: monospace;">&#x21F1;</span>
+            </div>
+            <div style="margin-top: 1rem;">
+                <p>DATADOC is published on PyPI. You can install it globally via pip or uv.</p>
+                <div style="background-color: #111; color: #0f0; padding: 1.5rem; border: 2px solid var(--text-color); margin-top: 1rem; font-family: monospace; font-size: 1.2rem;">
+                    $ pip install datadoc-cli
+                </div>
+                <p style="margin-top: 1rem; font-size: 0.9rem; color: #888;">Requires Python 3.9+</p>
+            </div>
+        </section>
+
+        <!-- Usage Section -->
+        <section class="brutal-card card-commands" style="margin-top: 2rem;">
+            <div class="card-header">
+                <div class="icons">
+                    <span></span><span></span><span></span>
+                </div>
+                HOW TO USE IT
+                <span style="font-family: monospace;">&#x21F1;</span>
+            </div>
+            
+            <p style="margin-top: 1rem;">You don't need to write a single line of Python to clean your data. Just use the CLI.</p>
+
+            <ul class="cmd-list" style="margin-top: 1.5rem;">
+                <li>
+                    <span><span class="badge">01</span> datadoc analyze raw_data.csv</span>
+                    <span style="font-size: 0.9rem; color: #aaa;">Analyze dataset health</span>
+                </li>
+                <li>
+                    <span><span class="badge">02</span> datadoc recommend raw_data.csv</span>
+                    <span style="font-size: 0.9rem; color: #aaa;">Get suggested transformations</span>
+                </li>
+                <li>
+                    <span><span class="badge">03</span> datadoc engineer raw_data.csv</span>
+                    <span style="font-size: 0.9rem; color: #aaa;">AUTO-ENGINEER!</span>
+                </li>
+                <li>
+                    <span><span class="badge">04</span> datadoc compare raw_data.csv clean.csv</span>
+                    <span style="font-size: 0.9rem; color: #aaa;">Compare before/after visually</span>
+                </li>
+                <li>
+                    <span><span class="badge">05</span> datadoc pipeline raw_data.csv</span>
+                    <span style="font-size: 0.9rem; color: #aaa;">Export standalone script</span>
+                </li>
+                <li>
+                    <span><span class="badge">06</span> datadoc chat raw_data.csv</span>
+                    <span style="font-size: 0.9rem; color: #aaa;">Interactive AI session</span>
+                </li>
+            </ul>
+        </section>
+
+        <!-- Features Section -->
+        <section class="brutal-card card-why" style="margin-top: 2rem;">
+            <div class="card-header">
+                FEATURES
+                <span style="font-family: monospace;">&#x21F1;</span>
+            </div>
+            <ul class="feature-list" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
+                <li>
+                    <h4>⚡ BLAZING FAST</h4>
+                    <p>Built on Polars (Rust). Processes millions of rows with minimal memory overhead.</p>
+                </li>
+                <li>
+                    <h4>🔒 ZERO BLACK-BOX</h4>
+                    <p>Every transformation is strictly mathematical (IQR, medians). 100% deterministic and explainable.</p>
+                </li>
+                <li>
+                    <h4>🛡️ AVOID LEAKAGE</h4>
+                    <p>Built-in safeguards ensure that data scaling and imputation are handled correctly.</p>
+                </li>
+                <li>
+                    <h4>🤖 AGENTIC AI INTEGRATION</h4>
+                    <p>Features a built-in AI Planner and interactive Chat Assistant to orchestrate plugins.</p>
+                </li>
+                <li>
+                    <h4>📊 BEAUTIFUL TERMINAL UI</h4>
+                    <p>Powered by Rich and Textual for stunning terminal outputs.</p>
+                </li>
+                <li>
+                    <h4>🐍 PYTHON SDK</h4>
+                    <p>Export a deterministic Python script to replicate the pipeline anywhere.</p>
+                </li>
+            </ul>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-grid">
+            <div class="footer-brand">
+                <h3 style="font-size: 2rem; font-family: var(--font-display);">[DATADOC]</h3>
+                <p style="margin-top: 1rem; font-family: monospace; color: #888;">The OS for Dataset Engineering.</p>
+                <div style="margin-top: 1rem; font-size: 1.5rem;">
+                    &#9733; &#9733; &#9733;
+                </div>
+            </div>
+            
+            <div>
+                <h4>RESOURCES</h4>
+                <ul>
+                    <li><a href="api-docs.html">API Docs</a></li>
+                    <li><a href="sdk.html">Python SDK</a></li>
+                    <li><a href="contribute.html">Contributions</a></li>
+                    <li><a href="license.html">License</a></li>
+                </ul>
+            </div>
+            
+            <div>
+                <h4>PROJECT</h4>
+                <ul>
+                    <li><a href="https://github.com/narain-karti/DATADOC">GitHub Repo</a></li>
+                    <li><a href="https://pypi.org/project/datadoc-cli/">PyPI Package</a></li>
+                    <li><a href="#">Report Issue</a></li>
+                </ul>
+            </div>
+            
+        </div>
+        
+        <div class="copyright">
+            &copy; 2026 DATADOC Contributors. All rights reserved. Licensed under MIT.
+        </div>
+    </footer>
+
+</body>
+</html>

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DATADOC | How It Works</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="nav-brand">
+            [<span>DATADOC</span>]
+        </div>
+        <div class="nav-links">
+            <a href="index.html">FEATURES</a>
+            <a href="how-it-works.html" class="active">HOW IT WORKS</a>
+            <a href="setup.html">SETUP & USAGE</a>
+            <a href="api-docs.html">API DOCS</a>
+            <a href="sdk.html">PYTHON SDK</a>
+            <a href="contribute.html">CONTRIBUTE</a>
+            <a href="license.html">LICENSE</a>
+        </div>
+        <a href="setup.html" class="brutal-btn nav-cta">GET STARTED</a>
+    </nav>
+
+    <!-- Main Content Grid -->
+    <main class="container">
+        
+        <section class="brutal-card" style="margin-top: 2rem;">
+            <div class="card-header">
+                ARCHITECTURE
+                <span style="font-family: monospace;">&#x21F1;</span>
+            </div>
+            
+            <h2 style="margin-top: 1rem;">The Plugin Orchestrator</h2>
+            <p style="margin-top: 1rem;">
+                DATADOC operates as an intelligent orchestrator. It doesn't modify your data haphazardly. 
+                Instead, it passes your dataset through an isolated chain of plugins in a strict priority order. 
+                Each plugin analyzes the data, computes optimal transformations, and builds a reproducible execution graph.
+            </p>
+
+            <div style="background-color: var(--bg-card); border: 2px solid var(--text-color); margin-top: 2rem; padding: 2rem; overflow-x: auto;">
+                <pre class="mermaid" style="text-align: center; background: transparent;">
+flowchart TD
+    A["Raw Dataset CSV"] --> B("DATADOC Engine")
+    
+    subgraph PluginPipeline ["Priority-Ordered Plugin Pipeline"]
+        direction TB
+        P1["10: MissingValuePlugin<br/>Imputes nulls"]
+        P2["20: OutlierPlugin<br/>Clips via IQR"]
+        P3["30: DatetimePlugin<br/>Extracts components"]
+        P4["40: CategoricalEncoder<br/>One-Hot Encodings"]
+        P5["45: ScalingPlugin<br/>Standard Scaling"]
+        
+        P1 --> P2 --> P3 --> P4 --> P5
+    end
+    
+    B --> PluginPipeline
+    
+    PluginPipeline --> C{"Output Formats"}
+    C -->|"datadoc engineer"| D["Cleaned CSV"]
+    C -->|"datadoc pipeline"| E["Deterministic Python Script"]
+    C -->|"datadoc analyze"| F["Terminal Report"]
+                </pre>
+            </div>
+
+            <h2 style="margin-top: 2rem;">How Plugins Work</h2>
+            <p style="margin-top: 1rem;">
+                Every plugin implements a strict <code>BasePlugin</code> interface ensuring absolute safety and determinism:
+            </p>
+            <ul class="feature-list" style="margin-top: 1rem;">
+                <li><strong>analyze():</strong> Evaluates the column to check if the plugin's logic applies.</li>
+                <li><strong>apply():</strong> Applies the transformation mathematically and efficiently using Polars.</li>
+                <li><strong>rollback():</strong> Safely undoes the transformation if needed.</li>
+                <li><strong>generate_code():</strong> Generates equivalent Python source code for pipeline exportation.</li>
+            </ul>
+
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-grid">
+            <div class="footer-brand">
+                <h3 style="font-size: 2rem; font-family: var(--font-display);">[DATADOC]</h3>
+                <p style="margin-top: 1rem; font-family: monospace; color: #888;">The OS for Dataset Engineering.</p>
+                <div style="margin-top: 1rem; font-size: 1.5rem;">
+                    &#9733; &#9733; &#9733;
+                </div>
+            </div>
+            
+            <div>
+                <h4>RESOURCES</h4>
+                <ul>
+                    <li><a href="api-docs.html">API Docs</a></li>
+                    <li><a href="sdk.html">Python SDK</a></li>
+                    <li><a href="contribute.html">Contributions</a></li>
+                    <li><a href="license.html">License</a></li>
+                </ul>
+            </div>
+            
+            <div>
+                <h4>PROJECT</h4>
+                <ul>
+                    <li><a href="https://github.com/narain-karti/DATADOC">GitHub Repo</a></li>
+                    <li><a href="https://pypi.org/project/datadoc-cli/">PyPI Package</a></li>
+                    <li><a href="#">Report Issue</a></li>
+                </ul>
+            </div>
+            
+        </div>
+        
+        <div class="copyright">
+            &copy; 2026 DATADOC Contributors. All rights reserved. Licensed under MIT.
+        </div>
+    </footer>
+
+    <!-- Mermaid.js integration -->
+    <script type="module">
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+      mermaid.initialize({ startOnLoad: true, theme: 'dark', fontFamily: 'monospace' });
+    </script>
+</body>
+</html>
