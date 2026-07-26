@@ -58,6 +58,9 @@ def load_dataset(file_path: str) -> DATADOC:
     return doc
 
 
+# ──────────────────────────────────────────────────────────────
+# COMMAND: analyze
+# ──────────────────────────────────────────────────────────────
 @app.command()
 def analyze(file_path: str):
     """
@@ -80,7 +83,7 @@ def analyze(file_path: str):
     )
     table.add_column("Metric", justify="left", style="white", min_width=25)
     table.add_column("Value", justify="center", style="bold", min_width=10)
-    table.add_column("Status", justify="center", min_width=10)
+    table.add_column("Status", justify="center", min_width=15)
 
     table.add_row("Rows", f"{report['rows']:,}", "[green]--[/green]")
     table.add_row("Columns", str(report["cols"]), "[green]--[/green]")
@@ -91,19 +94,38 @@ def analyze(file_path: str):
             status = "[green][OK] Clean[/green]" if total == 0 else f"[red][!!] {total} found[/red]"
             table.add_row("Missing Values", str(total), status)
         elif p_name == "OutlierPlugin":
-            count = len(p_stats["outlier_columns"])
+            count = len(p_stats.get("outlier_columns", []))
             status = "[green][OK] Clean[/green]" if count == 0 else f"[yellow][!!] {count} cols[/yellow]"
             table.add_row("Outlier Columns", str(count), status)
+        elif p_name == "DatetimePlugin":
+            count = len(p_stats.get("datetime_columns", []))
+            if count > 0:
+                cols_list = ", ".join(p_stats["datetime_columns"])
+                table.add_row("Datetime Columns", str(count), f"[cyan]{cols_list}[/cyan]")
+            else:
+                table.add_row("Datetime Columns", "0", "[dim]None[/dim]")
         elif p_name == "CategoricalEncoderPlugin":
-            count = len(p_stats["categorical_columns"])
-            cols_list = ", ".join(p_stats["categorical_columns"]) if count > 0 else "--"
-            status = "[dim]None[/dim]" if count == 0 else f"[cyan]{cols_list}[/cyan]"
-            table.add_row("Categorical Columns", str(count), status)
+            count = len(p_stats.get("categorical_columns", []))
+            if count > 0:
+                cols_list = ", ".join(p_stats["categorical_columns"])
+                table.add_row("Categorical Columns", str(count), f"[cyan]{cols_list}[/cyan]")
+            else:
+                table.add_row("Categorical Columns", "0", "[dim]None[/dim]")
+        elif p_name == "ScalingPlugin":
+            has_issue = p_stats.get("has_scale_issues", False)
+            ratio = p_stats.get("scale_ratio", 0)
+            if has_issue:
+                table.add_row("Scale Mismatch", f"{ratio}x", f"[yellow][!!] Needs scaling[/yellow]")
+            else:
+                table.add_row("Scale Mismatch", "--", "[green][OK] Balanced[/green]")
 
     console.print(table)
     console.print()
 
 
+# ──────────────────────────────────────────────────────────────
+# COMMAND: recommend
+# ──────────────────────────────────────────────────────────────
 @app.command()
 def recommend(file_path: str):
     """
@@ -142,6 +164,9 @@ def recommend(file_path: str):
     console.print("  [dim]Run [bold cyan]datadoc engineer <file>[/bold cyan] to apply these automatically.[/dim]\n")
 
 
+# ──────────────────────────────────────────────────────────────
+# COMMAND: engineer
+# ──────────────────────────────────────────────────────────────
 @app.command()
 def engineer(file_path: str):
     """
@@ -170,13 +195,78 @@ def engineer(file_path: str):
     console.print(Panel(
         f"[bold green][OK] Success![/bold green]\n\n"
         f"  Input:  [cyan]{file_path}[/cyan] ({doc.df.shape[0]} rows x {doc.df.shape[1]} cols)\n"
-        f"  Output: [cyan]{output_path}[/cyan] ({clean_df.shape[0]} rows x {clean_df.shape[1]} cols)",
+        f"  Output: [cyan]{output_path}[/cyan] ({clean_df.shape[0]} rows x {clean_df.shape[1]} cols)\n\n"
+        f"  Applied:  {', '.join(doc._applied_plugins) or 'None'}\n"
+        f"  Skipped:  {', '.join(doc._skipped_plugins) or 'None'}",
         title="[bold]Engineering Complete[/bold]",
         border_style="green",
     ))
     console.print()
 
 
+# ──────────────────────────────────────────────────────────────
+# COMMAND: compare
+# ──────────────────────────────────────────────────────────────
+@app.command()
+def compare(file_path: str):
+    """
+    Shows a diff-like comparison between the raw and engineered dataset.
+    """
+    print_banner()
+    doc = load_dataset(file_path)
+
+    print_step("[..]", "Engineering dataset for comparison...")
+    clean_df = doc.engineer()
+    diff = doc.compare(clean_df)
+
+    console.print()
+    table = Table(
+        title="[bold]Before vs After Comparison[/bold]",
+        box=box.ROUNDED,
+        title_style="bold magenta",
+        header_style="bold bright_white",
+        border_style="magenta",
+        show_lines=True,
+    )
+    table.add_column("Metric", style="white", min_width=20)
+    table.add_column("Before", justify="center", style="red", min_width=15)
+    table.add_column("After", justify="center", style="green", min_width=15)
+
+    orig_r, orig_c = diff["original_shape"]
+    clean_r, clean_c = diff["clean_shape"]
+    table.add_row("Rows", str(orig_r), str(clean_r))
+    table.add_row("Columns", str(orig_c), str(clean_c))
+    table.add_row("Missing Values", str(diff["original_missing"]), str(diff["clean_missing"]))
+    table.add_row(
+        "Columns Added",
+        "--",
+        f"+{diff['cols_added']}" if diff["cols_added"] > 0 else "0"
+    )
+
+    # Data type breakdown
+    for dtype, count in diff["original_dtypes"].items():
+        dtype_str = str(dtype)
+        clean_count = diff["clean_dtypes"].get(dtype, 0)
+        table.add_row(f"dtype: {dtype_str}", str(count), str(clean_count))
+
+    # Check for new dtypes in clean that weren't in original
+    for dtype, count in diff["clean_dtypes"].items():
+        if dtype not in diff["original_dtypes"]:
+            table.add_row(f"dtype: {str(dtype)}", "0", str(count))
+
+    console.print(table)
+
+    # Show applied/skipped plugins
+    console.print()
+    if hasattr(doc, '_applied_plugins'):
+        print_step("[OK]", f"Applied: {', '.join(doc._applied_plugins)}", "bold green")
+        print_step("[--]", f"Skipped: {', '.join(doc._skipped_plugins)}", "dim")
+    console.print()
+
+
+# ──────────────────────────────────────────────────────────────
+# COMMAND: pipeline
+# ──────────────────────────────────────────────────────────────
 @app.command()
 def pipeline(file_path: str):
     """
@@ -204,6 +294,147 @@ def pipeline(file_path: str):
     console.print()
 
 
+# ──────────────────────────────────────────────────────────────
+# COMMAND: report
+# ──────────────────────────────────────────────────────────────
+@app.command()
+def report(file_path: str):
+    """
+    Generates a Markdown report summarizing the dataset and recommendations.
+    """
+    print_banner()
+    doc = load_dataset(file_path)
+
+    print_step("[..]", "Generating report...")
+    report_data = doc.analyze()
+    recommendations = doc.recommend()
+    plugin_info = doc.list_plugins()
+
+    md_lines = [
+        f"# DATADOC Report: {os.path.basename(file_path)}",
+        "",
+        "---",
+        "",
+        "## Dataset Overview",
+        "",
+        f"| Metric | Value |",
+        f"|--------|-------|",
+        f"| File | `{file_path}` |",
+        f"| Rows | {report_data['rows']:,} |",
+        f"| Columns | {report_data['cols']} |",
+        "",
+    ]
+
+    # Plugin analysis details
+    md_lines.append("## Health Analysis")
+    md_lines.append("")
+    for p_name, p_stats in report_data["plugins"].items():
+        md_lines.append(f"### {p_name}")
+        md_lines.append("")
+        for key, val in p_stats.items():
+            md_lines.append(f"- **{key}**: `{val}`")
+        md_lines.append("")
+
+    # Recommendations
+    md_lines.append("## Recommendations")
+    md_lines.append("")
+    if recommendations:
+        for i, rec in enumerate(recommendations, 1):
+            md_lines.append(f"{i}. {rec}")
+    else:
+        md_lines.append("No issues found. Dataset is healthy!")
+    md_lines.append("")
+
+    # Plugin registry
+    md_lines.append("## Plugin Registry")
+    md_lines.append("")
+    md_lines.append("| Plugin | Version | Priority | Will Trigger |")
+    md_lines.append("|--------|---------|----------|-------------|")
+    for p in plugin_info:
+        trigger = "Yes" if p["will_trigger"] else "No"
+        md_lines.append(f"| {p['name']} | {p['version']} | {p['priority']} | {trigger} |")
+    md_lines.append("")
+    md_lines.append("---")
+    md_lines.append(f"*Generated by DATADOC v{VERSION}*")
+    md_lines.append("")
+
+    output_path = f"report_{os.path.basename(file_path).split('.')[0]}.md"
+    with open(output_path, "w") as f:
+        f.write("\n".join(md_lines))
+
+    console.print()
+    console.print(Panel(
+        f"[bold green][OK] Report generated![/bold green]\n\n"
+        f"  Saved to: [bold cyan]{output_path}[/bold cyan]",
+        title="[bold]Report Export[/bold]",
+        border_style="cyan",
+    ))
+    console.print()
+
+
+# ──────────────────────────────────────────────────────────────
+# COMMAND: plugin
+# ──────────────────────────────────────────────────────────────
+@app.command(name="plugin")
+def plugin_list():
+    """
+    Lists all registered plugins and their status.
+    """
+    print_banner()
+
+    # Create a temporary DATADOC instance with a minimal df just to list plugins
+    # We don't need a real file for this
+    import io
+    dummy_csv = io.StringIO("a,b\n1,2\n")
+    import pandas as pd
+    dummy_df = pd.read_csv(dummy_csv)
+
+    from datadoc.plugins.missing_values import MissingValuePlugin
+    from datadoc.plugins.outliers import OutlierPlugin
+    from datadoc.plugins.datetime_feat import DatetimePlugin
+    from datadoc.plugins.encoders import CategoricalEncoderPlugin
+    from datadoc.plugins.scaling import ScalingPlugin
+
+    plugins = sorted([
+        MissingValuePlugin(),
+        OutlierPlugin(),
+        DatetimePlugin(),
+        CategoricalEncoderPlugin(),
+        ScalingPlugin(),
+    ], key=lambda p: p.priority)
+
+    console.print()
+    table = Table(
+        title="[bold]Registered Plugins[/bold]",
+        box=box.ROUNDED,
+        title_style="bold cyan",
+        header_style="bold bright_white",
+        border_style="bright_blue",
+        show_lines=True,
+    )
+    table.add_column("Priority", justify="center", style="yellow", width=10)
+    table.add_column("Plugin", style="bold white", min_width=25)
+    table.add_column("Version", justify="center", style="cyan", width=10)
+    table.add_column("Description", style="dim white")
+
+    for p in plugins:
+        table.add_row(str(p.priority), p.name, p.version, p.description)
+
+    console.print(table)
+
+    # Plugin explanations
+    console.print()
+    console.print(Panel(
+        "\n".join([f"  [bold cyan]{p.name}[/bold cyan]: {p.explain()}" for p in plugins]),
+        title="[bold]Plugin Explanations[/bold]",
+        border_style="dim",
+    ))
+    console.print()
+
+
+# ──────────────────────────────────────────────────────────────
+# COMMAND: version
+# ──────────────────────────────────────────────────────────────
 @app.command()
 def version():
     """

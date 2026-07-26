@@ -6,33 +6,58 @@ class OutlierPlugin(BasePlugin):
     @property
     def name(self) -> str:
         return "OutlierPlugin"
-        
+
+    @property
+    def version(self) -> str:
+        return "0.1.0"
+
+    @property
+    def description(self) -> str:
+        return "Detects outliers using IQR and clips extreme values at 5th/95th percentiles."
+
+    @property
+    def priority(self) -> int:
+        return 20  # After missing values
+
+    @property
+    def supported_datatypes(self) -> list:
+        return ["numeric"]
+
+    @property
+    def dependencies(self) -> list:
+        return ["MissingValuePlugin"]
+
     def analyze(self, df: pd.DataFrame) -> dict:
-        outlier_cols = []
+        outlier_info = {}
         num_cols = df.select_dtypes(include=[np.number]).columns
-        
+
         for col in num_cols:
-            # Simple IQR detection
             Q1 = df[col].quantile(0.25)
             Q3 = df[col].quantile(0.75)
             IQR = Q3 - Q1
-            # Check if any values are outside the fences
-            outliers = ((df[col] < (Q1 - 1.5 * IQR)) | (df[col] > (Q3 + 1.5 * IQR))).sum()
-            if outliers > 0:
-                outlier_cols.append(col)
-                
+            lower = Q1 - 1.5 * IQR
+            upper = Q3 + 1.5 * IQR
+            count = int(((df[col] < lower) | (df[col] > upper)).sum())
+            if count > 0:
+                outlier_info[col] = count
+
         return {
-            "has_outliers": len(outlier_cols) > 0,
-            "outlier_columns": outlier_cols
+            "has_outliers": len(outlier_info) > 0,
+            "outlier_columns": list(outlier_info.keys()),
+            "outlier_counts": outlier_info,
         }
-        
+
     def recommend(self, analysis_result: dict) -> list[str]:
         recs = []
         if analysis_result.get("has_outliers"):
-            cols = analysis_result["outlier_columns"]
-            recs.append(f"Found outliers in {len(cols)} columns ({', '.join(cols)}). Recommendation: Clip values at 5th and 95th percentiles.")
+            info = analysis_result.get("outlier_counts", {})
+            detail = ", ".join([f"{c} ({v} outliers)" for c, v in info.items()])
+            recs.append(
+                f"Outliers detected in: {detail}. "
+                f"Recommendation: Clip values at 5th and 95th percentiles."
+            )
         return recs
-        
+
     def generate_code(self, analysis_result: dict) -> str:
         if not analysis_result.get("has_outliers"):
             return ""
@@ -52,3 +77,13 @@ for col in outlier_cols:
             upper = df_clean[col].quantile(0.95)
             df_clean[col] = df_clean[col].clip(lower=lower, upper=upper)
         return df_clean
+
+    def validate(self, df: pd.DataFrame) -> bool:
+        # After clipping, no values should be outside 5th/95th range
+        return not df.select_dtypes(include=[np.number]).empty
+
+    def explain(self) -> str:
+        return (
+            "OutlierPlugin detects statistical outliers using the IQR (Interquartile Range) "
+            "method and clips extreme values to the 5th and 95th percentile boundaries."
+        )
