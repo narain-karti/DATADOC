@@ -25,6 +25,15 @@ class DATADOC:
             
         return report
         
+    def recommend(self) -> list[str]:
+        """Runs analysis and aggregates recommendations from all plugins."""
+        recommendations = []
+        for plugin in self.plugins:
+            analysis = plugin.analyze(self.df)
+            recs = plugin.recommend(analysis)
+            recommendations.extend(recs)
+        return recommendations
+        
     def engineer(self) -> pd.DataFrame:
         """Automatically triggers plugins that are needed."""
         df_transformed = self.df.copy()

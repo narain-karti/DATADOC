@@ -41,6 +41,33 @@ def analyze(file_path: str):
     console.print(table)
     
 @app.command()
+def recommend(file_path: str):
+    """
+    Outputs a list of suggested engineering steps without applying them.
+    """
+    if not os.path.exists(file_path):
+        console.print(f"[bold red]Error:[/] File '{file_path}' not found.")
+        raise typer.Exit(code=1)
+        
+    console.print(f"[bold green]Generating recommendations for {file_path}...[/]")
+    
+    try:
+        doc = DATADOC(file_path)
+        recommendations = doc.recommend()
+    except Exception as e:
+        console.print(f"[bold red]Failed to process dataset:[/] {e}")
+        raise typer.Exit(code=1)
+
+    if not recommendations:
+        console.print("[bold cyan]Dataset looks perfectly healthy! No recommendations.[/]")
+        return
+        
+    console.print("\n[bold underline]Recommended Actions:[/]")
+    for i, rec in enumerate(recommendations, 1):
+        console.print(f"[bold yellow]{i}.[/] {rec}")
+    console.print()
+
+@app.command()
 def engineer(file_path: str):
     """
     Automatically applies best-practice pipelines.
