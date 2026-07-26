@@ -78,7 +78,7 @@ class DATADOC:
 
         return "\n".join(lines)
 
-    def engineer(self) -> pd.DataFrame:
+    def engineer(self, progress_callback=None) -> pd.DataFrame:
         """Automatically triggers plugins that are needed."""
         df_transformed = self.df.copy()
 
@@ -86,13 +86,21 @@ class DATADOC:
         self._skipped_plugins = []
 
         for plugin in self.plugins:
+            if progress_callback:
+                progress_callback(plugin.name, "running", [])
+                
             analysis = plugin.analyze(df_transformed)
             should_apply = any(bool(v) for k, v in analysis.items() if k.startswith('has_'))
             if should_apply:
+                details = plugin.recommend(analysis)
                 df_transformed = plugin.apply(df_transformed)
                 self._applied_plugins.append(plugin.name)
+                if progress_callback:
+                    progress_callback(plugin.name, "applied", details)
             else:
                 self._skipped_plugins.append(plugin.name)
+                if progress_callback:
+                    progress_callback(plugin.name, "skipped", [])
 
         return df_transformed
 

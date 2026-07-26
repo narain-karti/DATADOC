@@ -25,8 +25,7 @@ dependencies = [
     "rich>=13.7.0",
     "pandas>=2.0.0",
     "numpy>=1.24.0",
-    "plotly>=5.18.0",
-    "jinja2>=3.1.0",
+    "plotext>=5.2.8",
 ]
 
 [project.optional-dependencies]

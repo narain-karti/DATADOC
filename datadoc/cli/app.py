@@ -178,14 +178,20 @@ def engineer(file_path: str):
     print_banner()
     doc = load_dataset(file_path)
 
-    with console.status("[bold cyan]Running Rule Engine...", spinner="dots"):
-        clean_df = doc.engineer()
+    console.print()
+    with console.status("[bold cyan]Running Rule Engine...", spinner="dots") as status:
+        def on_progress(plugin_name, p_status, details):
+            if p_status == "running":
+                status.update(f"[bold cyan]Running [yellow]{plugin_name}[/yellow]...[/bold cyan]")
+                time.sleep(0.5) # Add a small delay to make the UI update visible to the user
+            elif p_status == "applied":
+                print_step("[>>]", f"Applied [bold cyan]{plugin_name}[/bold cyan]", "bold white")
+                for detail in details:
+                    console.print(f"      [dim]-> {detail}[/dim]")
+            elif p_status == "skipped":
+                print_step("[--]", f"Skipped [dim]{plugin_name}[/dim] (not needed)", "dim white")
 
-    # Show which plugins were applied/skipped
-    for name in doc._applied_plugins:
-        print_step("[>>]", f"Applied {name}", "dim")
-    for name in doc._skipped_plugins:
-        print_step("[--]", f"Skipped {name} (not needed)", "dim")
+        clean_df = doc.engineer(progress_callback=on_progress)
 
     output_path = f"clean_{os.path.basename(file_path)}"
     clean_df.to_csv(output_path, index=False)
@@ -269,42 +275,83 @@ def compare(file_path: str):
 @app.command()
 def visualize(file_path: str):
     """
-    Generates a massive, interactive HTML dashboard comparing the before and after states.
+    Generates a massive, interactive terminal dashboard comparing the before and after states.
     """
-    import webbrowser
-    print_banner()
+    import plotext as plt
+    import numpy as np
+    import sys
     
-    # We delay importing visualizer to avoid importing plotly if they just run --help
-    from datadoc.core.visualizer import DashboardGenerator
-    
-    if not os.path.exists(file_path):
-        console.print(f"\n  [bold red][X] File not found:[/] {file_path}")
-        raise typer.Exit(code=1)
-
-    print_step("[>>]", f"Loading [cyan]{file_path}[/cyan]...")
-    
-    with console.status("[bold cyan]Generating visual dashboard...", spinner="dots"):
-        dashboard = DashboardGenerator(file_path)
-        html_content = dashboard.render()
+    if sys.platform == "win32":
+        sys.stdout.reconfigure(encoding="utf-8")
         
-        output_path = f"dashboard_{os.path.basename(file_path).split('.')[0]}.html"
-        with open(output_path, "w", encoding="utf-8") as f:
-            f.write(html_content)
-            
-    print_step("[OK]", "Dashboard generated.", "bold green")
+    print_banner()
+    doc = load_dataset(file_path)
 
+    with console.status("[bold cyan]Generating terminal dashboard...", spinner="dots"):
+        clean_df = doc.engineer()
+        
+        orig_missing = doc.df.isnull().sum()
+        clean_missing = clean_df.isnull().sum()
+        cols_with_missing = orig_missing[orig_missing > 0].index.tolist()
+        
+        # Missing values bar chart
+        if cols_with_missing:
+            plt.clf()
+            plt.theme("dark")
+            orig_vals = [orig_missing[c] for c in cols_with_missing]
+            clean_vals = [clean_missing.get(c, 0) for c in cols_with_missing]
+            
+            plt.multiple_bar(cols_with_missing, [orig_vals, clean_vals], labels=["Before", "After"])
+            plt.title("Missing Values Resolution")
+            plt.plotsize(100, 20)
+            missing_plot = plt.build()
+        else:
+            missing_plot = "  [dim]No missing values found in the original dataset.[/dim]"
+            
+        # Numerical distributions
+        num_cols = doc.df.select_dtypes(include=[np.number]).columns.tolist()
+        dist_plots = []
+        
+        for col in num_cols:
+            if col not in clean_df.columns:
+                continue
+                
+            orig_data = doc.df[col].dropna()
+            clean_data = clean_df[col].dropna()
+            
+            if len(orig_data) == 0 or len(clean_data) == 0:
+                continue
+                
+            plt.clf()
+            plt.theme("dark")
+            
+            plt.hist(orig_data.tolist(), bins=20, label="Before", color="red")
+            plt.hist(clean_data.tolist(), bins=20, label="After", color="green")
+            plt.title(f"Distribution: {col}")
+            plt.plotsize(100, 20)
+            dist_plots.append(plt.build())
+
+    # Render directly to terminal
     console.print()
     console.print(Panel(
-        f"[bold green][OK] Dashboard Ready![/bold green]\n\n"
-        f"  Saved to: [bold cyan]{output_path}[/bold cyan]\n\n"
-        f"  Opening in your default web browser...",
-        title="[bold]Visual Dashboard[/bold]",
-        border_style="cyan",
+        Text.from_ansi(missing_plot) if "No missing" not in missing_plot else missing_plot,
+        title="[bold yellow]Missing Values Breakdown[/bold yellow]",
+        border_style="yellow"
     ))
-    console.print()
     
-    # Open the HTML file in the default web browser
-    webbrowser.open(f"file://{os.path.abspath(output_path)}")
+    for i, d_plot in enumerate(dist_plots):
+        console.print(Panel(
+            Text.from_ansi(d_plot),
+            title=f"[bold cyan]Numerical Distribution: {num_cols[i]}[/bold cyan]",
+            border_style="cyan"
+        ))
+
+    console.print(Panel(
+        f"[bold green]Terminal dashboard generated successfully![/bold green]\n\n"
+        f"  Applied Plugins: {', '.join(doc._applied_plugins) or 'None'}",
+        title="[bold]Summary[/bold]",
+        border_style="green",
+    ))
 
 
 # ──────────────────────────────────────────────────────────────
