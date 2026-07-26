@@ -18,13 +18,7 @@ class CategoricalEncoderPlugin(BasePlugin):
     def priority(self) -> int:
         return 40  # After missing values and outliers
 
-    @property
-    def supported_datatypes(self) -> list:
-        return ["categorical"]
 
-    @property
-    def dependencies(self) -> list:
-        return ["MissingValuePlugin"]
 
     def analyze(self, df: pl.DataFrame) -> dict:
         cat_cols = [col for col in df.columns if df[col].dtype == pl.String]
@@ -63,8 +57,7 @@ df = df.to_dummies(columns=cat_cols, drop_first=True)"""
             df_clean = df_clean.to_dummies(columns=cat_cols, drop_first=True)
         return df_clean
 
-    def validate(self, df: pl.DataFrame) -> bool:
-        return True
+
 
     def explain(self) -> str:
         return (

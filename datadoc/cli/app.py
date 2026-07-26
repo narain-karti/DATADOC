@@ -65,23 +65,15 @@ def load_dataset(file_path: str) -> DATADOC:
 
 
 def _get_api_key(model: str) -> str:
-    api_key = None
-    if model.startswith("gemini"):
-        api_key = os.getenv("GEMINI_API_KEY")
-        key_name = "GEMINI_API_KEY"
-    elif model.startswith("gpt") or model.startswith("openai"):
-        api_key = os.getenv("OPENAI_API_KEY")
-        key_name = "OPENAI_API_KEY"
-    elif model.startswith("claude") or model.startswith("anthropic"):
-        api_key = os.getenv("ANTHROPIC_API_KEY")
-        key_name = "ANTHROPIC_API_KEY"
-    elif model.startswith("groq"):
-        api_key = os.getenv("GROQ_API_KEY")
-        key_name = "GROQ_API_KEY"
-    else:
-        api_key = os.getenv("OPENAI_API_KEY") # Default fallback
-        key_name = "API_KEY"
-        
+    key_map = {
+        "gemini": "GEMINI_API_KEY",
+        "gpt": "OPENAI_API_KEY", "openai": "OPENAI_API_KEY",
+        "claude": "ANTHROPIC_API_KEY", "anthropic": "ANTHROPIC_API_KEY",
+        "groq": "GROQ_API_KEY"
+    }
+    key_name = next((v for k, v in key_map.items() if model.startswith(k)), "API_KEY")
+    api_key = os.getenv("OPENAI_API_KEY") if key_name == "API_KEY" else os.getenv(key_name)
+
     if not api_key:
         console.print(f"\n  [bold yellow][!][/bold yellow] {key_name} not found in environment or .env file.")
         api_key = typer.prompt(f"Please enter your {key_name}", hide_input=True)
@@ -584,11 +576,7 @@ def plugin_list():
     """
     print_banner()
 
-    # Create a temporary DATADOC instance with a minimal df just to list plugins
-    # We don't need a real file for this
-    dummy_csv = b"a,b\n1,2\n"
-    import polars as pl
-    pl.read_csv(dummy_csv)
+
 
     from datadoc.plugins.missing_values import MissingValuePlugin
     from datadoc.plugins.outliers import OutlierPlugin

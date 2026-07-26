@@ -18,9 +18,7 @@ class MissingValuePlugin(BasePlugin):
     def priority(self) -> int:
         return 10  # Should run first
 
-    @property
-    def supported_datatypes(self) -> list:
-        return ["numeric", "categorical"]
+
 
     def analyze(self, df: pl.DataFrame) -> dict:
         cols_with_missing = {c: df[c].null_count() for c in df.columns if df[c].null_count() > 0}
@@ -64,8 +62,7 @@ for col in df.columns:
                     df_clean = df_clean.with_columns(pl.col(col).fill_null(pl.col(col).drop_nulls().mode().first()))
         return df_clean
 
-    def validate(self, df: pl.DataFrame) -> bool:
-        return bool(sum(df[c].null_count() for c in df.columns) == 0)
+
 
     def explain(self) -> str:
         return (

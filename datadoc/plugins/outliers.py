@@ -18,13 +18,7 @@ class OutlierPlugin(BasePlugin):
     def priority(self) -> int:
         return 20  # After missing values
 
-    @property
-    def supported_datatypes(self) -> list:
-        return ["numeric"]
 
-    @property
-    def dependencies(self) -> list:
-        return ["MissingValuePlugin"]
 
     def analyze(self, df: pl.DataFrame) -> dict:
         outlier_info = {}
@@ -83,8 +77,7 @@ for col in outlier_cols:
                 df_clean = df_clean.with_columns(pl.col(col).clip(lower, upper))
         return df_clean
 
-    def validate(self, df: pl.DataFrame) -> bool:
-        return True
+
 
     def explain(self) -> str:
         return (

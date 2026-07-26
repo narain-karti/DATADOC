@@ -18,13 +18,7 @@ class ScalingPlugin(BasePlugin):
     def priority(self) -> int:
         return 45  # Near the end, after encoding
 
-    @property
-    def supported_datatypes(self) -> list:
-        return ["numeric"]
 
-    @property
-    def dependencies(self) -> list:
-        return ["MissingValuePlugin", "OutlierPlugin"]
 
     def analyze(self, df: pl.DataFrame) -> dict:
         num_cols = [c for c in df.columns if df[c].dtype.is_numeric()]
@@ -92,8 +86,7 @@ if exprs:
             
         return df_clean
 
-    def validate(self, df: pl.DataFrame) -> bool:
-        return True
+
 
     def explain(self) -> str:
         return (

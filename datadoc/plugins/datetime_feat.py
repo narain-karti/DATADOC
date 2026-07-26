@@ -18,13 +18,7 @@ class DatetimePlugin(BasePlugin):
     def priority(self) -> int:
         return 30  # After missing values and outliers, before encoding
 
-    @property
-    def supported_datatypes(self) -> list:
-        return ["datetime"]
 
-    @property
-    def dependencies(self) -> list:
-        return ["MissingValuePlugin"]
 
     def analyze(self, df: pl.DataFrame) -> dict:
         datetime_cols = []
@@ -92,8 +86,7 @@ for col in datetime_cols:
 
         return df_clean
 
-    def validate(self, df: pl.DataFrame) -> bool:
-        return True
+
 
     def explain(self) -> str:
         return (
