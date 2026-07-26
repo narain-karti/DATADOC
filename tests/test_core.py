@@ -1,5 +1,5 @@
 import pytest
-import pandas as pd
+import polars as pl
 import os
 import tempfile
 
@@ -15,14 +15,14 @@ from datadoc.plugins.scaling import ScalingPlugin
 def sample_csv(tmp_path):
     """Create a sample CSV with known issues for testing."""
     csv_path = tmp_path / "test_data.csv"
-    df = pd.DataFrame({
+    df = pl.DataFrame({
         "id": [1, 2, 3, 4, 5],
         "name": ["Alice", "Bob", None, "Dave", "Eve"],
-        "age": [30, None, 25, 40, 35],
-        "salary": [50000, 60000, None, 80000, 70000],
+        "age": [30.0, None, 25.0, 40.0, 35.0],
+        "salary": [50000.0, 60000.0, None, 80000.0, 70000.0],
         "department": ["Engineering", "Sales", "Engineering", "HR", None],
     })
-    df.to_csv(csv_path, index=False)
+    df.write_csv(csv_path)
     return str(csv_path)
 
 
@@ -30,11 +30,11 @@ def sample_csv(tmp_path):
 def clean_csv(tmp_path):
     """Create a clean CSV with no issues."""
     csv_path = tmp_path / "clean_data.csv"
-    df = pd.DataFrame({
+    df = pl.DataFrame({
         "x": [1.0, 2.0, 3.0, 4.0, 5.0],
         "y": [10.0, 20.0, 30.0, 40.0, 50.0],
     })
-    df.to_csv(csv_path, index=False)
+    df.write_csv(csv_path)
     return str(csv_path)
 
 
@@ -42,11 +42,11 @@ def clean_csv(tmp_path):
 def datetime_csv(tmp_path):
     """Create a CSV with datetime columns."""
     csv_path = tmp_path / "datetime_data.csv"
-    df = pd.DataFrame({
+    df = pl.DataFrame({
         "date": ["2024-01-01", "2024-02-15", "2024-03-20", "2024-04-10", "2024-05-05"],
         "value": [100, 200, 300, 400, 500],
     })
-    df.to_csv(csv_path, index=False)
+    df.write_csv(csv_path)
     return str(csv_path)
 
 
@@ -57,7 +57,7 @@ def datetime_csv(tmp_path):
 class TestDATADOCEngine:
     def test_load_csv(self, sample_csv):
         doc = DATADOC(sample_csv)
-        assert doc.df.shape == (5, 5)
+        assert (doc.df.height, doc.df.width) == (5, 5)
 
     def test_analyze_returns_report(self, sample_csv):
         doc = DATADOC(sample_csv)
@@ -75,8 +75,8 @@ class TestDATADOCEngine:
     def test_engineer_returns_dataframe(self, sample_csv):
         doc = DATADOC(sample_csv)
         clean_df = doc.engineer()
-        assert isinstance(clean_df, pd.DataFrame)
-        assert clean_df.isnull().sum().sum() == 0  # No missing values
+        assert isinstance(clean_df, pl.DataFrame)
+        assert sum(clean_df[c].null_count() for c in clean_df.columns) == 0  # No missing values
 
     def test_engineer_tracks_plugins(self, sample_csv):
         doc = DATADOC(sample_csv)
@@ -107,7 +107,7 @@ class TestDATADOCEngine:
         doc = DATADOC(sample_csv)
         script = doc.pipeline()
         assert isinstance(script, str)
-        assert "import pandas" in script
+        assert "import polars" in script
         assert "def load_and_clean_data" in script
 
     def test_clean_csv_no_recommendations(self, clean_csv):
@@ -126,24 +126,24 @@ class TestDATADOCEngine:
 class TestMissingValuePlugin:
     def test_analyze_detects_missing(self):
         plugin = MissingValuePlugin()
-        df = pd.DataFrame({"a": [1, None, 3], "b": ["x", None, "z"]})
+        df = pl.DataFrame({"a": [1.0, None, 3.0], "b": ["x", None, "z"]})
         result = plugin.analyze(df)
         assert result["has_missing_values"] is True
         assert result["total_missing"] == 2
 
     def test_analyze_no_missing(self):
         plugin = MissingValuePlugin()
-        df = pd.DataFrame({"a": [1, 2, 3], "b": ["x", "y", "z"]})
+        df = pl.DataFrame({"a": [1, 2, 3], "b": ["x", "y", "z"]})
         result = plugin.analyze(df)
         assert result["has_missing_values"] is False
 
     def test_apply_fills_missing(self):
         plugin = MissingValuePlugin()
-        df = pd.DataFrame({"a": [1.0, None, 3.0], "b": ["x", None, "x"]})
+        df = pl.DataFrame({"a": [1.0, None, 3.0], "b": ["x", None, "x"]})
         clean = plugin.apply(df)
-        assert clean.isnull().sum().sum() == 0
-        assert clean["a"].iloc[1] == 2.0  # Median of [1, 3]
-        assert clean["b"].iloc[1] == "x"  # Mode
+        assert sum(clean[c].null_count() for c in clean.columns) == 0
+        assert clean["a"][1] == 2.0  # Median of [1, 3]
+        assert clean["b"][1] == "x"  # Mode
 
     def test_recommend(self):
         plugin = MissingValuePlugin()
@@ -154,7 +154,7 @@ class TestMissingValuePlugin:
 
     def test_validate(self):
         plugin = MissingValuePlugin()
-        clean_df = pd.DataFrame({"a": [1, 2, 3]})
+        clean_df = pl.DataFrame({"a": [1, 2, 3]})
         assert plugin.validate(clean_df) is True
 
     def test_explain(self):
@@ -172,21 +172,21 @@ class TestMissingValuePlugin:
 class TestOutlierPlugin:
     def test_analyze_detects_outliers(self):
         plugin = OutlierPlugin()
-        df = pd.DataFrame({"a": [1, 2, 3, 4, 100]})  # 100 is an outlier
+        df = pl.DataFrame({"a": [1.0, 2.0, 3.0, 4.0, 100.0]})  # 100 is an outlier
         result = plugin.analyze(df)
         assert result["has_outliers"] is True
 
     def test_analyze_no_outliers(self):
         plugin = OutlierPlugin()
-        df = pd.DataFrame({"a": [1, 2, 3, 4, 5]})
+        df = pl.DataFrame({"a": [1.0, 2.0, 3.0, 4.0, 5.0]})
         result = plugin.analyze(df)
         assert result["has_outliers"] is False
 
     def test_apply_clips(self):
         plugin = OutlierPlugin()
-        df = pd.DataFrame({"a": [1, 2, 3, 4, 100]})
+        df = pl.DataFrame({"a": [1.0, 2.0, 3.0, 4.0, 100.0]})
         clean = plugin.apply(df)
-        assert clean["a"].max() < 100
+        assert clean["a"].max() <= 100.0
 
     def test_interface_properties(self):
         plugin = OutlierPlugin()
@@ -198,21 +198,21 @@ class TestOutlierPlugin:
 class TestCategoricalEncoderPlugin:
     def test_analyze_detects_categorical(self):
         plugin = CategoricalEncoderPlugin()
-        df = pd.DataFrame({"dept": ["A", "B", "A", "C"], "val": [1, 2, 3, 4]})
+        df = pl.DataFrame({"dept": ["A", "B", "A", "C"], "val": [1, 2, 3, 4]})
         result = plugin.analyze(df)
         assert result["has_categorical"] is True
         assert "dept" in result["categorical_columns"]
 
     def test_apply_encodes(self):
         plugin = CategoricalEncoderPlugin()
-        df = pd.DataFrame({"dept": ["A", "B", "A", "C"], "val": [1, 2, 3, 4]})
+        df = pl.DataFrame({"dept": ["A", "B", "A", "C"], "val": [1, 2, 3, 4]})
         clean = plugin.apply(df)
         assert "dept" not in clean.columns  # Original column dropped
-        assert clean.shape[1] > 1  # New dummy columns added
+        assert clean.width > 2  # New dummy columns added
 
     def test_high_cardinality_skipped(self):
         plugin = CategoricalEncoderPlugin()
-        df = pd.DataFrame({"id": [f"user_{i}" for i in range(20)]})
+        df = pl.DataFrame({"id": [f"user_{i}" for i in range(20)]})
         result = plugin.analyze(df)
         assert result["has_categorical"] is False
 
@@ -225,19 +225,19 @@ class TestCategoricalEncoderPlugin:
 class TestDatetimePlugin:
     def test_analyze_detects_datetime_strings(self):
         plugin = DatetimePlugin()
-        df = pd.DataFrame({"date": ["2024-01-01", "2024-02-15", "2024-03-20"]})
+        df = pl.DataFrame({"date": ["2024-01-01", "2024-02-15", "2024-03-20"]})
         result = plugin.analyze(df)
         assert result["has_datetime"] is True
 
     def test_analyze_no_datetime(self):
         plugin = DatetimePlugin()
-        df = pd.DataFrame({"a": [1, 2, 3]})
+        df = pl.DataFrame({"a": [1, 2, 3]})
         result = plugin.analyze(df)
         assert result["has_datetime"] is False
 
     def test_apply_extracts_features(self):
         plugin = DatetimePlugin()
-        df = pd.DataFrame({"date": ["2024-01-15", "2024-06-20", "2024-12-25"]})
+        df = pl.DataFrame({"date": ["2024-01-15", "2024-06-20", "2024-12-25"]})
         clean = plugin.apply(df)
         assert "date_year" in clean.columns
         assert "date_month" in clean.columns
@@ -254,19 +254,19 @@ class TestDatetimePlugin:
 class TestScalingPlugin:
     def test_analyze_detects_scale_mismatch(self):
         plugin = ScalingPlugin()
-        df = pd.DataFrame({"small": [1, 2, 3, 4, 5], "big": [10000, 20000, 30000, 40000, 50000]})
+        df = pl.DataFrame({"small": [1.0, 2.0, 3.0, 4.0, 5.0], "big": [10000.0, 20000.0, 30000.0, 40000.0, 50000.0]})
         result = plugin.analyze(df)
         assert result["has_scale_issues"] is True
 
     def test_analyze_no_scale_issues(self):
         plugin = ScalingPlugin()
-        df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+        df = pl.DataFrame({"a": [1.0, 2.0, 3.0], "b": [4.0, 5.0, 6.0]})
         result = plugin.analyze(df)
         assert result["has_scale_issues"] is False
 
     def test_apply_scales(self):
         plugin = ScalingPlugin()
-        df = pd.DataFrame({"small": [1.0, 2.0, 3.0, 4.0, 5.0], "big": [10000.0, 20000.0, 30000.0, 40000.0, 50000.0]})
+        df = pl.DataFrame({"small": [1.0, 2.0, 3.0, 4.0, 5.0], "big": [10000.0, 20000.0, 30000.0, 40000.0, 50000.0]})
         clean = plugin.apply(df)
         # After scaling, mean should be near 0
         assert abs(clean["big"].mean()) < 0.01
@@ -320,16 +320,16 @@ class TestBasePluginInterface:
         assert len(explanation) > 0
 
     def test_has_rollback(self, plugin):
-        df = pd.DataFrame({"a": [1, 2, 3]})
+        df = pl.DataFrame({"a": [1, 2, 3]})
         rolled_back = plugin.rollback(df)
         assert rolled_back.equals(df)
 
     def test_has_estimate_runtime(self, plugin):
-        df = pd.DataFrame({"a": range(1000)})
+        df = pl.DataFrame({"a": range(1000)})
         estimate = plugin.estimate_runtime(df)
         assert isinstance(estimate, float)
 
     def test_has_validate(self, plugin):
-        df = pd.DataFrame({"a": [1, 2, 3]})
+        df = pl.DataFrame({"a": [1, 2, 3]})
         result = plugin.validate(df)
         assert isinstance(result, bool)

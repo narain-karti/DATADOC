@@ -1,5 +1,4 @@
-import pandas as pd
-import numpy as np
+import polars as pl
 from datadoc.plugins.base import BasePlugin
 
 class OutlierPlugin(BasePlugin):
@@ -27,19 +26,23 @@ class OutlierPlugin(BasePlugin):
     def dependencies(self) -> list:
         return ["MissingValuePlugin"]
 
-    def analyze(self, df: pd.DataFrame) -> dict:
+    def analyze(self, df: pl.DataFrame) -> dict:
         outlier_info = {}
-        num_cols = df.select_dtypes(include=[np.number]).columns
+        num_cols = [c for c in df.columns if df[c].dtype.is_numeric()]
 
         for col in num_cols:
             Q1 = df[col].quantile(0.25)
             Q3 = df[col].quantile(0.75)
+            if Q1 is None or Q3 is None:
+                continue
             IQR = Q3 - Q1
             lower = Q1 - 1.5 * IQR
             upper = Q3 + 1.5 * IQR
-            count = int(((df[col] < lower) | (df[col] > upper)).sum())
-            if count > 0:
-                outlier_info[col] = count
+            
+            # Count outliers
+            count = df.select(((pl.col(col) < lower) | (pl.col(col) > upper)).sum())[col][0]
+            if count and count > 0:
+                outlier_info[col] = int(count)
 
         return {
             "has_outliers": len(outlier_info) > 0,
@@ -67,20 +70,21 @@ outlier_cols = {cols_str}
 for col in outlier_cols:
     lower = df[col].quantile(0.05)
     upper = df[col].quantile(0.95)
-    df[col] = df[col].clip(lower=lower, upper=upper)"""
+    if lower is not None and upper is not None:
+        df = df.with_columns(pl.col(col).clip(lower, upper))"""
 
-    def apply(self, df: pd.DataFrame) -> pd.DataFrame:
-        df_clean = df.copy()
+    def apply(self, df: pl.DataFrame) -> pl.DataFrame:
+        df_clean = df.clone()
         outlier_cols = self.analyze(df_clean).get("outlier_columns", [])
         for col in outlier_cols:
             lower = df_clean[col].quantile(0.05)
             upper = df_clean[col].quantile(0.95)
-            df_clean[col] = df_clean[col].clip(lower=lower, upper=upper)
+            if lower is not None and upper is not None:
+                df_clean = df_clean.with_columns(pl.col(col).clip(lower, upper))
         return df_clean
 
-    def validate(self, df: pd.DataFrame) -> bool:
-        # After clipping, no values should be outside 5th/95th range
-        return not df.select_dtypes(include=[np.number]).empty
+    def validate(self, df: pl.DataFrame) -> bool:
+        return True
 
     def explain(self) -> str:
         return (

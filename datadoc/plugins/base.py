@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-import pandas as pd
+import polars as pl
 
 class BasePlugin(ABC):
     @property
@@ -30,7 +30,7 @@ class BasePlugin(ABC):
         return []
 
     @abstractmethod
-    def analyze(self, df: pd.DataFrame) -> dict:
+    def analyze(self, df: pl.DataFrame) -> dict:
         """Analyze the dataframe and return metadata/flags if the plugin should run."""
         pass
 
@@ -45,26 +45,26 @@ class BasePlugin(ABC):
         pass
 
     @abstractmethod
-    def apply(self, df: pd.DataFrame) -> pd.DataFrame:
+    def apply(self, df: pl.DataFrame) -> pl.DataFrame:
         """Apply the engineering transformation and return the new dataframe."""
         pass
 
-    def validate(self, df: pd.DataFrame) -> bool:
+    def validate(self, df: pl.DataFrame) -> bool:
         """Validate that the transformation produced a valid result."""
-        if df.empty:
+        if df.is_empty():
             return False
         return True
 
-    def rollback(self, original_df: pd.DataFrame) -> pd.DataFrame:
+    def rollback(self, original_df: pl.DataFrame) -> pl.DataFrame:
         """Return the original dataframe, undoing any transformation."""
-        return original_df.copy()
+        return original_df.clone()
 
     def explain(self) -> str:
         """Return a human-readable explanation of what this plugin does."""
         return f"{self.name} (v{self.version}): {self.description}"
 
-    def estimate_runtime(self, df: pd.DataFrame) -> float:
+    def estimate_runtime(self, df: pl.DataFrame) -> float:
         """Estimate runtime in seconds based on dataset size."""
-        rows = df.shape[0]
+        rows = df.height
         # Simple linear estimate: ~1ms per 1000 rows
         return round(rows / 1_000_000, 4)

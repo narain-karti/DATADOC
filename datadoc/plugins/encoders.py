@@ -1,4 +1,4 @@
-import pandas as pd
+import polars as pl
 from datadoc.plugins.base import BasePlugin
 
 class CategoricalEncoderPlugin(BasePlugin):
@@ -26,10 +26,10 @@ class CategoricalEncoderPlugin(BasePlugin):
     def dependencies(self) -> list:
         return ["MissingValuePlugin"]
 
-    def analyze(self, df: pd.DataFrame) -> dict:
-        cat_cols = [col for col in df.columns if df[col].dtype == 'object']
-        valid_cats = [col for col in cat_cols if df[col].nunique() < 10 and df[col].nunique() > 1]
-        cardinality = {col: int(df[col].nunique()) for col in valid_cats}
+    def analyze(self, df: pl.DataFrame) -> dict:
+        cat_cols = [col for col in df.columns if df[col].dtype == pl.String]
+        valid_cats = [col for col in cat_cols if df[col].n_unique() < 10 and df[col].n_unique() > 1]
+        cardinality = {col: df[col].n_unique() for col in valid_cats}
 
         return {
             "has_categorical": len(valid_cats) > 0,
@@ -54,21 +54,20 @@ class CategoricalEncoderPlugin(BasePlugin):
         cols_str = str(analysis_result.get("categorical_columns", []))
         return f"""# Categorical Encoding (One-Hot)
 cat_cols = {cols_str}
-df = pd.get_dummies(df, columns=cat_cols, drop_first=True)"""
+df = df.to_dummies(columns=cat_cols, drop_first=True)"""
 
-    def apply(self, df: pd.DataFrame) -> pd.DataFrame:
-        df_clean = df.copy()
+    def apply(self, df: pl.DataFrame) -> pl.DataFrame:
+        df_clean = df.clone()
         cat_cols = self.analyze(df_clean).get("categorical_columns", [])
         if cat_cols:
-            df_clean = pd.get_dummies(df_clean, columns=cat_cols, drop_first=True)
+            df_clean = df_clean.to_dummies(columns=cat_cols, drop_first=True)
         return df_clean
 
-    def validate(self, df: pd.DataFrame) -> bool:
-        # After encoding, no object columns should remain (for the encoded ones)
+    def validate(self, df: pl.DataFrame) -> bool:
         return True
 
     def explain(self) -> str:
         return (
-            "CategoricalEncoderPlugin detects text/object columns with fewer than 10 unique values "
+            "CategoricalEncoderPlugin detects text/string columns with fewer than 10 unique values "
             "and applies One-Hot Encoding with drop_first=True to avoid multicollinearity."
         )

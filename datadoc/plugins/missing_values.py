@@ -1,4 +1,4 @@
-import pandas as pd
+import polars as pl
 from datadoc.plugins.base import BasePlugin
 
 class MissingValuePlugin(BasePlugin):
@@ -22,13 +22,12 @@ class MissingValuePlugin(BasePlugin):
     def supported_datatypes(self) -> list:
         return ["numeric", "categorical"]
 
-    def analyze(self, df: pd.DataFrame) -> dict:
-        missing_count = df.isnull().sum().sum()
-        missing_by_col = df.isnull().sum()
-        cols_with_missing = missing_by_col[missing_by_col > 0].to_dict()
+    def analyze(self, df: pl.DataFrame) -> dict:
+        cols_with_missing = {c: df[c].null_count() for c in df.columns if df[c].null_count() > 0}
+        total_missing = sum(cols_with_missing.values())
         return {
-            "has_missing_values": bool(missing_count > 0),
-            "total_missing": int(missing_count),
+            "has_missing_values": bool(total_missing > 0),
+            "total_missing": int(total_missing),
             "columns_affected": cols_with_missing,
         }
 
@@ -49,24 +48,24 @@ class MissingValuePlugin(BasePlugin):
             return ""
         return """# Missing Value Imputation
 for col in df.columns:
-    if df[col].isnull().any():
-        if pd.api.types.is_numeric_dtype(df[col]):
-            df[col] = df[col].fillna(df[col].median())
+    if df[col].null_count() > 0:
+        if df[col].dtype.is_numeric():
+            df = df.with_columns(pl.col(col).fill_null(pl.col(col).median()))
         else:
-            df[col] = df[col].fillna(df[col].mode()[0])"""
+            df = df.with_columns(pl.col(col).fill_null(pl.col(col).drop_nulls().mode().first()))"""
 
-    def apply(self, df: pd.DataFrame) -> pd.DataFrame:
-        df_clean = df.copy()
+    def apply(self, df: pl.DataFrame) -> pl.DataFrame:
+        df_clean = df.clone()
         for col in df_clean.columns:
-            if df_clean[col].isnull().any():
-                if pd.api.types.is_numeric_dtype(df_clean[col]):
-                    df_clean[col] = df_clean[col].fillna(df_clean[col].median())
+            if df_clean[col].null_count() > 0:
+                if df_clean[col].dtype.is_numeric():
+                    df_clean = df_clean.with_columns(pl.col(col).fill_null(pl.col(col).median()))
                 else:
-                    df_clean[col] = df_clean[col].fillna(df_clean[col].mode()[0])
+                    df_clean = df_clean.with_columns(pl.col(col).fill_null(pl.col(col).drop_nulls().mode().first()))
         return df_clean
 
-    def validate(self, df: pd.DataFrame) -> bool:
-        return bool(df.isnull().sum().sum() == 0)
+    def validate(self, df: pl.DataFrame) -> bool:
+        return bool(sum(df[c].null_count() for c in df.columns) == 0)
 
     def explain(self) -> str:
         return (

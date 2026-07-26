@@ -54,7 +54,7 @@ def load_dataset(file_path: str) -> DATADOC:
         console.print(f"\n  [bold red][X] Failed to read dataset:[/] {e}")
         raise typer.Exit(code=1)
 
-    rows, cols = doc.df.shape
+    rows, cols = doc.df.height, doc.df.width
     print_step("[OK]", f"Loaded [green]{rows:,}[/green] rows x [green]{cols}[/green] columns", "bold green")
     return doc
 
@@ -194,13 +194,13 @@ def engineer(file_path: str):
         clean_df = doc.engineer(progress_callback=on_progress)
 
     output_path = f"clean_{os.path.basename(file_path)}"
-    clean_df.to_csv(output_path, index=False)
+    clean_df.write_csv(output_path)
 
     console.print()
     console.print(Panel(
         f"[bold green][OK] Success![/bold green]\n\n"
-        f"  Input:  [cyan]{file_path}[/cyan] ({doc.df.shape[0]} rows x {doc.df.shape[1]} cols)\n"
-        f"  Output: [cyan]{output_path}[/cyan] ({clean_df.shape[0]} rows x {clean_df.shape[1]} cols)\n\n"
+        f"  Input:  [cyan]{file_path}[/cyan] ({doc.df.height} rows x {doc.df.width} cols)\n"
+        f"  Output: [cyan]{output_path}[/cyan] ({clean_df.height} rows x {clean_df.width} cols)\n\n"
         f"  Applied:  {', '.join(doc._applied_plugins) or 'None'}\n"
         f"  Skipped:  {', '.join(doc._skipped_plugins) or 'None'}",
         title="[bold]Engineering Complete[/bold]",
@@ -280,6 +280,7 @@ def visualize(file_path: str):
     import plotext as plt
     import numpy as np
     import sys
+    import polars as pl
     
     if sys.platform == "win32":
         sys.stdout.reconfigure(encoding="utf-8")
@@ -290,9 +291,9 @@ def visualize(file_path: str):
     with console.status("[bold cyan]Generating terminal dashboard...", spinner="dots"):
         clean_df = doc.engineer()
         
-        orig_missing = doc.df.isnull().sum()
-        clean_missing = clean_df.isnull().sum()
-        cols_with_missing = orig_missing[orig_missing > 0].index.tolist()
+        orig_missing = {c: doc.df[c].null_count() for c in doc.df.columns}
+        clean_missing = {c: clean_df[c].null_count() for c in clean_df.columns}
+        cols_with_missing = [c for c, count in orig_missing.items() if count > 0]
         
         # Missing values bar chart
         if cols_with_missing:
@@ -309,15 +310,15 @@ def visualize(file_path: str):
             missing_plot = "  [dim]No missing values found in the original dataset.[/dim]"
             
         # Numerical distributions
-        num_cols = doc.df.select_dtypes(include=[np.number]).columns.tolist()
+        num_cols = [c for c in doc.df.columns if doc.df[c].dtype in pl.NUMERIC_DTYPES]
         dist_plots = []
         
         for col in num_cols:
             if col not in clean_df.columns:
                 continue
                 
-            orig_data = doc.df[col].dropna()
-            clean_data = clean_df[col].dropna()
+            orig_data = doc.df[col].drop_nulls()
+            clean_data = clean_df[col].drop_nulls()
             
             if len(orig_data) == 0 or len(clean_data) == 0:
                 continue
@@ -325,8 +326,8 @@ def visualize(file_path: str):
             plt.clf()
             plt.theme("dark")
             
-            plt.hist(orig_data.tolist(), bins=20, label="Before", color="red")
-            plt.hist(clean_data.tolist(), bins=20, label="After", color="green")
+            plt.hist(orig_data.to_list(), bins=20, label="Before", color="red")
+            plt.hist(clean_data.to_list(), bins=20, label="After", color="green")
             plt.title(f"Distribution: {col}")
             plt.plotsize(100, 20)
             dist_plots.append(plt.build())
@@ -476,9 +477,9 @@ def plugin_list():
     # Create a temporary DATADOC instance with a minimal df just to list plugins
     # We don't need a real file for this
     import io
-    dummy_csv = io.StringIO("a,b\n1,2\n")
-    import pandas as pd
-    dummy_df = pd.read_csv(dummy_csv)
+    dummy_csv = b"a,b\n1,2\n"
+    import polars as pl
+    dummy_df = pl.read_csv(dummy_csv)
 
     from datadoc.plugins.missing_values import MissingValuePlugin
     from datadoc.plugins.outliers import OutlierPlugin

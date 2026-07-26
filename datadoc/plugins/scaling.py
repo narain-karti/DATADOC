@@ -1,5 +1,4 @@
-import pandas as pd
-import numpy as np
+import polars as pl
 from datadoc.plugins.base import BasePlugin
 
 class ScalingPlugin(BasePlugin):
@@ -27,23 +26,34 @@ class ScalingPlugin(BasePlugin):
     def dependencies(self) -> list:
         return ["MissingValuePlugin", "OutlierPlugin"]
 
-    def analyze(self, df: pd.DataFrame) -> dict:
-        num_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    def analyze(self, df: pl.DataFrame) -> dict:
+        num_cols = [c for c in df.columns if df[c].dtype.is_numeric()]
         if len(num_cols) < 2:
             return {"has_scale_issues": False, "columns_to_scale": []}
 
-        stds = df[num_cols].std()
-        # If the ratio between max std and min std is > 10, scaling is needed
-        if stds.min() == 0:
-            cols_to_scale = [c for c in num_cols if stds[c] > 0]
+        stds = {}
+        for col in num_cols:
+            std = df[col].std()
+            if std is not None:
+                stds[col] = std
+                
+        if not stds:
+            return {"has_scale_issues": False, "columns_to_scale": []}
+
+        min_std = min(stds.values())
+        max_std = max(stds.values())
+
+        if min_std == 0:
+            cols_to_scale = [c for c, s in stds.items() if s > 0]
+            ratio = float('inf')
         else:
-            ratio = stds.max() / stds.min()
+            ratio = max_std / min_std
             cols_to_scale = num_cols if ratio > 10 else []
 
         return {
             "has_scale_issues": len(cols_to_scale) > 0,
             "columns_to_scale": cols_to_scale,
-            "scale_ratio": round(float(stds.max() / stds.min()), 2) if stds.min() > 0 else float('inf'),
+            "scale_ratio": round(ratio, 2) if ratio != float('inf') else ratio,
         }
 
     def recommend(self, analysis_result: dict) -> list[str]:
@@ -63,23 +73,26 @@ class ScalingPlugin(BasePlugin):
         cols_str = str(analysis_result.get("columns_to_scale", []))
         return f"""# Standard Scaling
 scale_cols = {cols_str}
-for col in scale_cols:
-    mean = df[col].mean()
-    std = df[col].std()
-    if std > 0:
-        df[col] = (df[col] - mean) / std"""
+exprs = [((pl.col(c) - pl.col(c).mean()) / pl.col(c).std()).alias(c) for c in scale_cols]
+if exprs:
+    df = df.with_columns(exprs)"""
 
-    def apply(self, df: pd.DataFrame) -> pd.DataFrame:
-        df_clean = df.copy()
+    def apply(self, df: pl.DataFrame) -> pl.DataFrame:
+        df_clean = df.clone()
         cols_to_scale = self.analyze(df_clean).get("columns_to_scale", [])
+        
+        exprs = []
         for col in cols_to_scale:
-            mean = df_clean[col].mean()
-            std = df_clean[col].std()
-            if std > 0:
-                df_clean[col] = (df_clean[col] - mean) / std
+            exprs.append(
+                ((pl.col(col) - pl.col(col).mean()) / pl.col(col).std()).alias(col)
+            )
+            
+        if exprs:
+            df_clean = df_clean.with_columns(exprs)
+            
         return df_clean
 
-    def validate(self, df: pd.DataFrame) -> bool:
+    def validate(self, df: pl.DataFrame) -> bool:
         return True
 
     def explain(self) -> str:
