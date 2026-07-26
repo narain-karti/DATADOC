@@ -1,5 +1,5 @@
 import polars as pl
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 import json
 from collections import Counter
 import litellm
@@ -230,7 +230,7 @@ Respond in plain text formatted nicely with bullet points and paragraphs where a
             
         try:
             planner_response = self._generate_ai_plan(model, goal, api_key)
-        except Exception as e:
+        except (RuntimeError, ValueError, TypeError) as e:
             if progress_callback:
                 progress_callback("AI Planner", "error", [f"LLM API Error: {e}"])
             raise RuntimeError(f"AI Planner failed: {e}")

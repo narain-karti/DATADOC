@@ -1,14 +1,17 @@
 <p align="center">
-  <pre>
+  <pre align="center">
  ____    _  _____  _    ____   ___   ____
 |  _ \  / \|_   _|/ \  |  _ \ / _ \ / ___|
 | | | |/ _ \ | | / _ \ | | | | | | | |
 | |_| / ___ \| |/ ___ \| |_| | |_| | |___
 |____/_/   \_\_/_/   \_\____/ \___/ \____|
+  </pre>
+</p>
+
 <h3 align="center">The Open Source Operating System for Dataset Engineering.</h3>
 
 <p align="center">
-  <a href="https://narain-karti.github.io/DATADOC/"><b>[ View Official Documentation Website ]</b></a>
+  <a href="https://narain-karti.github.io/DATADOC/"><b>&#x1F4D6; View Official Documentation Website</b></a>
 </p>
 
 <p align="center">
@@ -18,14 +21,14 @@
 </p>
 
 <p align="center">
-  <a href="#installation">Install</a> |
-  <a href="#why-datadoc">Why DATADOC?</a> |
-  <a href="#quick-start">Quick Start</a> |
-  <a href="#cli-commands">CLI Commands</a> |
-  <a href="#architecture--plugins">Architecture</a>
+  <a href="#installation"><b>Install</b></a> &bull;
+  <a href="#why-datadoc"><b>Why DATADOC?</b></a> &bull;
+  <a href="#quick-start"><b>Quick Start</b></a> &bull;
+  <a href="#cli-commands"><b>CLI Commands</b></a> &bull;
+  <a href="#architecture--plugins"><b>Architecture</b></a>
 </p>
 
----
+<hr>
 
 ## 🚀 What is DATADOC?
 

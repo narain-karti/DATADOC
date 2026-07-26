@@ -14,7 +14,7 @@ load_dotenv()
 # Determine the default model from the environment, fallback to Gemini
 DEFAULT_MODEL = os.getenv("DATADOC_MODEL", "gemini/gemini-2.0-flash")
 
-from datadoc.core.engine import DATADOC
+from datadoc.core.engine import DATADOC  # noqa: E402
 
 app = typer.Typer(
     help="DATADOC: The Open Source Operating System for Dataset Engineering.",
@@ -55,7 +55,7 @@ def load_dataset(file_path: str) -> DATADOC:
     print_step("[>>]", f"Loading [cyan]{file_path}[/cyan]...")
     try:
         doc = DATADOC(file_path)
-    except Exception as e:
+    except (FileNotFoundError, ValueError, RuntimeError) as e:
         console.print(f"\n  [bold red][X] Failed to read dataset:[/] {e}")
         raise typer.Exit(code=1)
 
@@ -149,7 +149,7 @@ def analyze(
             has_issue = p_stats.get("has_scale_issues", False)
             ratio = p_stats.get("scale_ratio", 0)
             if has_issue:
-                table.add_row("Scale Mismatch", f"{ratio}x", f"[yellow][!!] Needs scaling[/yellow]")
+                table.add_row("Scale Mismatch", f"{ratio}x", "[yellow][!!] Needs scaling[/yellow]")
             else:
                 table.add_row("Scale Mismatch", "--", "[green][OK] Balanced[/green]")
 
@@ -389,7 +389,6 @@ def visualize(file_path: str):
     Generates a massive, interactive terminal dashboard comparing the before and after states.
     """
     import plotext as plt
-    import numpy as np
     import sys
     import polars as pl
     
@@ -520,8 +519,8 @@ def report(file_path: str):
         "",
         "## Dataset Overview",
         "",
-        f"| Metric | Value |",
-        f"|--------|-------|",
+        "| Metric | Value |",
+        "|--------|-------|",
         f"| File | `{file_path}` |",
         f"| Rows | {report_data['rows']:,} |",
         f"| Columns | {report_data['cols']} |",
@@ -587,10 +586,9 @@ def plugin_list():
 
     # Create a temporary DATADOC instance with a minimal df just to list plugins
     # We don't need a real file for this
-    import io
     dummy_csv = b"a,b\n1,2\n"
     import polars as pl
-    dummy_df = pl.read_csv(dummy_csv)
+    pl.read_csv(dummy_csv)
 
     from datadoc.plugins.missing_values import MissingValuePlugin
     from datadoc.plugins.outliers import OutlierPlugin
@@ -784,7 +782,7 @@ Be helpful, analytical, and concise. Format your responses with markdown."""
                                 tool_result = f"Dataset successfully saved to {args['filename']}."
                             else:
                                 tool_result = f"Error: Unknown function {func_name}"
-                        except Exception as e:
+                        except (ValueError, KeyError, RuntimeError) as e:
                             tool_result = f"Error executing {func_name}: {e}"
                             
                         messages.append({
@@ -812,7 +810,7 @@ Be helpful, analytical, and concise. Format your responses with markdown."""
         except KeyboardInterrupt:
             console.print("\n[bold green]Ending chat session. Goodbye![/bold green]\n")
             break
-        except Exception as e:
+        except (KeyboardInterrupt, RuntimeError) as e:
             console.print(f"\n[bold red]Error:[/] {e}")
 
 if __name__ == "__main__":

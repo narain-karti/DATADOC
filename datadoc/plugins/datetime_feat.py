@@ -39,7 +39,8 @@ class DatetimePlugin(BasePlugin):
                         not_null_ratio = 1 - (parsed[col].null_count() / parsed.height)
                         if not_null_ratio > 0.5:
                             datetime_cols.append(col)
-                except Exception:
+                except (ValueError, TypeError):
+                    # Column is not a valid datetime string; skipping
                     pass
 
         return {
