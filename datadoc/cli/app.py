@@ -11,8 +11,8 @@ from dotenv import load_dotenv
 # Load environment variables (including .env) at startup
 load_dotenv()
 
-# Determine the default model from the environment, fallback to Gemini
-DEFAULT_MODEL = os.getenv("DATADOC_MODEL", "gemini/gemini-2.0-flash")
+# Determine the default model from the environment, fallback to Groq
+DEFAULT_MODEL = os.getenv("DATADOC_MODEL", "groq/llama-3.3-70b-versatile")
 
 from datadoc.core.engine import DATADOC  # noqa: E402
 
