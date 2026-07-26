@@ -18,6 +18,11 @@ class BasePlugin(ABC):
         pass
 
     @abstractmethod
+    def generate_code(self, analysis_result: dict) -> str:
+        """Return the Python code string to replicate this plugin's transformation."""
+        pass
+
+    @abstractmethod
     def apply(self, df: pd.DataFrame) -> pd.DataFrame:
         """Apply the engineering transformation and return the new dataframe."""
         pass

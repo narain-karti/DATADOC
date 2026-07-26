@@ -22,6 +22,14 @@ class CategoricalEncoderPlugin(BasePlugin):
             cols = analysis_result["categorical_columns"]
             recs.append(f"Found {len(cols)} categorical columns ({', '.join(cols)}). Recommendation: Apply One-Hot Encoding.")
         return recs
+        
+    def generate_code(self, analysis_result: dict) -> str:
+        if not analysis_result.get("has_categorical"):
+            return ""
+        cols_str = str(analysis_result.get("categorical_columns", []))
+        return f"""# Categorical Encoding
+cat_cols = {cols_str}
+df = pd.get_dummies(df, columns=cat_cols, drop_first=True)"""
 
     def apply(self, df: pd.DataFrame) -> pd.DataFrame:
         df_clean = df.copy()

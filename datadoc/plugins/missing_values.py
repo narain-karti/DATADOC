@@ -19,6 +19,17 @@ class MissingValuePlugin(BasePlugin):
             recs.append(f"Found {analysis_result['total_missing']} missing values. Recommendation: Impute numeric with Median and categorical with Mode.")
         return recs
         
+    def generate_code(self, analysis_result: dict) -> str:
+        if not analysis_result.get("has_missing_values"):
+            return ""
+        return """# Missing Value Imputation
+for col in df.columns:
+    if df[col].isnull().any():
+        if pd.api.types.is_numeric_dtype(df[col]):
+            df[col] = df[col].fillna(df[col].median())
+        else:
+            df[col] = df[col].fillna(df[col].mode()[0])"""
+        
     def apply(self, df: pd.DataFrame) -> pd.DataFrame:
         df_clean = df.copy()
         # Very simple MVP strategy: Fill numeric with median, object with mode

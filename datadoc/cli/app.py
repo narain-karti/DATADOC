@@ -90,5 +90,30 @@ def engineer(file_path: str):
     
     console.print(f"[bold green]Success![/] Clean dataset saved to [bold cyan]{output_path}[/]")
 
+@app.command()
+def pipeline(file_path: str):
+    """
+    Exports the generated pipeline as a standalone .py script.
+    """
+    if not os.path.exists(file_path):
+        console.print(f"[bold red]Error:[/] File '{file_path}' not found.")
+        raise typer.Exit(code=1)
+        
+    console.print(f"[bold green]Generating Python pipeline for {file_path}...[/]")
+    
+    try:
+        doc = DATADOC(file_path)
+        script = doc.pipeline()
+    except Exception as e:
+        console.print(f"[bold red]Failed to process dataset:[/] {e}")
+        raise typer.Exit(code=1)
+        
+    output_path = f"pipeline_{os.path.basename(file_path).split('.')[0]}.py"
+    with open(output_path, "w") as f:
+        f.write(script)
+        
+    console.print(f"[bold cyan]Pipeline script saved to:[/] {output_path}")
+    console.print("[dim]You can now run this script independently![/dim]")
+
 if __name__ == "__main__":
     app()

@@ -32,6 +32,17 @@ class OutlierPlugin(BasePlugin):
             cols = analysis_result["outlier_columns"]
             recs.append(f"Found outliers in {len(cols)} columns ({', '.join(cols)}). Recommendation: Clip values at 5th and 95th percentiles.")
         return recs
+        
+    def generate_code(self, analysis_result: dict) -> str:
+        if not analysis_result.get("has_outliers"):
+            return ""
+        cols_str = str(analysis_result.get("outlier_columns", []))
+        return f"""# Outlier Clipping
+outlier_cols = {cols_str}
+for col in outlier_cols:
+    lower = df[col].quantile(0.05)
+    upper = df[col].quantile(0.95)
+    df[col] = df[col].clip(lower=lower, upper=upper)"""
 
     def apply(self, df: pd.DataFrame) -> pd.DataFrame:
         df_clean = df.copy()
