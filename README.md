@@ -1,400 +1,223 @@
-# DATADOC: Master Planning Board
+<p align="center">
+  <pre>
+ ____    _  _____  _    ____   ___   ____
+|  _ \  / \|_   _|/ \  |  _ \ / _ \ / ___|
+| | | |/ _ \ | | / _ \ | | | | | | | |
+| |_| / ___ \| |/ ___ \| |_| | |_| | |___
+|____/_/   \_\_/_/   \_\____/ \___/ \____|
+  </pre>
+</p>
 
-> **Tagline:** "The Open Source Operating System for Dataset Engineering."
+<h3 align="center">The Open Source Operating System for Dataset Engineering.</h3>
 
-Welcome to the DATADOC Master Planning Workspace. This document serves as the single source of truth for the entire project's architecture, design decisions, and implementation strategies before any code is written.
+<p align="center">
+  <a href="#installation">Install</a> |
+  <a href="#quick-start">Quick Start</a> |
+  <a href="#cli-commands">CLI Commands</a> |
+  <a href="#plugins">Plugins</a> |
+  <a href="#contributing">Contributing</a>
+</p>
 
 ---
 
-## 🎨 Board 1: Project Vision
+## What is DATADOC?
 
-DATADOC is an intelligent, modular Dataset Engineering Framework that orchestrates existing powerful libraries (Pandas, Polars, Scikit-learn, Featuretools) into a standardized, reusable workflow.
+DATADOC is an intelligent, modular **Dataset Engineering Framework** that orchestrates existing powerful libraries (Pandas, NumPy, Scikit-learn) into a standardized, reusable workflow.
 
-```mermaid
-mindmap
-  root((DATADOC))
-    Core Philosophy
-      Orchestrate, dont replace
-      Modular and Extensible
-      Explainable Rules
-      Deterministic First
-    Initial Release (v1.0)
-      Python SDK Library
-      Terminal CLI (Rich)
-      Local Execution
-      Rule Engine
-    Long Term Ecosystem
-      REST API
-      Dashboard Web App
-      Plugin Marketplace
-      AI Orchestration Planner
-      Enterprise Edition
-      Cloud SaaS
-    Ecosystem Integrations
-      Pandas
-      Polars
-      Scikit-learn
-      Feature-engine
+**DATADOC is NOT another EDA tool.** It doesn't just show you charts. It **diagnoses**, **recommends**, and **automatically engineers** your dataset -- then hands you a portable Python script to replicate it anywhere.
+
+### Core Philosophy
+
+- **Orchestrate, don't replace** -- DATADOC wraps Pandas, NumPy, and Sklearn. It doesn't reinvent them.
+- **Modular Plugin Architecture** -- Every transformation is an isolated, testable plugin.
+- **Explainable by Default** -- Every action can be explained, rolled back, and exported as code.
+- **Deterministic First** -- v1.0 uses a rule-based engine. No black-box AI decisions.
+
+---
+
+## Installation
+
+```bash
+# Clone and install
+git clone https://github.com/narain-karti/DATADOC.git
+cd DATADOC
+pip install -e .
+
+# Or install with dev dependencies
+pip install -e ".[dev]"
 ```
 
 ---
 
-## 🏛️ Board 2: System Architecture
+## Quick Start
 
-The architecture is strictly separated into layers. The business logic lives exclusively in the **Core Engine**.
+```bash
+# Analyze your dataset's health
+datadoc analyze your_data.csv
 
-```mermaid
-graph TD
-    UserCLI["Terminal CLI (Typer / Rich)"]
-    UserSDK["Python SDK (DATADOC)"]
-    
-    subgraph "DATADOC Core"
-        Core["Core Engine"]
-        RuleEng["Deterministic Rule Engine"]
-        PluginMgr["Plugin Manager"]
-        Config["Configuration & State"]
-    end
-    
-    subgraph "Plugin Ecosystem"
-        Plugins["Pre-processing Plugins"]
-        Plugin1["Missing Values"]
-        Plugin2["Encoders"]
-        Plugin3["Outliers"]
-        Plugin4["Feature Creation"]
-    end
-    
-    subgraph "Base Libraries (The Muscle)"
-        Pandas["Pandas / Polars"]
-        Sklearn["Scikit-Learn"]
-        FeatEng["Feature-engine"]
-    end
+# Get recommendations without changing anything
+datadoc recommend your_data.csv
 
-    UserCLI --> UserSDK
-    UserSDK --> Core
-    Core --> RuleEng
-    Core --> PluginMgr
-    Core --> Config
-    RuleEng --> PluginMgr
-    PluginMgr --> Plugins
-    Plugins --> Plugin1
-    Plugins --> Plugin2
-    Plugins --> Plugin3
-    Plugins --> Plugin4
-    Plugins --> Pandas
-    Plugins --> Sklearn
-    Plugins --> FeatEng
+# Automatically engineer your dataset
+datadoc engineer your_data.csv
+
+# Compare before vs after
+datadoc compare your_data.csv
+
+# Export a standalone Python pipeline
+datadoc pipeline your_data.csv
+
+# Generate a Markdown report
+datadoc report your_data.csv
+
+# List all available plugins
+datadoc plugin
 ```
 
-> [!TIP]
-> **Design Decision:** The CLI interacts with the Python SDK, not the Core Engine directly. This ensures the SDK is robust and capable of everything the CLI can do.
+### Python SDK
 
----
+```python
+from datadoc.core.engine import DATADOC
 
-## 📁 Board 3: Project Structure
+doc = DATADOC("your_data.csv")
 
-An enterprise-grade repository structure designed for modularity and open-source contribution.
+# Analyze
+report = doc.analyze()
+print(report)
 
-```mermaid
-graph LR
-    Root["datadoc/"]
-    Root --> Pkg["datadoc/"]
-    Root --> Tests["tests/"]
-    Root --> Docs["docs/"]
-    Root --> Examples["examples/"]
-    Root --> Github[".github/"]
-    
-    Pkg --> Core["core/ (engine, rule_engine)"]
-    Pkg --> Cli["cli/ (app, commands)"]
-    Pkg --> Plugins["plugins/ (manager, base, standard/)"]
-    Pkg --> Utils["utils/"]
-    Pkg --> Config["config/"]
-    Pkg --> Exceptions["exceptions/"]
+# Get recommendations
+for rec in doc.recommend():
+    print(rec)
+
+# Auto-engineer
+clean_df = doc.engineer()
+clean_df.to_csv("clean_data.csv", index=False)
+
+# Export pipeline
+with open("pipeline.py", "w") as f:
+    f.write(doc.pipeline())
 ```
 
 ---
 
-## 🔌 Board 4: Plugin Architecture
-
-Every preprocessing operation is an isolated plugin inheriting from a strict base class.
-
-```mermaid
-classDiagram
-    class BasePlugin {
-        <<Abstract>>
-        +name: str
-        +version: str
-        +description: str
-        +priority: int
-        +supported_datatypes: list
-        +dependencies: list
-        +analyze(data) dict
-        +recommend(analysis_results) list
-        +apply(data, config) data
-        +validate(data) bool
-        +rollback(data) data
-        +explain() str
-        +estimate_runtime(data) float
-    }
-
-    class MissingValuePlugin {
-        +strategies: list
-        +analyze(data)
-        +recommend(analysis_results)
-        +apply(data, config)
-    }
-    
-    class CategoricalEncoderPlugin {
-        +analyze(data)
-        +apply(data, config)
-    }
-
-    BasePlugin <|-- MissingValuePlugin
-    BasePlugin <|-- CategoricalEncoderPlugin
-```
-
-> [!IMPORTANT]
-> **Design Decision:** Plugins MUST implement `rollback()` and `explain()`. Explainability is a core pillar. We must be able to tell the user *why* an operation occurred and revert it if needed.
-
----
-
-## ⚙️ Board 5: Feature Engineering (Rule Engine)
-
-Version 1 uses a Deterministic Rule Engine to orchestrate plugins based on hardcoded best practices.
-
-```mermaid
-graph TD
-    Start["Ingest Dataset"] --> Analyze["Run Plugin.analyze() across all Plugins"]
-    Analyze --> RuleMissing{"Missing Values > 0?"}
-    RuleMissing -- Yes --> MvRec["MissingValuePlugin.recommend()"]
-    RuleMissing -- No --> RuleCard{"Categorical Columns?"}
-    
-    MvRec --> RuleCard
-    
-    RuleCard -- Yes --> EncRec["EncodingPlugin.recommend()"]
-    RuleCard -- No --> RuleDate{"Datetime Columns?"}
-    
-    EncRec --> RuleDate
-    
-    RuleDate -- Yes --> DateRec["DatetimePlugin.recommend()"]
-    RuleDate -- No --> RuleOutlier{"Outliers Detected?"}
-    
-    DateRec --> RuleOutlier
-    
-    RuleOutlier -- Yes --> OutRec["OutlierPlugin.recommend()"]
-    RuleOutlier -- No --> BuildPipe["Construct Pipeline Plan"]
-    
-    OutRec --> BuildPipe
-    BuildPipe --> Apply["Execute Pipeline"]
-    Apply --> Validate["Validate Output Data"]
-```
-
----
-
-## 💻 Board 6: CLI Design
-
-The CLI uses modern tools (e.g., Typer and Rich) for a beautiful, colorful, and highly readable terminal experience.
+## CLI Commands
 
 | Command | Description |
-|---|---|
-| `datadoc analyze` | Scans dataset, returns rich health report table |
-| `datadoc recommend`| Outputs a list of suggested engineering steps |
-| `datadoc engineer` | Automatically applies the best-practice pipeline |
-| `datadoc compare` | Diff-like view between raw and engineered datasets |
-| `datadoc pipeline` | Exports the generated pipeline as a standalone `.py` script |
-| `datadoc report` | Generates a visual HTML/Markdown report |
-| `datadoc plugin` | Lists, enables, or disables local plugins |
+|---------|-------------|
+| `datadoc analyze <file>` | Scans dataset and shows a health report with status indicators |
+| `datadoc recommend <file>` | Lists suggested engineering steps without modifying data |
+| `datadoc engineer <file>` | Automatically applies all recommended transformations |
+| `datadoc compare <file>` | Shows a before/after diff of the raw vs engineered dataset |
+| `datadoc pipeline <file>` | Exports a standalone `.py` script with the exact Pandas code |
+| `datadoc report <file>` | Generates a full Markdown report |
+| `datadoc plugin` | Lists all registered plugins with priority and descriptions |
+| `datadoc version` | Displays the DATADOC version |
 
-```mermaid
-graph LR
-    CLI["$ datadoc analyze train.csv"] --> Parser["CLI Parser (Typer)"]
-    Parser --> Init["Initialize SDK"]
-    Init --> Analyze["SDK.analyze()"]
-    Analyze --> Format["Rich Table Formatter"]
-    Format --> Output["Render Terminal Output"]
+---
+
+## Plugins
+
+DATADOC ships with 5 built-in plugins, executed in priority order:
+
+| Priority | Plugin | What it Does |
+|----------|--------|-------------|
+| 10 | **MissingValuePlugin** | Imputes missing numeric values with median, categorical with mode |
+| 20 | **OutlierPlugin** | Detects outliers via IQR and clips at 5th/95th percentiles |
+| 30 | **DatetimePlugin** | Detects date columns and extracts year, month, day, day_of_week |
+| 40 | **CategoricalEncoderPlugin** | One-Hot Encodes categorical columns (< 10 unique values) |
+| 45 | **ScalingPlugin** | Standard scales numeric columns when scale ratio exceeds 10x |
+
+### Plugin Interface
+
+Every plugin implements the full `BasePlugin` interface:
+
+```python
+class BasePlugin(ABC):
+    name: str              # Plugin identifier
+    version: str           # Semantic version
+    description: str       # One-line description
+    priority: int          # Execution order (lower = first)
+    supported_datatypes    # Which dtypes this plugin handles
+    dependencies           # Plugins that must run before this one
+
+    analyze(df) -> dict           # Detect issues
+    recommend(analysis) -> list   # Suggest fixes
+    generate_code(analysis) -> str # Export as Python code
+    apply(df) -> DataFrame        # Apply transformation
+    validate(df) -> bool          # Verify result
+    rollback(original) -> DataFrame # Undo transformation
+    explain() -> str              # Human-readable explanation
+    estimate_runtime(df) -> float # Performance estimate
+```
+
+### Building Your Own Plugin
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for a step-by-step guide on building and registering custom plugins.
+
+---
+
+## Architecture
+
+```
+datadoc/
+  core/
+    engine.py          # DATADOC orchestrator class
+  cli/
+    app.py             # Typer CLI with Rich terminal UI
+  plugins/
+    base.py            # Abstract BasePlugin interface
+    missing_values.py  # MissingValuePlugin
+    outliers.py        # OutlierPlugin
+    datetime_feat.py   # DatetimePlugin
+    encoders.py        # CategoricalEncoderPlugin
+    scaling.py         # ScalingPlugin
+tests/
+  test_core.py         # Comprehensive test suite
+```
+
+The CLI talks to the Core Engine, which orchestrates Plugins sorted by priority. Each plugin independently analyzes, recommends, and applies transformations.
+
+---
+
+## Development
+
+```bash
+# Install dev dependencies
+pip install -e ".[dev]"
+
+# Run tests
+pytest tests/ -v
+
+# Lint
+ruff check datadoc/
 ```
 
 ---
 
-## 🐍 Board 7: Python SDK Interface
+## Roadmap
 
-The SDK must feel elegant, chained, and highly intuitive.
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant SDK as DATADOC
-    participant Engine as CoreEngine
-    participant PM as PluginManager
-
-    User->>SDK: doc = DATADOC("train.csv")
-    SDK->>Engine: load_data()
-    User->>SDK: doc.diagnose()
-    SDK->>Engine: execute_health_check()
-    Engine->>PM: run_analyze()
-    PM-->>SDK: health_metrics
-    SDK-->>User: Return Health Score
-    User->>SDK: doc.engineer()
-    SDK->>Engine: trigger_rule_engine()
-    Engine->>PM: apply_recommended_plugins()
-    PM-->>SDK: transformed_dataset
-    SDK-->>User: Return Clean Data
-```
+- [x] Core Engine with plugin orchestration
+- [x] 5 built-in plugins (Missing Values, Outliers, Datetime, Encoding, Scaling)
+- [x] 7 CLI commands with Rich terminal UI
+- [x] Pipeline export (standalone `.py` scripts)
+- [x] Markdown report generation
+- [x] Full plugin interface (validate, rollback, explain, estimate_runtime)
+- [x] CI/CD with GitHub Actions
+- [ ] PyPI release (`pip install datadoc`)
+- [ ] Polars backend support
+- [ ] REST API (FastAPI)
+- [ ] Web Dashboard
+- [ ] AI Planner (LLM replaces Rule Engine)
+- [ ] Plugin Marketplace
 
 ---
 
-## 🔄 Board 8: Core Workflow
+## License
 
-The end-to-end lifecycle of a dataset passing through DATADOC.
-
-```mermaid
-stateDiagram-v2
-    [*] --> Ingestion
-    Ingestion --> Profiling: Extract Metadata
-    Profiling --> Diagnosis: Plugin Analysis
-    Diagnosis --> Recommendation: Rule Engine triggers
-    Recommendation --> UserReview: (Optional via CLI)
-    UserReview --> Execution: Apply Plugins
-    Recommendation --> Execution: (Auto Mode)
-    Execution --> Validation: Post-Execution Checks
-    Validation --> Export: Pipeline & Data
-    Export --> [*]
-```
+MIT License. See [LICENSE](LICENSE) for details.
 
 ---
 
-## 🗺️ Board 9: Roadmap (Milestones)
+## Contributing
 
-| Milestone | Objectives | Estimated Time | Deliverables |
-|---|---|---|---|
-| **M1: Foundation** | Core Engine, Base Plugin Class, CLI skeleton | 2 Weeks | `datadoc` core package, CLI entrypoint |
-| **M2: Profiler** | `analyze()`, `diagnose()` logic, Rich CLI tables | 2 Weeks | Health score, terminal analysis reports |
-| **M3: Rule Engine** | Deterministic engine, Missing Value/Encoder plugins | 3 Weeks | First end-to-end automated `engineer()` workflow |
-| **M4: Adv Features** | Outliers, Datetimes, Scaling, Pipeline Export | 3 Weeks | Exportable `.py` pipelines, expanded plugins |
-| **M5: V1.0 Polish** | Docs, benchmarks, test coverage, release | 2 Weeks | PyPI Release, ReadTheDocs, GitHub Actions |
-
----
-
-## 🐙 Board 10: GitHub & Open Source Strategy
-
-- **Branching Strategy:** GitHub Flow (main is always deployable, feature branches for work).
-- **Semantic Versioning:** Strict SemVer (`MAJOR.MINOR.PATCH`).
-- **Issues & PRs:** Enforced templates (Bug Report, Feature Request, Plugin Proposal).
-- **CI/CD Actions:**
-  - `lint.yml` (Ruff, MyPy)
-  - `test.yml` (Pytest matrix across Python 3.9 - 3.12, OS matrix)
-  - `publish.yml` (Auto-publish to PyPI on GitHub Release)
-- **Community:** 
-  - `CONTRIBUTING.md` with explicit instructions on "How to build a Plugin".
-  - Labels: `good first issue`, `plugin-idea`, `core-engine`.
-
----
-
-## 🧪 Board 11: Testing Strategy
-
-Every step is independently testable. AI should not be involved in the determinism of tests.
-
-```mermaid
-graph TD
-    TestStrat["Testing Strategy"]
-    TestStrat --> Unit["Unit Tests"]
-    TestStrat --> Int["Integration Tests"]
-    TestStrat --> E2E["End-to-End Tests"]
-    
-    Unit --> CoreT["Core Engine Logic"]
-    Unit --> PluginT["Isolated Plugin Tests (Analyze/Apply)"]
-    
-    Int --> RuleT["Rule Engine Workflow"]
-    Int --> DataT["Cross-Plugin Data Integrity"]
-    
-    E2E --> CLI["CLI Command Execution"]
-    E2E --> SDK["Full SDK Pipeline Generation"]
-```
-
----
-
-## 🚀 Board 12: Future Roadmap (Ecosystem)
-
-```mermaid
-mindmap
-  root((DATADOC v2.0+))
-    Web UI
-      Local Streamlit/React Dashboard
-      Drag and drop pipeline editing
-    REST API
-      FastAPI Microservice wrapping Core
-    AI Planner
-      LLM replaces Rule Engine
-      Dynamic strategy generation
-    Enterprise
-      Cloud Data Warehouse Integrations
-      Role-based Access
-      Dataset Registry
-```
-
----
-
-## 🛒 Board 13: Plugin Marketplace Architecture
-
-In future versions, plugins are decoupled from the core repository.
-
-```mermaid
-graph TD
-    CLI["CLI: datadoc plugin install imbalanced-learn"] --> Registry["Marketplace Registry (JSON/API)"]
-    Registry --> Pypi["PyPI Package Download"]
-    Pypi --> Local["Install to local Virtual Environment"]
-    Local --> PluginMgr["Core Plugin Manager auto-discovers"]
-```
-
-> [!NOTE]
-> **Design Decision:** The marketplace will act as a curated index pointing to PyPI packages prefixed with `datadoc-plugin-`. This leverages existing Python infrastructure (pip/uv).
-
----
-
-## 🧠 Board 14: AI Planner (Future Vision)
-
-When the project matures, the deterministic rule engine is swapped for an LLM planner, **but the plugins remain unchanged**.
-
-```mermaid
-graph TD
-    Data["Dataset"] --> Meta["Extract Metadata (Schema, Stats)"]
-    Meta --> Prompt["Compile Prompt with Available Plugins"]
-    Prompt --> LLM["LLM (GPT/Claude/Gemini)"]
-    LLM --> JSON["Output JSON Execution Plan"]
-    JSON --> Core["Core Engine Executes Plan"]
-    Core --> CleanData["Engineered Dataset"]
-```
-
----
-
-## 🪜 Board 15: Implementation Sequence
-
-> **Crucial Rule:** Never build everything at once. Build sequentially, ensuring a working, testable product at each step.
-
-1. **Step 1: The Skeleton** 
-   - Set up `pyproject.toml`, Ruff, Pytest.
-   - Create `DATADOC` base class (no logic, just loading data into Pandas).
-2. **Step 2: Plugin Architecture Foundation**
-   - Create `BasePlugin` abstract class.
-   - Create `PluginManager` that registers a dummy plugin.
-3. **Step 3: CLI Scaffolding**
-   - Implement `Typer` app with a dummy `analyze` command that prints "Hello from DATADOC".
-4. **Step 4: The Profiler & Health Metrics**
-   - Implement basic `analyze()` in the Core. Calculate missing value %, data types.
-   - Connect CLI to print Rich tables.
-5. **Step 5: The First Real Plugin**
-   - Implement `MissingValuePlugin` (Mean/Median imputation).
-6. **Step 6: The Rule Engine V1**
-   - Implement basic IF statements in Core to trigger `MissingValuePlugin` if missing values are found.
-7. **Step 7: The "Fix" Workflow**
-   - Wire SDK `doc.fix()` to execute the Rule Engine. 
-   - Wire CLI `datadoc fix` to output the result.
-8. **Step 8: Expanding the Arsenal (Parallelizable)**
-   - Add `CategoricalEncoderPlugin`.
-   - Add `OutlierPlugin`.
-9. **Step 9: Pipeline Generation**
-   - Implement logic to record plugin actions and export them to a `.py` file (`datadoc pipeline`).
-10. **Step 10: Polish & Release v0.1.0**
-    - Documentation, examples, and CI/CD pipelines.
-
----
-*End of Master Planning Board.*
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.

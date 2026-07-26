@@ -27,7 +27,7 @@ class MissingValuePlugin(BasePlugin):
         missing_by_col = df.isnull().sum()
         cols_with_missing = missing_by_col[missing_by_col > 0].to_dict()
         return {
-            "has_missing_values": missing_count > 0,
+            "has_missing_values": bool(missing_count > 0),
             "total_missing": int(missing_count),
             "columns_affected": cols_with_missing,
         }
@@ -66,7 +66,7 @@ for col in df.columns:
         return df_clean
 
     def validate(self, df: pd.DataFrame) -> bool:
-        return df.isnull().sum().sum() == 0
+        return bool(df.isnull().sum().sum() == 0)
 
     def explain(self) -> str:
         return (

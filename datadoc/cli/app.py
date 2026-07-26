@@ -5,6 +5,7 @@ from rich.panel import Panel
 from rich.text import Text
 from rich import box
 import os
+import time
 
 from datadoc.core.engine import DATADOC
 
@@ -69,8 +70,9 @@ def analyze(file_path: str):
     print_banner()
     doc = load_dataset(file_path)
 
-    print_step("[..]", "Running health analysis...")
-    report = doc.analyze()
+    with console.status("[bold cyan]Running health analysis...", spinner="dots"):
+        report = doc.analyze()
+    print_step("[OK]", "Analysis complete.", "bold green")
 
     console.print()
     table = Table(
@@ -134,8 +136,9 @@ def recommend(file_path: str):
     print_banner()
     doc = load_dataset(file_path)
 
-    print_step("[..]", "Generating recommendations...")
-    recommendations = doc.recommend()
+    with console.status("[bold cyan]Generating recommendations...", spinner="dots"):
+        recommendations = doc.recommend()
+    print_step("[OK]", "Recommendations ready.", "bold green")
 
     console.print()
     if not recommendations:
@@ -175,18 +178,14 @@ def engineer(file_path: str):
     print_banner()
     doc = load_dataset(file_path)
 
-    print_step("[..]", "Running Rule Engine...")
+    with console.status("[bold cyan]Running Rule Engine...", spinner="dots"):
+        clean_df = doc.engineer()
 
-    # Show which plugins are being applied
-    for plugin in doc.plugins:
-        analysis = plugin.analyze(doc.df)
-        has_work = any(bool(v) for k, v in analysis.items() if k.startswith('has_'))
-        if has_work:
-            print_step("[>>]", f"Applying {plugin.name}...", "dim")
-        else:
-            print_step("[--]", f"Skipping {plugin.name} (not needed)", "dim")
-
-    clean_df = doc.engineer()
+    # Show which plugins were applied/skipped
+    for name in doc._applied_plugins:
+        print_step("[>>]", f"Applied {name}", "dim")
+    for name in doc._skipped_plugins:
+        print_step("[--]", f"Skipped {name} (not needed)", "dim")
 
     output_path = f"clean_{os.path.basename(file_path)}"
     clean_df.to_csv(output_path, index=False)
@@ -215,8 +214,8 @@ def compare(file_path: str):
     print_banner()
     doc = load_dataset(file_path)
 
-    print_step("[..]", "Engineering dataset for comparison...")
-    clean_df = doc.engineer()
+    with console.status("[bold cyan]Engineering dataset for comparison...", spinner="dots"):
+        clean_df = doc.engineer()
     diff = doc.compare(clean_df)
 
     console.print()
@@ -275,9 +274,10 @@ def pipeline(file_path: str):
     print_banner()
     doc = load_dataset(file_path)
 
-    print_step("[..]", "Generating Python pipeline...")
+    with console.status("[bold cyan]Generating Python pipeline...", spinner="dots"):
+        script = doc.pipeline()
+    print_step("[OK]", "Pipeline generated.", "bold green")
 
-    script = doc.pipeline()
     output_path = f"pipeline_{os.path.basename(file_path).split('.')[0]}.py"
 
     with open(output_path, "w") as f:
@@ -305,10 +305,10 @@ def report(file_path: str):
     print_banner()
     doc = load_dataset(file_path)
 
-    print_step("[..]", "Generating report...")
-    report_data = doc.analyze()
-    recommendations = doc.recommend()
-    plugin_info = doc.list_plugins()
+    with console.status("[bold cyan]Generating report...", spinner="dots"):
+        report_data = doc.analyze()
+        recommendations = doc.recommend()
+        plugin_info = doc.list_plugins()
 
     md_lines = [
         f"# DATADOC Report: {os.path.basename(file_path)}",

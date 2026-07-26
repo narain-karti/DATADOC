@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# DATADOC generated outputs
+clean_*.csv
+pipeline_*.py
+report_*.md
+
+# Testing
+.pytest_cache/
+htmlcov/
+.coverage
