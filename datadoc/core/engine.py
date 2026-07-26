@@ -1,6 +1,8 @@
 import pandas as pd
 from typing import Dict, Any
 from datadoc.plugins.missing_values import MissingValuePlugin
+from datadoc.plugins.encoders import CategoricalEncoderPlugin
+from datadoc.plugins.outliers import OutlierPlugin
 
 class DATADOC:
     def __init__(self, file_path: str):
@@ -9,7 +11,9 @@ class DATADOC:
         
         # Hardcoded rule engine for MVP
         self.plugins = [
-            MissingValuePlugin()
+            MissingValuePlugin(),
+            OutlierPlugin(),
+            CategoricalEncoderPlugin()
         ]
         
     def analyze(self) -> Dict[str, Any]:
@@ -40,8 +44,9 @@ class DATADOC:
         
         for plugin in self.plugins:
             analysis = plugin.analyze(df_transformed)
-            # Simplistic rule trigger
-            if analysis.get("has_missing_values"):
+            # Generic rule trigger: if any 'has_' flag is True
+            should_apply = any(v for k, v in analysis.items() if k.startswith('has_') and v is True)
+            if should_apply:
                 df_transformed = plugin.apply(df_transformed)
                 
         return df_transformed

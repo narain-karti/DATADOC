@@ -36,7 +36,11 @@ def analyze(file_path: str):
     # Iterate plugin reports
     for p_name, p_stats in report["plugins"].items():
         if p_name == "MissingValuePlugin":
-            table.add_row("Total Missing Values", str(p_stats["total_missing"]))
+            table.add_row("Missing Values", str(p_stats["total_missing"]))
+        elif p_name == "OutlierPlugin":
+            table.add_row("Columns with Outliers", str(len(p_stats["outlier_columns"])))
+        elif p_name == "CategoricalEncoderPlugin":
+            table.add_row("Categorical Columns", str(len(p_stats["categorical_columns"])))
     
     console.print(table)
     
