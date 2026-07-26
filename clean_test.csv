@@ -1,6 +1,6 @@
 id,age,salary,name_Bob,name_Charlie,name_Eve,department_HR,department_Sales
 1,30.0,50000.0,False,False,False,False,False
-2,,60000.0,True,False,False,False,True
-3,25.0,,False,True,False,False,False
+2,32.5,60000.0,True,False,False,False,True
+3,25.0,65000.0,False,True,False,False,False
 4,40.0,80000.0,False,False,False,True,False
 5,35.0,70000.0,False,False,True,False,False
