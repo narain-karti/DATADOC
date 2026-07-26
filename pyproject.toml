@@ -1,5 +1,5 @@
 [project]
-name = "datadoc"
+name = "datadoc-cli"
 version = "0.1.0"
 description = "The Open Source Operating System for Dataset Engineering."
 readme = "README.md"
@@ -26,6 +26,9 @@ dependencies = [
     "polars>=0.20.0",
     "numpy>=1.24.0",
     "plotext>=5.2.8",
+    "litellm>=1.40.0",
+    "pydantic>=2.0.0",
+    "python-dotenv>=1.0.0",
 ]
 
 [project.optional-dependencies]
@@ -52,4 +55,7 @@ line-length = 100
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["datadoc"]
 

@@ -333,3 +333,23 @@ class TestBasePluginInterface:
         df = pl.DataFrame({"a": [1, 2, 3]})
         result = plugin.validate(df)
         assert isinstance(result, bool)
+
+
+def test_ai_engineer_mock(sample_csv, monkeypatch):
+    doc = DATADOC(sample_csv)
+    
+    # Mock litellm.completion
+    class MockChoice:
+        message = type("Message", (), {"content": '{"plan": [{"plugin_name": "MissingValuePlugin", "reason": "Fix nulls"}]}'})()
+
+    class MockResponse:
+        choices = [MockChoice()]
+
+    def mock_completion(*args, **kwargs):
+        return MockResponse()
+
+    monkeypatch.setattr("litellm.completion", mock_completion)
+
+    clean_df = doc.ai_engineer(model="mock/model", goal="Clean data", api_key="dummy_key")
+    assert clean_df["name"].null_count() == 0
+    assert "MissingValuePlugin" in doc._applied_plugins

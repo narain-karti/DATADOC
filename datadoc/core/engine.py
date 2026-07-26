@@ -1,6 +1,9 @@
 import polars as pl
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
+import json
 from collections import Counter
+import litellm
+from pydantic import BaseModel, Field
 from datadoc.plugins.base import BasePlugin
 from datadoc.plugins.missing_values import MissingValuePlugin
 from datadoc.plugins.outliers import OutlierPlugin
@@ -140,3 +143,103 @@ class DATADOC:
                 "dependencies": plugin.dependencies,
             })
         return info
+
+    def _extract_metadata(self) -> str:
+        """Safely extracts dataset metadata without exposing raw rows."""
+        meta = {
+            "rows": self.df.height,
+            "columns": self.df.width,
+            "schema": {col: str(dtype) for col, dtype in zip(self.df.columns, self.df.dtypes)},
+            "null_counts": {col: self.df[col].null_count() for col in self.df.columns if self.df[col].null_count() > 0},
+            "available_plugins": [p.name for p in self.plugins]
+        }
+        return json.dumps(meta, indent=2)
+
+    def ai_engineer(self, model: str, goal: str, api_key: str = None, progress_callback=None) -> pl.DataFrame:
+        """Uses an LLM to plan and execute a custom pipeline based on a user goal."""
+        import os
+        if api_key:
+            # For litellm, we can just set the env var for the provider, 
+            # but litellm handles api_key directly in completion if specified.
+            # However, litellm often expects the specific provider key (e.g., GEMINI_API_KEY).
+            # To be safe, we pass api_key to completion.
+            pass
+        
+        class PluginExecution(BaseModel):
+            plugin_name: str = Field(description="The exact class name of the plugin to execute.")
+            reason: str = Field(description="Why this plugin is needed for the user's goal.")
+            
+        class AIPlannerResponse(BaseModel):
+            plan: List[PluginExecution]
+
+        metadata = self._extract_metadata()
+        
+        prompt = f"""You are an expert Data Scientist building a dataset engineering pipeline.
+You have the following dataset metadata:
+{metadata}
+
+The user's specific goal is: "{goal}"
+
+Based on the metadata and the goal, create an execution plan selecting ONLY from the `available_plugins`.
+You may skip plugins if they are not relevant to the goal. You may order them logically.
+Respond strictly with a JSON object matching the requested schema.
+"""
+
+        if progress_callback:
+            progress_callback("AI Planner", "running", ["Consulting LLM..."])
+            
+        try:
+            response = litellm.completion(
+                model=model,
+                messages=[{"role": "user", "content": prompt}],
+                api_key=api_key,
+                response_format=AIPlannerResponse
+            )
+        except Exception as e:
+            if progress_callback:
+                progress_callback("AI Planner", "error", [f"LLM API Error ({e.__class__.__name__}): {e}"])
+            raise RuntimeError(f"AI Planner failed: {e}")
+        
+        # Parse the JSON response
+        try:
+            plan_data = json.loads(response.choices[0].message.content)
+            planner_response = AIPlannerResponse(**plan_data)
+        except Exception as e:
+            if progress_callback:
+                progress_callback("AI Planner", "error", [f"Failed to parse LLM response: {e}"])
+            raise ValueError(f"Invalid AI response format: {e}")
+
+        df_transformed = self.df.clone()
+        self._applied_plugins = []
+        self._skipped_plugins = []
+
+        if progress_callback:
+            progress_callback("AI Planner", "applied", [f"Generated plan with {len(planner_response.plan)} steps."])
+
+        # Execute the plan
+        plugin_map = {p.name: p for p in self.plugins}
+        
+        for step in planner_response.plan:
+            if step.plugin_name not in plugin_map:
+                continue
+                
+            plugin = plugin_map[step.plugin_name]
+            
+            if progress_callback:
+                progress_callback(plugin.name, "running", [step.reason])
+                
+            df_transformed = plugin.apply(df_transformed)
+            self._applied_plugins.append(plugin.name)
+            
+            if progress_callback:
+                progress_callback(plugin.name, "applied", [f"Reason: {step.reason}"])
+                
+        # Find skipped plugins
+        for p in self.plugins:
+            if p.name not in self._applied_plugins:
+                self._skipped_plugins.append(p.name)
+                if progress_callback:
+                    progress_callback(p.name, "skipped", ["Skipped by AI Planner"])
+                    
+        return df_transformed
+

@@ -6,6 +6,7 @@ from rich.text import Text
 from rich import box
 import os
 import time
+from dotenv import load_dotenv
 
 from datadoc.core.engine import DATADOC
 
@@ -171,27 +172,72 @@ def recommend(file_path: str):
 # COMMAND: engineer
 # ──────────────────────────────────────────────────────────────
 @app.command()
-def engineer(file_path: str):
+def engineer(
+    file_path: str,
+    ai: bool = typer.Option(False, "--ai", help="Use the AI Planner to dynamically orchestrate the pipeline."),
+    goal: str = typer.Option("Clean the dataset for machine learning", "--goal", help="The semantic goal for the AI Planner."),
+    model: str = typer.Option("gemini/gemini-2.0-flash", "--model", help="The LiteLLM model string to use.")
+):
     """
-    Automatically applies best-practice pipelines.
+    Automatically applies best-practice pipelines or uses AI to plan.
     """
+    load_dotenv()  # Load .env variables
+
     print_banner()
     doc = load_dataset(file_path)
 
     console.print()
-    with console.status("[bold cyan]Running Rule Engine...", spinner="dots") as status:
-        def on_progress(plugin_name, p_status, details):
-            if p_status == "running":
-                status.update(f"[bold cyan]Running [yellow]{plugin_name}[/yellow]...[/bold cyan]")
-                time.sleep(0.5) # Add a small delay to make the UI update visible to the user
-            elif p_status == "applied":
-                print_step("[>>]", f"Applied [bold cyan]{plugin_name}[/bold cyan]", "bold white")
-                for detail in details:
-                    console.print(f"      [dim]-> {detail}[/dim]")
-            elif p_status == "skipped":
-                print_step("[--]", f"Skipped [dim]{plugin_name}[/dim] (not needed)", "dim white")
+    if ai:
+        # Check for API key logic
+        api_key = None
+        # Let's try to detect based on model prefix
+        if model.startswith("gemini"):
+            api_key = os.getenv("GEMINI_API_KEY")
+            key_name = "GEMINI_API_KEY"
+        elif model.startswith("gpt") or model.startswith("openai"):
+            api_key = os.getenv("OPENAI_API_KEY")
+            key_name = "OPENAI_API_KEY"
+        elif model.startswith("claude") or model.startswith("anthropic"):
+            api_key = os.getenv("ANTHROPIC_API_KEY")
+            key_name = "ANTHROPIC_API_KEY"
+        else:
+            api_key = os.getenv("OPENAI_API_KEY") # Default fallback
+            key_name = "API_KEY"
+            
+        if not api_key:
+            console.print(f"\n  [bold yellow][!][/bold yellow] {key_name} not found in environment or .env file.")
+            api_key = typer.prompt(f"Please enter your {key_name}", hide_input=True)
 
-        clean_df = doc.engineer(progress_callback=on_progress)
+        with console.status(f"[bold cyan]Running AI Planner ({model})...", spinner="dots") as status:
+            def on_progress(plugin_name, p_status, details):
+                if p_status == "running":
+                    status.update(f"[bold cyan]Running [yellow]{plugin_name}[/yellow]...[/bold cyan]")
+                    time.sleep(0.2)
+                elif p_status == "applied":
+                    print_step("[>>]", f"Applied [bold cyan]{plugin_name}[/bold cyan]", "bold white")
+                    for detail in details:
+                        console.print(f"      [dim]-> {detail}[/dim]")
+                elif p_status == "skipped":
+                    print_step("[--]", f"Skipped [dim]{plugin_name}[/dim]", "dim white")
+                elif p_status == "error":
+                    console.print(f"\n  [bold red][X] Error in AI Planner:[/] {details[0]}")
+                    raise typer.Exit(code=1)
+
+            clean_df = doc.ai_engineer(model=model, goal=goal, api_key=api_key, progress_callback=on_progress)
+    else:
+        with console.status("[bold cyan]Running Rule Engine...", spinner="dots") as status:
+            def on_progress(plugin_name, p_status, details):
+                if p_status == "running":
+                    status.update(f"[bold cyan]Running [yellow]{plugin_name}[/yellow]...[/bold cyan]")
+                    time.sleep(0.5)
+                elif p_status == "applied":
+                    print_step("[>>]", f"Applied [bold cyan]{plugin_name}[/bold cyan]", "bold white")
+                    for detail in details:
+                        console.print(f"      [dim]-> {detail}[/dim]")
+                elif p_status == "skipped":
+                    print_step("[--]", f"Skipped [dim]{plugin_name}[/dim] (not needed)", "dim white")
+    
+            clean_df = doc.engineer(progress_callback=on_progress)
 
     output_path = f"clean_{os.path.basename(file_path)}"
     clean_df.write_csv(output_path)

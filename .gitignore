@@ -31,3 +31,7 @@ report_*.md
 .pytest_cache/
 htmlcov/
 .coverage
+
+# Environment & Secrets
+.env
+.env.*
