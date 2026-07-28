@@ -5,23 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DATADOC | The Open Source OS for Dataset Engineering</title>
     <link rel="stylesheet" href="css/style.css">
-    <style>
-        .code-block {
-            background: #111;
-            color: #5af78e;
-            padding: 1.2rem;
-            border-left: 4px solid var(--accent-color, #ff5e00);
-            border: 2px solid var(--text-color, #fff);
-            font-family: monospace;
-            font-size: 0.95rem;
-            line-height: 1.5;
-            overflow-x: auto;
-            margin: 1rem 0;
-        }
-        .code-block pre {
-            margin: 0;
-        }
-    </style>
+    
+    <!-- Prism CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/toolbar/prism-toolbar.min.css" rel="stylesheet" />
 </head>
 <body>
 
@@ -84,7 +71,7 @@
             </div>
             
             <div class="code-block">
-                <pre><code>from datadoc.core.engine import DATADOC
+                <pre><code class="language-python">from datadoc.core.engine import DATADOC
 
 # 1. Initialize with your raw CSV
 doc = DATADOC("messy_raw_data.csv")
@@ -224,7 +211,7 @@ y = df_clean["target"]</code></pre>
                 <h2>AUTOMATE 80% OF<br>YOUR DATA WRANGLING.</h2>
                 <p>Install via pip or uv from PyPI. Works out of the box.</p>
                 <div class="code-block">
-                    <pre><code>pip install datadoc-cli</code></pre>
+                    <pre><code class="language-bash">pip install datadoc-cli</code></pre>
                 </div>
             </div>
             <div>
@@ -266,5 +253,11 @@ y = df_clean["target"]</code></pre>
         </div>
     </footer>
 
+    <!-- PrismJS Syntax Highlighting & Copy Button -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/toolbar/prism-toolbar.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/copy-to-clipboard/prism-copy-to-clipboard.min.js"></script>
 </body>
 </html>

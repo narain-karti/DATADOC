@@ -6,21 +6,7 @@
     <title>Python SDK Guide | DATADOC</title>
     <link rel="stylesheet" href="css/style.css">
     <style>
-        .code-block {
-            background: #111;
-            color: #5af78e;
-            padding: 1.2rem;
-            border-left: 4px solid var(--accent-color, #ff5e00);
-            border: 2px solid var(--text-color, #fff);
-            font-family: monospace;
-            font-size: 0.95rem;
-            line-height: 1.5;
-            overflow-x: auto;
-            margin: 1rem 0 1.5rem 0;
-        }
-        .code-block pre {
-            margin: 0;
-        }
+        
         .tip-box {
             background-color: #1a1a1a;
             border: 2px solid #00e5ff;
@@ -32,6 +18,9 @@
             margin-top: 0;
         }
     </style>
+    <!-- Prism CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/toolbar/prism-toolbar.min.css" rel="stylesheet" />
 </head>
 <body>
 
@@ -97,7 +86,7 @@
                 <h2 id="install">1. Installation</h2>
                 <p>DATADOC is available directly from PyPI. Install it in your environment or notebook cell:</p>
                 <div class="code-block">
-                    <pre><code># Install in Jupyter / Colab / Kaggle
+                    <pre><code class="language-python"># Install in Jupyter / Colab / Kaggle
 !pip install datadoc-cli
 
 # Or using uv for ultra-fast installation
@@ -108,7 +97,7 @@
                 <h2 id="quickstart">2. Two-Line Quickstart</h2>
                 <p>Automate 80% of data wrangling without writing custom imputers, manual scalers, or one-hot encoders:</p>
                 <div class="code-block">
-                    <pre><code>from datadoc.core.engine import DATADOC
+                    <pre><code class="language-python">from datadoc.core.engine import DATADOC
 
 # 1. Initialize engine with your raw CSV file path
 doc = DATADOC("messy_raw_data.csv")
@@ -124,7 +113,7 @@ print("Cleaned DataFrame Shape:", clean_df.shape)</code></pre>
                 <p>DATADOC processes datasets using a Rust-backed Polars engine for maximum speed and sub-second memory efficiency. However, ML frameworks like Scikit-Learn, XGBoost, and LightGBM often expect Pandas DataFrames.</p>
                 <p>You can instantly bridge both worlds using Polars' zero-copy conversion:</p>
                 <div class="code-block">
-                    <pre><code># Get cleaned data as a Pandas DataFrame for Scikit-Learn
+                    <pre><code class="language-python"># Get cleaned data as a Pandas DataFrame for Scikit-Learn
 df_pandas = doc.engineer().to_pandas()
 
 # Split into X and y directly
@@ -141,7 +130,7 @@ y = df_pandas["target"]</code></pre>
                 <h2 id="analysis">4. Data Inspection & Analysis</h2>
                 <p>Before applying transformations, inspect what issues DATADOC discovered in your raw dataset:</p>
                 <div class="code-block">
-                    <pre><code># Generate a human-readable diagnostic report
+                    <pre><code class="language-python"># Generate a human-readable diagnostic report
 report = doc.analyze()
 print(report)
 
@@ -155,7 +144,7 @@ for r in recs:
                 <h2 id="progress">5. Real-Time Execution Tracking</h2>
                 <p>Track plugin progress step-by-step using custom callbacks during pipeline execution:</p>
                 <div class="code-block">
-                    <pre><code>def track_pipeline(plugin_name, status, details):
+                    <pre><code class="language-python">def track_pipeline(plugin_name, status, details):
     if status == "applied":
         print(f"✅ {plugin_name}: {details[0]}")
     elif status == "skipped":
@@ -168,7 +157,7 @@ clean_df = doc.engineer(progress_callback=track_pipeline)</code></pre>
                 <h2 id="ai-engineer">6. AI-Driven Auto-Engineering (<code>ai_engineer</code>)</h2>
                 <p>Leverage Generative AI (via LiteLLM) to analyze your dataset and generate an optimized plugin plan based on your plain-English objective:</p>
                 <div class="code-block">
-                    <pre><code># Run AI-guided engineering with your custom goal
+                    <pre><code class="language-python"># Run AI-guided engineering with your custom goal
 clean_df = doc.ai_engineer(
     goal="Optimize features for a churn classification model",
     model="groq/llama-3.3-70b-versatile",
@@ -180,7 +169,7 @@ clean_df = doc.ai_engineer(
                 <h2 id="custom-plugins">7. Writing Custom Plugins</h2>
                 <p>Extend DATADOC by subclassing <code>BasePlugin</code> to introduce custom domain-specific transformations:</p>
                 <div class="code-block">
-                    <pre><code>import polars as pl
+                    <pre><code class="language-python">import polars as pl
 from datadoc.plugins.base import BasePlugin
 
 class CustomLogTransformPlugin(BasePlugin):
@@ -216,7 +205,7 @@ clean_df = doc.engineer()</code></pre>
                 <h2 id="kaggle-demo">8. Kaggle / Google Colab End-to-End ML Pipeline</h2>
                 <p>Here is a complete production-grade snippet showing how DATADOC turns messy data into a trained Random Forest classifier in under 15 lines of code:</p>
                 <div class="code-block">
-                    <pre><code>import pandas as pd
+                    <pre><code class="language-python">import pandas as pd
 from datadoc.core.engine import DATADOC
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
@@ -287,5 +276,11 @@ print(classification_report(y_test, preds))</code></pre>
         </div>
     </footer>
 
+    <!-- PrismJS Syntax Highlighting & Copy Button -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/toolbar/prism-toolbar.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/copy-to-clipboard/prism-copy-to-clipboard.min.js"></script>
 </body>
 </html>

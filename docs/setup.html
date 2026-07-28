@@ -5,23 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DATADOC | Setup & Installation Guide</title>
     <link rel="stylesheet" href="css/style.css">
-    <style>
-        .code-block {
-            background: #111;
-            color: #5af78e;
-            padding: 1.2rem;
-            border-left: 4px solid var(--accent-color, #ff5e00);
-            border: 2px solid var(--text-color, #fff);
-            font-family: monospace;
-            font-size: 0.95rem;
-            line-height: 1.5;
-            overflow-x: auto;
-            margin: 1rem 0 1.5rem 0;
-        }
-        .code-block pre {
-            margin: 0;
-        }
-    </style>
+    
+    <!-- Prism CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/toolbar/prism-toolbar.min.css" rel="stylesheet" />
 </head>
 <body>
 
@@ -56,18 +43,18 @@
 
                 <h3 style="margin-top: 1rem;">1. Install via pip</h3>
                 <div class="code-block">
-                    <pre><code>$ pip install datadoc-cli</code></pre>
+                    <pre><code class="language-bash">$ pip install datadoc-cli</code></pre>
                 </div>
 
                 <h3 style="margin-top: 1rem;">2. Install via uv (Recommended for speed)</h3>
                 <div class="code-block">
-                    <pre><code>$ uv pip install datadoc-cli</code></pre>
+                    <pre><code class="language-bash">$ uv pip install datadoc-cli</code></pre>
                 </div>
 
                 <h3 style="margin-top: 1rem;">3. Environment Variables (Optional for AI Orchestration)</h3>
                 <p>If using the <code>--ai</code> flag or <code>doc.ai_engineer()</code>, create a <code>.env</code> file in your working directory:</p>
                 <div class="code-block">
-                    <pre><code>DATADOC_MODEL=groq/llama-3.3-70b-versatile
+                    <pre><code class="language-python">DATADOC_MODEL=groq/llama-3.3-70b-versatile
 GROQ_API_KEY=gsk_your_groq_api_key
 GEMINI_API_KEY=AIza_your_gemini_api_key</code></pre>
                 </div>
@@ -86,27 +73,27 @@ GEMINI_API_KEY=AIza_your_gemini_api_key</code></pre>
             <ul class="cmd-list" style="margin-top: 1.5rem;">
                 <li>
                     <span><span class="badge">01</span> datadoc analyze raw_data.csv</span>
-                    <span style="font-size: 0.9rem; color: #aaa;">Generates full diagnostic health report</span>
+                    <span style="font-size: 0.9rem; color: #555; font-weight: 500;">Generates full diagnostic health report</span>
                 </li>
                 <li>
                     <span><span class="badge">02</span> datadoc recommend raw_data.csv</span>
-                    <span style="font-size: 0.9rem; color: #aaa;">Shows recommended plugin transformations</span>
+                    <span style="font-size: 0.9rem; color: #555; font-weight: 500;">Shows recommended plugin transformations</span>
                 </li>
                 <li>
                     <span><span class="badge">03</span> datadoc engineer raw_data.csv</span>
-                    <span style="font-size: 0.9rem; color: #aaa;">Executes full automated cleaning & exports clean CSV</span>
+                    <span style="font-size: 0.9rem; color: #555; font-weight: 500;">Executes full automated cleaning & exports clean CSV</span>
                 </li>
                 <li>
                     <span><span class="badge">04</span> datadoc compare raw_data.csv clean.csv</span>
-                    <span style="font-size: 0.9rem; color: #aaa;">Displays visual side-by-side terminal comparison</span>
+                    <span style="font-size: 0.9rem; color: #555; font-weight: 500;">Displays visual side-by-side terminal comparison</span>
                 </li>
                 <li>
                     <span><span class="badge">05</span> datadoc pipeline raw_data.csv</span>
-                    <span style="font-size: 0.9rem; color: #aaa;">Exports reproducible Python source code file</span>
+                    <span style="font-size: 0.9rem; color: #555; font-weight: 500;">Exports reproducible Python source code file</span>
                 </li>
                 <li>
                     <span><span class="badge">06</span> datadoc chat raw_data.csv</span>
-                    <span style="font-size: 0.9rem; color: #aaa;">Interactive agentic AI chat session</span>
+                    <span style="font-size: 0.9rem; color: #555; font-weight: 500;">Interactive agentic AI chat session</span>
                 </li>
             </ul>
         </section>
@@ -145,5 +132,11 @@ GEMINI_API_KEY=AIza_your_gemini_api_key</code></pre>
         </div>
     </footer>
 
+    <!-- PrismJS Syntax Highlighting & Copy Button -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/toolbar/prism-toolbar.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/copy-to-clipboard/prism-copy-to-clipboard.min.js"></script>
 </body>
 </html>

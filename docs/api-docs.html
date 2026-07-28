@@ -6,21 +6,7 @@
     <title>API Documentation | DATADOC</title>
     <link rel="stylesheet" href="css/style.css">
     <style>
-        .code-block {
-            background: #111;
-            color: #5af78e;
-            padding: 1.2rem;
-            border-left: 4px solid var(--accent-color, #ff5e00);
-            border: 2px solid var(--text-color, #fff);
-            font-family: monospace;
-            font-size: 0.95rem;
-            line-height: 1.5;
-            overflow-x: auto;
-            margin: 1rem 0 1.5rem 0;
-        }
-        .code-block pre {
-            margin: 0;
-        }
+        
         .api-card {
             border: 2px solid var(--text-color, #fff);
             background: #1a1a1a;
@@ -41,6 +27,9 @@
             border-radius: 2px;
         }
     </style>
+    <!-- Prism CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/toolbar/prism-toolbar.min.css" rel="stylesheet" />
 </head>
 <body>
 
@@ -107,7 +96,7 @@
                     <h3>datadoc analyze &lt;file.csv&gt; [--ai]</h3>
                     <p>Analyzes dataset health, profiling missing values, outliers, data types, and scaling issues.</p>
                     <div class="code-block">
-                        <pre><code># Basic analysis
+                        <pre><code class="language-python"># Basic analysis
 $ datadoc analyze raw_data.csv
 
 # AI-enhanced analysis via LiteLLM
@@ -119,7 +108,7 @@ $ datadoc analyze raw_data.csv --ai</code></pre>
                     <h3>datadoc recommend &lt;file.csv&gt;</h3>
                     <p>Returns prioritized engineering recommendations for transforming raw columns into ML features.</p>
                     <div class="code-block">
-                        <pre><code>$ datadoc recommend raw_data.csv</code></pre>
+                        <pre><code class="language-bash">$ datadoc recommend raw_data.csv</code></pre>
                     </div>
                 </div>
 
@@ -127,7 +116,7 @@ $ datadoc analyze raw_data.csv --ai</code></pre>
                     <h3>datadoc engineer &lt;file.csv&gt; [--output clean.csv]</h3>
                     <p>Executes the complete autonomous cleaning pipeline and exports the engineered CSV file.</p>
                     <div class="code-block">
-                        <pre><code># Default output: clean_raw_data.csv
+                        <pre><code class="language-python"># Default output: clean_raw_data.csv
 $ datadoc engineer raw_data.csv
 
 # Specify custom output path
@@ -139,7 +128,7 @@ $ datadoc engineer raw_data.csv --output processed_features.csv</code></pre>
                     <h3>datadoc compare &lt;raw.csv&gt; &lt;clean.csv&gt;</h3>
                     <p>Displays side-by-side terminal comparison tables comparing row counts, column counts, missing values, and scaling statistics.</p>
                     <div class="code-block">
-                        <pre><code>$ datadoc compare raw_data.csv clean_raw_data.csv</code></pre>
+                        <pre><code class="language-bash">$ datadoc compare raw_data.csv clean_raw_data.csv</code></pre>
                     </div>
                 </div>
 
@@ -147,7 +136,7 @@ $ datadoc engineer raw_data.csv --output processed_features.csv</code></pre>
                     <h3>datadoc pipeline &lt;file.csv&gt;</h3>
                     <p>Generates a standalone, reproducible Python script (<code>pipeline_&lt;filename&gt;.py</code>) that reproduces the exact cleaning pipeline.</p>
                     <div class="code-block">
-                        <pre><code>$ datadoc pipeline raw_data.csv</code></pre>
+                        <pre><code class="language-bash">$ datadoc pipeline raw_data.csv</code></pre>
                     </div>
                 </div>
 
@@ -156,7 +145,7 @@ $ datadoc engineer raw_data.csv --output processed_features.csv</code></pre>
                 <p>The primary SDK class for interacting with DATADOC inside Python code:</p>
 
                 <div class="code-block">
-                    <pre><code>class DATADOC(filepath: str)</code></pre>
+                    <pre><code class="language-python">class DATADOC(filepath: str)</code></pre>
                 </div>
                 
                 <ul class="feature-list" style="grid-template-columns: 1fr;">
@@ -208,7 +197,7 @@ $ datadoc engineer raw_data.csv --output processed_features.csv</code></pre>
                 <p>Before any plugins run, DATADOC's engine executes <code>_detect_column_roles()</code> to classify every column into one of four roles:</p>
                 
                 <div class="code-block">
-                    <pre><code>Roles:
+                    <pre><code class="language-none">Roles:
 1. "id"      -> Monotonically increasing unique integer series (Dropped automatically)
 2. "name"    -> Unique string identifiers / UUIDs / high-cardinality names (Dropped automatically)
 3. "constant"-> Zero-variance single-value columns (Dropped automatically at pipeline end)
@@ -263,5 +252,11 @@ $ datadoc engineer raw_data.csv --output processed_features.csv</code></pre>
         </div>
     </footer>
 
+    <!-- PrismJS Syntax Highlighting & Copy Button -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/toolbar/prism-toolbar.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/copy-to-clipboard/prism-copy-to-clipboard.min.js"></script>
 </body>
 </html>

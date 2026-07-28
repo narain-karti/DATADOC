@@ -381,7 +381,7 @@ a {
 }
 .feature-list p {
   font-size: 0.8rem;
-  color: #aaa;
+  color: #ddd;
 }
 
 /* Join the future -> Installation */
@@ -466,7 +466,7 @@ footer ul li a:hover {
   padding-top: 1rem;
   border-top: 1px solid #333;
   font-size: 0.8rem;
-  color: #888;
+  color: #aaa;
 }
 
 /* Docs Pages Specifics */
@@ -513,10 +513,40 @@ footer ul li a:hover {
 }
 .content pre {
   background: var(--black);
-  color: var(--neon);
   padding: 1.5rem;
   border: var(--border-thick);
   overflow-x: auto;
   margin-bottom: 1.5rem;
   font-family: monospace;
+}
+
+/* PrismJS Brutalist Overrides */
+pre[class*="language-"] {
+  border: var(--border-thick) !important;
+  border-radius: 0 !important;
+  box-shadow: var(--shadow-sm) !important;
+  margin: 1.5rem 0 !important;
+}
+code[class*="language-"] {
+  font-family: monospace !important;
+}
+div.code-toolbar > .toolbar {
+  opacity: 1 !important;
+}
+div.code-toolbar > .toolbar a,
+div.code-toolbar > .toolbar button,
+div.code-toolbar > .toolbar span {
+  background: var(--neon) !important;
+  color: var(--black) !important;
+  border: 2px solid var(--black) !important;
+  font-family: var(--font-display) !important;
+  border-radius: 0 !important;
+  box-shadow: 2px 2px 0px var(--black) !important;
+  transition: transform 0.1s !important;
+}
+div.code-toolbar > .toolbar a:hover,
+div.code-toolbar > .toolbar button:hover,
+div.code-toolbar > .toolbar span:hover {
+  transform: translate(1px, 1px) !important;
+  box-shadow: 1px 1px 0px var(--black) !important;
 }
