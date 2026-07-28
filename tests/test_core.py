@@ -208,11 +208,16 @@ class TestCategoricalEncoderPlugin:
         assert "dept" not in clean.columns  # Original column dropped
         assert clean.width > 2  # New dummy columns added
 
-    def test_high_cardinality_skipped(self):
+    def test_high_cardinality_dropped_as_identifier(self):
         plugin = CategoricalEncoderPlugin()
         df = pl.DataFrame({"id": [f"user_{i}" for i in range(20)]})
         result = plugin.analyze(df)
-        assert result["has_categorical"] is False
+        assert result["has_categorical"] is True  # Detected as identifier to drop
+        assert "id" in result["identifier_columns"]
+        assert "id" not in result["categorical_columns"]  # Not encoded, dropped
+        # Applying should drop the column
+        clean = plugin.apply(df)
+        assert "id" not in clean.columns
 
     def test_interface_properties(self):
         plugin = CategoricalEncoderPlugin()
@@ -237,11 +242,17 @@ class TestDatetimePlugin:
         plugin = DatetimePlugin()
         df = pl.DataFrame({"date": ["2024-01-15", "2024-06-20", "2024-12-25"]})
         clean = plugin.apply(df)
-        assert "date_year" in clean.columns
         assert "date_month" in clean.columns
         assert "date_day" in clean.columns
         assert "date_dayofweek" in clean.columns
         assert "date" not in clean.columns  # Original dropped
+
+    def test_drops_constant_year(self):
+        plugin = DatetimePlugin()
+        # All dates in same year — year column should be dropped
+        df = pl.DataFrame({"date": ["2024-01-15", "2024-06-20", "2024-12-25"]})
+        clean = plugin.apply(df)
+        assert "date_year" not in clean.columns  # Constant, so dropped
 
     def test_interface_properties(self):
         plugin = DatetimePlugin()
@@ -349,5 +360,31 @@ def test_ai_engineer_mock(sample_csv, monkeypatch):
     monkeypatch.setattr("litellm.completion", mock_completion)
 
     clean_df = doc.ai_engineer(model="mock/model", goal="Clean data", api_key="dummy_key")
-    assert clean_df["name"].null_count() == 0
+    # name and id columns are auto-dropped by the engine (identifiers)
+    assert "name" not in clean_df.columns
+    assert "id" not in clean_df.columns
     assert "MissingValuePlugin" in doc._applied_plugins
+
+
+def test_column_role_detection():
+    df = pl.DataFrame({
+        "ID": [1, 2, 3, 4, 5],
+        "Name": ["Alice", "Bob", "Charlie", "Dave", "Eve"],
+        "Age": [30, 25, 40, 35, 28],
+    })
+    roles = DATADOC._detect_column_roles(df)
+    assert roles["ID"] == "id"
+    assert roles["Name"] == "name"
+    assert roles["Age"] == "feature"
+
+
+def test_scaling_preserves_binary_columns():
+    plugin = ScalingPlugin()
+    df = pl.DataFrame({
+        "amount": [100.0, 200.0, 300.0, 400.0, 500.0],
+        "big": [10000.0, 20000.0, 30000.0, 40000.0, 50000.0],
+        "is_active": [0, 1, 0, 1, 0],  # Binary column
+    })
+    clean = plugin.apply(df)
+    # Binary column should not be scaled
+    assert set(clean["is_active"].to_list()).issubset({0, 1})

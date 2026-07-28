@@ -12,37 +12,55 @@ class ScalingPlugin(BasePlugin):
 
     @property
     def description(self) -> str:
-        return "Detects numeric columns with vastly different scales and applies StandardScaler normalization."
+        return "Detects continuous numeric columns with vastly different scales and applies StandardScaler normalization."
 
     @property
     def priority(self) -> int:
         return 45  # Near the end, after encoding
 
+    @staticmethod
+    def _is_binary(series: pl.Series) -> bool:
+        """Check if a column contains only two distinct values (e.g. 0/1 from one-hot encoding)."""
+        unique = series.drop_nulls().unique()
+        return unique.len() <= 2
 
+    @staticmethod
+    def _get_scalable_columns(df: pl.DataFrame) -> list[str]:
+        """Return numeric columns that are continuous (not binary, not constant)."""
+        scalable = []
+        for col in df.columns:
+            if not df[col].dtype.is_numeric():
+                continue
+            series = df[col].drop_nulls()
+            if series.len() == 0:
+                continue
+            # Skip constant columns
+            if series.n_unique() <= 1:
+                continue
+            # Skip binary columns (0/1 from one-hot encoding)
+            if ScalingPlugin._is_binary(df[col]):
+                continue
+            scalable.append(col)
+        return scalable
 
     def analyze(self, df: pl.DataFrame) -> dict:
-        num_cols = [c for c in df.columns if df[c].dtype.is_numeric()]
-        if len(num_cols) < 2:
+        scalable_cols = self._get_scalable_columns(df)
+        if len(scalable_cols) < 2:
             return {"has_scale_issues": False, "columns_to_scale": []}
 
         stds = {}
-        for col in num_cols:
+        for col in scalable_cols:
             std = df[col].std()
-            if std is not None:
+            if std is not None and std > 0:
                 stds[col] = std
-                
-        if not stds:
+
+        if len(stds) < 2:
             return {"has_scale_issues": False, "columns_to_scale": []}
 
         min_std = min(stds.values())
         max_std = max(stds.values())
-
-        if min_std == 0:
-            cols_to_scale = [c for c, s in stds.items() if s > 0]
-            ratio = float('inf')
-        else:
-            ratio = max_std / min_std
-            cols_to_scale = num_cols if ratio > 10 else []
+        ratio = max_std / min_std if min_std > 0 else float('inf')
+        cols_to_scale = list(stds.keys()) if ratio > 10 else []
 
         return {
             "has_scale_issues": len(cols_to_scale) > 0,
@@ -65,7 +83,7 @@ class ScalingPlugin(BasePlugin):
         if not analysis_result.get("has_scale_issues"):
             return ""
         cols_str = str(analysis_result.get("columns_to_scale", []))
-        return f"""# Standard Scaling
+        return f"""# Standard Scaling (continuous features only)
 scale_cols = {cols_str}
 exprs = [((pl.col(c) - pl.col(c).mean()) / pl.col(c).std()).alias(c) for c in scale_cols]
 if exprs:
@@ -86,11 +104,11 @@ if exprs:
             
         return df_clean
 
-
-
     def explain(self) -> str:
         return (
-            "ScalingPlugin detects when numeric columns have vastly different scales "
+            "ScalingPlugin detects when continuous numeric columns have vastly different scales "
             "(std ratio > 10x) and applies Standard Scaling: (value - mean) / std, "
-            "resulting in zero-mean, unit-variance features."
+            "resulting in zero-mean, unit-variance features. "
+            "Binary columns (e.g. one-hot encoded) and constant columns are excluded."
         )
+

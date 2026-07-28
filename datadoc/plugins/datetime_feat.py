@@ -12,13 +12,22 @@ class DatetimePlugin(BasePlugin):
 
     @property
     def description(self) -> str:
-        return "Detects datetime-like columns and extracts year, month, day, dayofweek features."
+        return "Detects datetime-like columns and extracts year, month, day, dayofweek, and hour features. Drops constant-value features."
 
     @property
     def priority(self) -> int:
         return 30  # After missing values and outliers, before encoding
 
-
+    @staticmethod
+    def _has_time_component(series: pl.Series) -> bool:
+        """Check if a datetime series has meaningful time components (not all midnight)."""
+        times = series.drop_nulls()
+        if times.len() == 0:
+            return False
+        hours = times.dt.hour()
+        minutes = times.dt.minute()
+        # If all hours and minutes are 0, there's no meaningful time info
+        return not ((hours == 0).all() and (minutes == 0).all())
 
     def analyze(self, df: pl.DataFrame) -> dict:
         datetime_cols = []
@@ -48,7 +57,8 @@ class DatetimePlugin(BasePlugin):
             cols = analysis_result["datetime_columns"]
             recs.append(
                 f"Datetime columns detected: {', '.join(cols)}. "
-                f"Recommendation: Extract year, month, day, day_of_week features and drop original."
+                f"Recommendation: Extract year, month, day, day_of_week, hour features. "
+                f"Drop original column and any constant features."
             )
         return recs
 
@@ -62,12 +72,23 @@ for col in datetime_cols:
     if df[col].dtype == pl.String:
         df = df.with_columns(pl.col(col).str.to_datetime(strict=False).alias(col))
     
-    df = df.with_columns([
+    new_cols = [
         pl.col(col).dt.year().alias(col + '_year'),
         pl.col(col).dt.month().alias(col + '_month'),
         pl.col(col).dt.day().alias(col + '_day'),
-        pl.col(col).dt.weekday().alias(col + '_dayofweek')
-    ]).drop(col)"""
+        pl.col(col).dt.weekday().alias(col + '_dayofweek'),
+    ]
+    # Add hour if time component exists
+    hours = df[col].dt.hour()
+    if not ((hours == 0).all()):
+        new_cols.append(pl.col(col).dt.hour().alias(col + '_hour'))
+    
+    df = df.with_columns(new_cols).drop(col)
+    
+    # Drop any constant features (e.g. year when all dates are same year)
+    for c in [c for c in df.columns if c.startswith(col + '_')]:
+        if df[c].drop_nulls().n_unique() <= 1:
+            df = df.drop(c)"""
 
     def apply(self, df: pl.DataFrame) -> pl.DataFrame:
         df_clean = df.clone()
@@ -76,21 +97,32 @@ for col in datetime_cols:
         for col in dt_cols:
             if df_clean[col].dtype == pl.String:
                 df_clean = df_clean.with_columns(pl.col(col).str.to_datetime(strict=False).alias(col))
-                
-            df_clean = df_clean.with_columns([
+
+            new_cols = [
                 pl.col(col).dt.year().alias(col + '_year'),
                 pl.col(col).dt.month().alias(col + '_month'),
                 pl.col(col).dt.day().alias(col + '_day'),
-                pl.col(col).dt.weekday().alias(col + '_dayofweek')
-            ]).drop(col)
+                pl.col(col).dt.weekday().alias(col + '_dayofweek'),
+            ]
+
+            # Add hour if time component exists
+            if self._has_time_component(df_clean[col]):
+                new_cols.append(pl.col(col).dt.hour().alias(col + '_hour'))
+
+            df_clean = df_clean.with_columns(new_cols).drop(col)
+
+            # Drop constant datetime features (e.g. year=2023 for all rows)
+            for c in [c for c in df_clean.columns if c.startswith(col + '_')]:
+                if df_clean[c].drop_nulls().n_unique() <= 1:
+                    df_clean = df_clean.drop(c)
 
         return df_clean
-
-
 
     def explain(self) -> str:
         return (
             "DatetimePlugin detects columns containing dates/times and extracts "
-            "year, month, day, and day_of_week as new numeric features. "
-            "The original datetime column is dropped."
+            "year, month, day, day_of_week, and hour as new numeric features. "
+            "The original datetime column is dropped, along with any constant features "
+            "(e.g., year when all dates are in the same year)."
         )
+

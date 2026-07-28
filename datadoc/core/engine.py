@@ -26,6 +26,50 @@ class DATADOC:
             ScalingPlugin(),
         ], key=lambda p: p.priority)
 
+    @staticmethod
+    def _detect_column_roles(df: pl.DataFrame) -> Dict[str, str]:
+        """Classify each column as 'id', 'name', 'constant', or 'feature'."""
+        roles = {}
+        for col in df.columns:
+            series = df[col]
+            # Constant columns (single unique value)
+            if series.drop_nulls().n_unique() <= 1:
+                roles[col] = "constant"
+            # Likely ID: integer, all unique, monotonically increasing
+            elif series.dtype.is_integer() and series.drop_nulls().n_unique() == series.drop_nulls().len() and series.drop_nulls().len() > 0:
+                sorted_vals = series.drop_nulls().sort()
+                diffs = sorted_vals.diff().drop_nulls()
+                if diffs.len() > 0 and (diffs == diffs[0]).all():
+                    roles[col] = "id"
+                else:
+                    roles[col] = "feature"
+            # String columns need extra checks
+            elif series.dtype == pl.String and series.drop_nulls().n_unique() == series.drop_nulls().len() and series.drop_nulls().len() > 0:
+                # Check if it's a datetime string before labelling as name
+                try:
+                    parsed = df.select(pl.col(col).str.to_datetime(strict=False))
+                    not_null_ratio = 1 - (parsed[col].null_count() / max(parsed.height, 1))
+                    if not_null_ratio > 0.5:
+                        roles[col] = "feature"  # Datetime string — let DatetimePlugin handle it
+                    else:
+                        roles[col] = "name"
+                except (ValueError, TypeError, pl.exceptions.ComputeError, pl.exceptions.InvalidOperationError):
+                    roles[col] = "name"
+            else:
+                roles[col] = "feature"
+        return roles
+
+    @staticmethod
+    def _drop_constant_columns(df: pl.DataFrame) -> tuple[pl.DataFrame, list[str]]:
+        """Drop columns with zero variance (single unique non-null value)."""
+        to_drop = []
+        for col in df.columns:
+            if df[col].drop_nulls().n_unique() <= 1:
+                to_drop.append(col)
+        if to_drop:
+            df = df.drop(to_drop)
+        return df, to_drop
+
     def analyze(self) -> Dict[str, Any]:
         """Runs the analyze step across all plugins."""
         dtype_counts = Counter([str(dt) for dt in self.df.dtypes])
@@ -89,6 +133,17 @@ class DATADOC:
 
         self._applied_plugins = []
         self._skipped_plugins = []
+        self._dropped_columns = []
+
+        # Phase 0: Drop ID and name columns before any plugin runs
+        roles = self._detect_column_roles(df_transformed)
+        cols_to_drop = [c for c, r in roles.items() if r in ("id", "name")]
+        if cols_to_drop:
+            df_transformed = df_transformed.drop(cols_to_drop)
+            self._dropped_columns.extend(cols_to_drop)
+            if progress_callback:
+                progress_callback("ColumnFilter", "applied",
+                    [f"Dropped non-feature columns: {', '.join(cols_to_drop)}"])
 
         for plugin in self.plugins:
             if progress_callback:
@@ -106,6 +161,14 @@ class DATADOC:
                 self._skipped_plugins.append(plugin.name)
                 if progress_callback:
                     progress_callback(plugin.name, "skipped", [])
+
+        # Phase final: Drop any constant columns created during pipeline
+        df_transformed, dropped_constants = self._drop_constant_columns(df_transformed)
+        if dropped_constants:
+            self._dropped_columns.extend(dropped_constants)
+            if progress_callback:
+                progress_callback("ColumnFilter", "applied",
+                    [f"Dropped constant columns: {', '.join(dropped_constants)}"])
 
         return df_transformed
 
@@ -238,6 +301,17 @@ Respond in plain text formatted nicely with bullet points and paragraphs where a
         df_transformed = self.df.clone()
         self._applied_plugins = []
         self._skipped_plugins = []
+        self._dropped_columns = []
+
+        # Phase 0: Drop ID and name columns before any plugin runs
+        roles = self._detect_column_roles(df_transformed)
+        cols_to_drop = [c for c, r in roles.items() if r in ("id", "name")]
+        if cols_to_drop:
+            df_transformed = df_transformed.drop(cols_to_drop)
+            self._dropped_columns.extend(cols_to_drop)
+            if progress_callback:
+                progress_callback("ColumnFilter", "applied",
+                    [f"Dropped non-feature columns: {', '.join(cols_to_drop)}"])
 
         if progress_callback:
             progress_callback("AI Planner", "applied", [f"Generated plan with {len(planner_response.plan)} steps."])
@@ -266,6 +340,14 @@ Respond in plain text formatted nicely with bullet points and paragraphs where a
                 self._skipped_plugins.append(p.name)
                 if progress_callback:
                     progress_callback(p.name, "skipped", ["Skipped by AI Planner"])
+
+        # Phase final: Drop any constant columns created during pipeline
+        df_transformed, dropped_constants = self._drop_constant_columns(df_transformed)
+        if dropped_constants:
+            self._dropped_columns.extend(dropped_constants)
+            if progress_callback:
+                progress_callback("ColumnFilter", "applied",
+                    [f"Dropped constant columns: {', '.join(dropped_constants)}"])
                     
         return df_transformed
 

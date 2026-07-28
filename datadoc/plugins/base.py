@@ -20,6 +20,15 @@ class BasePlugin(ABC):
         """Lower number = runs first. Default is 50."""
         return 50
 
+    @property
+    def dependencies(self) -> list[str]:
+        """List of plugin names this plugin depends on."""
+        return []
+
+    @property
+    def supported_datatypes(self) -> list[str]:
+        """List of datatypes this plugin can handle."""
+        return []
 
     @abstractmethod
     def analyze(self, df: pl.DataFrame) -> dict:
@@ -41,9 +50,19 @@ class BasePlugin(ABC):
         """Apply the engineering transformation and return the new dataframe."""
         pass
 
-
-
     def explain(self) -> str:
         """Return a human-readable explanation of what this plugin does."""
         return f"{self.name} (v{self.version}): {self.description}"
+
+    def validate(self, df: pl.DataFrame) -> bool:
+        """Validate that the plugin's transformation was applied correctly."""
+        return True
+
+    def rollback(self, df: pl.DataFrame) -> pl.DataFrame:
+        """Rollback the transformation (default: return df unchanged)."""
+        return df
+
+    def estimate_runtime(self, df: pl.DataFrame) -> float:
+        """Estimate runtime in seconds based on dataframe size."""
+        return df.height * df.width * 1e-6
 

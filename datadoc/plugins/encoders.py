@@ -12,28 +12,41 @@ class CategoricalEncoderPlugin(BasePlugin):
 
     @property
     def description(self) -> str:
-        return "Detects categorical columns and applies One-Hot Encoding (drop_first=True)."
+        return "Drops high-cardinality identifier columns and applies One-Hot Encoding (drop_first=True) to low-cardinality categoricals."
 
     @property
     def priority(self) -> int:
         return 40  # After missing values and outliers
 
-
-
     def analyze(self, df: pl.DataFrame) -> dict:
-        cat_cols = [col for col in df.columns if df[col].dtype == pl.String]
-        valid_cats = [col for col in cat_cols if df[col].n_unique() < 10 and df[col].n_unique() > 1]
+        str_cols = [col for col in df.columns if df[col].dtype == pl.String]
+
+        # Identifier columns: every value is unique (e.g. Name, Email)
+        id_cols = [col for col in str_cols if df[col].drop_nulls().n_unique() >= df.height]
+
+        # Encodable categorical: low cardinality (2-9 unique), not an identifier
+        valid_cats = [
+            col for col in str_cols
+            if col not in id_cols and 1 < df[col].n_unique() < 10
+        ]
         cardinality = {col: df[col].n_unique() for col in valid_cats}
 
         return {
-            "has_categorical": len(valid_cats) > 0,
+            "has_categorical": len(valid_cats) > 0 or len(id_cols) > 0,
             "categorical_columns": valid_cats,
+            "identifier_columns": id_cols,
             "cardinality": cardinality,
         }
 
     def recommend(self, analysis_result: dict) -> list[str]:
         recs = []
-        if analysis_result.get("has_categorical"):
+        id_cols = analysis_result.get("identifier_columns", [])
+        if id_cols:
+            recs.append(
+                f"Identifier columns detected: {', '.join(id_cols)}. "
+                f"Recommendation: Drop these (every value is unique, no ML signal)."
+            )
+        if analysis_result.get("categorical_columns"):
             info = analysis_result.get("cardinality", {})
             detail = ", ".join([f"{c} ({v} unique)" for c, v in info.items()])
             recs.append(
@@ -43,24 +56,40 @@ class CategoricalEncoderPlugin(BasePlugin):
         return recs
 
     def generate_code(self, analysis_result: dict) -> str:
-        if not analysis_result.get("has_categorical"):
-            return ""
-        cols_str = str(analysis_result.get("categorical_columns", []))
-        return f"""# Categorical Encoding (One-Hot)
-cat_cols = {cols_str}
-df = df.to_dummies(columns=cat_cols, drop_first=True)"""
+        lines = []
+        id_cols = analysis_result.get("identifier_columns", [])
+        if id_cols:
+            lines.append(f"# Drop identifier columns")
+            lines.append(f"df = df.drop({id_cols})")
+
+        cat_cols = analysis_result.get("categorical_columns", [])
+        if cat_cols:
+            cols_str = str(cat_cols)
+            lines.append(f"# Categorical Encoding (One-Hot)")
+            lines.append(f"cat_cols = {cols_str}")
+            lines.append(f"df = df.to_dummies(columns=cat_cols, drop_first=True)")
+
+        return "\n".join(lines)
 
     def apply(self, df: pl.DataFrame) -> pl.DataFrame:
         df_clean = df.clone()
-        cat_cols = self.analyze(df_clean).get("categorical_columns", [])
+        analysis = self.analyze(df_clean)
+
+        # Drop identifier columns first
+        id_cols = analysis.get("identifier_columns", [])
+        if id_cols:
+            df_clean = df_clean.drop(id_cols)
+
+        # One-hot encode low-cardinality categoricals
+        cat_cols = analysis.get("categorical_columns", [])
         if cat_cols:
             df_clean = df_clean.to_dummies(columns=cat_cols, drop_first=True)
         return df_clean
 
-
-
     def explain(self) -> str:
         return (
-            "CategoricalEncoderPlugin detects text/string columns with fewer than 10 unique values "
-            "and applies One-Hot Encoding with drop_first=True to avoid multicollinearity."
+            "CategoricalEncoderPlugin detects text/string columns. "
+            "High-cardinality identifier columns (every value unique) are dropped. "
+            "Low-cardinality columns (< 10 unique values) are One-Hot Encoded with drop_first=True."
         )
+
