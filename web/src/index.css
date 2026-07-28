@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg-workspace: #F3EAD5;
+  --color-bg-sidebar: #B9D9C1;
+  --color-bg-accent-yellow: #F4C542;
+  --color-bg-accent-pink: #E8B5E6;
+  --color-bg-accent-blue: #67B8E8;
+  --color-bg-accent-peach: #F7CDA7;
+  --color-bg-accent-orange: #F99973;
+
+  --font-mono: 'Space Mono', 'Roboto Mono', 'Courier New', monospace;
+  
+  --border-width-DEFAULT: 2px;
+  --border-color-DEFAULT: #000000;
+  
+  --radius-DEFAULT: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --radius-3xl: 0px;
+  --radius-full: 0px;
+
+  --shadow-DEFAULT: none;
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+  --shadow-xl: none;
+  --shadow-2xl: none;
+}
+
+body {
+  font-family: var(--font-mono);
+  background-color: var(--color-bg-workspace);
+  color: #000;
+  margin: 0;
+  padding: 0;
+}
+
+/* Custom scrollbar for brutalist look */
+::-webkit-scrollbar {
+  width: 12px;
+  border-left: 2px solid #000;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-workspace);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #000;
+  border: 2px solid #000;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #333;
+}

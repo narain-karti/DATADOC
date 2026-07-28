@@ -608,6 +608,36 @@ def version():
     """
     print_banner()
 
+# ──────────────────────────────────────────────────────────────
+# COMMAND: ui
+# ──────────────────────────────────────────────────────────────
+@app.command()
+def ui(
+    file_path: str,
+    port: int = typer.Option(8000, "--port", help="Port to run the UI server on.")
+):
+    """
+    Launch the interactive Web Dashboard (Retro-Brutalist UI).
+    """
+    import uvicorn
+    from datadoc.cli.ui_server import init_server
+    import webbrowser
+    
+    print_banner()
+    console.print(f"[bold cyan]Initializing Retro Dashboard on port {port}...[/bold cyan]")
+    
+    # Initialize the global dataset instance before starting server
+    init_server(file_path)
+    
+    url = f"http://127.0.0.1:{port}"
+    console.print(f"\n[bold green]Dashboard is live! Opening browser to: {url}[/bold green]\n")
+    
+    # Try to open the browser
+    webbrowser.open(url)
+    
+    # Run the server
+    uvicorn.run("datadoc.cli.ui_server:app", host="127.0.0.1", port=port, log_level="info")
+
 
 # ──────────────────────────────────────────────────────────────
 # COMMAND: agent
