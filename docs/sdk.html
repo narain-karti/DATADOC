@@ -154,11 +154,11 @@ clean_df = doc.engineer(progress_callback=track_pipeline)</code></pre>
                 </div>
 
                 <!-- 6. AI Engineer -->
-                <h2 id="ai-engineer">6. AI-Driven Auto-Engineering (<code>ai_engineer</code>)</h2>
+                <h2 id="ai-engineer">6. AI-Driven Auto-Engineering (<code>agentic_engineer</code>)</h2>
                 <p>Leverage Generative AI (via LiteLLM) to analyze your dataset and generate an optimized plugin plan based on your plain-English objective:</p>
                 <div class="code-block">
                     <pre><code class="language-python"># Run AI-guided engineering with your custom goal
-clean_df = doc.ai_engineer(
+clean_df = doc.agentic_engineer(
     goal="Optimize features for a churn classification model",
     model="groq/llama-3.3-70b-versatile",
     api_key="your_api_key_here"

@@ -250,51 +250,28 @@ def recommend(
 # ──────────────────────────────────────────────────────────────
 @app.command()
 def engineer(
-    file_path: str,
-    ai: bool = typer.Option(False, "--ai", help="Use the AI Planner to dynamically orchestrate the pipeline."),
-    goal: str = typer.Option("Clean the dataset for machine learning", "--goal", help="The semantic goal for the AI Planner."),
-    model: str = typer.Option(DEFAULT_MODEL, "--model", help="The LiteLLM model string to use.")
+    file_path: str
 ):
     """
-    Automatically applies best-practice pipelines or uses AI to plan.
+    Automatically applies best-practice pipelines using the Rule Engine.
     """
     print_banner()
     doc = load_dataset(file_path)
 
     console.print()
-    if ai:
-        api_key = _get_api_key(model)
+    with console.status("[bold cyan]Running Rule Engine...", spinner="dots") as status:
+        def on_progress(plugin_name, p_status, details):
+            if p_status == "running":
+                status.update(f"[bold cyan]Running [yellow]{plugin_name}[/yellow]...[/bold cyan]")
+                time.sleep(0.5)
+            elif p_status == "applied":
+                print_step("[>>]", f"Applied [bold cyan]{plugin_name}[/bold cyan]", "bold white")
+                for detail in details:
+                    console.print(f"      [dim]-> {detail}[/dim]")
+            elif p_status == "skipped":
+                print_step("[--]", f"Skipped [dim]{plugin_name}[/dim] (not needed)", "dim white")
 
-        with console.status(f"[bold cyan]Running AI Planner ({model})...", spinner="dots") as status:
-            def on_progress(plugin_name, p_status, details):
-                if p_status == "running":
-                    status.update(f"[bold cyan]Running [yellow]{plugin_name}[/yellow]...[/bold cyan]")
-                    time.sleep(0.2)
-                elif p_status == "applied":
-                    print_step("[>>]", f"Applied [bold cyan]{plugin_name}[/bold cyan]", "bold white")
-                    for detail in details:
-                        console.print(f"      [dim]-> {detail}[/dim]")
-                elif p_status == "skipped":
-                    print_step("[--]", f"Skipped [dim]{plugin_name}[/dim]", "dim white")
-                elif p_status == "error":
-                    console.print(f"\n  [bold red][X] Error in AI Planner:[/] {details[0]}")
-                    raise typer.Exit(code=1)
-
-            clean_df = doc.ai_engineer(model=model, goal=goal, api_key=api_key, progress_callback=on_progress)
-    else:
-        with console.status("[bold cyan]Running Rule Engine...", spinner="dots") as status:
-            def on_progress(plugin_name, p_status, details):
-                if p_status == "running":
-                    status.update(f"[bold cyan]Running [yellow]{plugin_name}[/yellow]...[/bold cyan]")
-                    time.sleep(0.5)
-                elif p_status == "applied":
-                    print_step("[>>]", f"Applied [bold cyan]{plugin_name}[/bold cyan]", "bold white")
-                    for detail in details:
-                        console.print(f"      [dim]-> {detail}[/dim]")
-                elif p_status == "skipped":
-                    print_step("[--]", f"Skipped [dim]{plugin_name}[/dim] (not needed)", "dim white")
-    
-            clean_df = doc.engineer(progress_callback=on_progress)
+        clean_df = doc.engineer(progress_callback=on_progress)
 
     output_path = f"clean_{os.path.basename(file_path)}"
     clean_df.write_csv(output_path)
@@ -659,173 +636,3 @@ def agent(
         print(f"\n✅ Clean dataset saved to {clean_path}")
 
 # ──────────────────────────────────────────────────────────────
-# COMMAND: chat
-# ──────────────────────────────────────────────────────────────
-@app.command()
-def chat(
-    file_path: str,
-    model: str = typer.Option(DEFAULT_MODEL, "--model", help="The LiteLLM model string to use.")
-):
-    """
-    Start an interactive AI chat session with tool-calling capabilities.
-    """
-    import litellm
-    import json
-    from rich.markdown import Markdown
-    from rich.prompt import Prompt
-
-    print_banner()
-    doc = load_dataset(file_path)
-    api_key = _get_api_key(model)
-
-    console.print()
-    console.print(Panel(
-        f"You are now chatting with the AI Assistant ({model}).\n"
-        f"The AI has access to your dataset and can run plugins autonomously.\n"
-        f"Type [bold cyan]exit[/bold cyan] or [bold cyan]quit[/bold cyan] to leave.",
-        title="[bold green]Interactive Chat Session[/bold green]",
-        border_style="green"
-    ))
-
-    tools = [
-        {
-            "type": "function",
-            "function": {
-                "name": "analyze_dataset",
-                "description": "Returns the current health report and metadata of the dataset.",
-                "parameters": {"type": "object", "properties": {}}
-            }
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "apply_plugin",
-                "description": "Applies a specific dataset engineering plugin to the current dataset. You must use this to transform data.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "plugin_name": {
-                            "type": "string",
-                            "description": "Name of the plugin.",
-                            "enum": ["MissingValuePlugin", "OutlierPlugin", "DatetimePlugin", "CategoricalEncoderPlugin", "ScalingPlugin"]
-                        }
-                    },
-                    "required": ["plugin_name"]
-                }
-            }
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "revert_dataset",
-                "description": "Reverts the dataset to its original loaded state, undoing all plugin transformations.",
-                "parameters": {"type": "object", "properties": {}}
-            }
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "save_dataset",
-                "description": "Saves the current state of the dataset to a CSV file.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "filename": {
-                            "type": "string",
-                            "description": "The name of the file to save (e.g., 'cleaned_data.csv')"
-                        }
-                    },
-                    "required": ["filename"]
-                }
-            }
-        }
-    ]
-
-    messages = [
-        {
-            "role": "system",
-            "content": f"""You are a Principal Data Scientist assisting a user in an interactive chat session.
-You have the ability to run dataset engineering tools.
-Current dataset metadata: {doc._extract_metadata()}
-
-When the user asks you to perform an action, use the appropriate tool.
-Always explain what you did after using a tool. 
-Be helpful, analytical, and concise. Format your responses with markdown."""
-        }
-    ]
-
-    while True:
-        try:
-            user_input = Prompt.ask("\n[bold cyan]You[/bold cyan]")
-            if user_input.strip().lower() in ['exit', 'quit']:
-                console.print("\n[bold green]Ending chat session. Goodbye![/bold green]\n")
-                break
-                
-            messages.append({"role": "user", "content": user_input})
-            
-            with console.status("[bold cyan]AI is thinking...", spinner="dots"):
-                response = litellm.completion(
-                    model=model,
-                    messages=messages,
-                    tools=tools,
-                    api_key=api_key
-                )
-                
-                response_msg = response.choices[0].message
-                messages.append(response_msg.model_dump(exclude_none=True))
-
-                # Handle tool calls if any
-                while response_msg.tool_calls:
-                    for tool_call in response_msg.tool_calls:
-                        func_name = tool_call.function.name
-                        args = json.loads(tool_call.function.arguments)
-                        
-                        console.print(f"  [dim]>[/dim] AI called tool: [bold yellow]{func_name}[/bold yellow]({args})")
-                        
-                        tool_result = ""
-                        try:
-                            if func_name == "analyze_dataset":
-                                tool_result = json.dumps(doc.analyze(), indent=2)
-                            elif func_name == "apply_plugin":
-                                tool_result = doc.apply_plugin_by_name(args["plugin_name"])
-                            elif func_name == "revert_dataset":
-                                doc.revert()
-                                tool_result = "Dataset reverted to original state."
-                            elif func_name == "save_dataset":
-                                doc.df.write_csv(args["filename"])
-                                tool_result = f"Dataset successfully saved to {args['filename']}."
-                            else:
-                                tool_result = f"Error: Unknown function {func_name}"
-                        except (ValueError, KeyError, RuntimeError) as e:
-                            tool_result = f"Error executing {func_name}: {e}"
-                            
-                        messages.append({
-                            "role": "tool",
-                            "tool_call_id": tool_call.id,
-                            "name": func_name,
-                            "content": tool_result
-                        })
-                        
-                    # Call LLM again with tool results
-                    response = litellm.completion(
-                        model=model,
-                        messages=messages,
-                        tools=tools,
-                        api_key=api_key
-                    )
-                    response_msg = response.choices[0].message
-                    messages.append(response_msg.model_dump(exclude_none=True))
-                
-            # Print final assistant message
-            if response_msg.content:
-                console.print("\n[bold purple]DATADOC AI[/bold purple]:")
-                console.print(Panel(Markdown(response_msg.content), border_style="purple"))
-
-        except KeyboardInterrupt:
-            console.print("\n[bold green]Ending chat session. Goodbye![/bold green]\n")
-            break
-        except (KeyboardInterrupt, RuntimeError) as e:
-            console.print(f"\n[bold red]Error:[/] {e}")
-
-if __name__ == "__main__":
-    app()

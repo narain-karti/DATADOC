@@ -84,9 +84,8 @@ datadoc compare raw_data.csv clean_raw_data.csv
 datadoc pipeline raw_data.csv
 
 # 6. Have an interactive AI session where the LLM engineers your data via chat!
-datadoc chat raw_data.csv
 
-*(Pro Tip: Add `--ai` to `analyze`, `recommend`, or `engineer` for AI-driven insights and orchestration!)*
+
 ```
 
 ---
@@ -123,14 +122,13 @@ with open("my_pipeline.py", "w") as f:
 | `datadoc analyze <file>` | Scans dataset and shows a health report with status indicators |
 | `datadoc recommend <file>` | Lists suggested engineering steps without modifying data |
 | `datadoc engineer <file>` | Automatically applies all recommended transformations |
-| `datadoc chat <file>` | Starts an interactive AI session with autonomous tool-calling |
 | `datadoc compare <file>` | Shows a before/after diff of the raw vs engineered dataset |
 | `datadoc pipeline <file>` | Exports a standalone `.py` script with the exact Polars code |
 | `datadoc visualize <file>` | Renders stunning terminal-based charts for numeric distributions |
 | `datadoc plugin` | Lists all registered plugins with priority and descriptions |
 | `datadoc version` | Displays the DATADOC version |
 
-*(Note: Use the `--ai` flag on `analyze`, `recommend`, or `engineer` for LLM-powered execution!)*
+
 
 ---
 

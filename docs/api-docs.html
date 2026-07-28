@@ -155,7 +155,7 @@ $ datadoc engineer raw_data.csv --output processed_features.csv</code></pre>
                     <li><strong><code>engineer(progress_callback=None) -> pl.DataFrame</code></strong>: Auto-detects column roles, prunes IDs/names, executes plugins by priority, drops constant columns, and returns a clean Polars DataFrame.</li>
                     <li><strong><code>compare(clean_df: pl.DataFrame) -> str</code></strong>: Generates comparative metrics between original and clean DataFrames.</li>
                     <li><strong><code>pipeline() -> str</code></strong>: Generates equivalent Python source code for replicating transformations.</li>
-                    <li><strong><code>ai_engineer(goal: str, model="groq/llama-3.3-70b-versatile", api_key=None) -> pl.DataFrame</code></strong>: Uses LiteLLM to plan and execute a customized plugin pipeline based on a user goal.</li>
+                    <li><strong><code>agentic_engineer(: str, model="groq/llama-3.3-70b-versatile", api_key=None) -> pl.DataFrame</code></strong>: Uses LiteLLM to plan and execute a customized plugin pipeline based on a user goal.</li>
                 </ul>
 
                 <!-- Plugin Specifications -->
@@ -206,7 +206,6 @@ $ datadoc engineer raw_data.csv --output processed_features.csv</code></pre>
 
                 <!-- AI Chat -->
                 <h2 id="chat">5. AI Chat & Autonomous Tool Calling</h2>
-                <p>DATADOC includes an agentic chat assistant launched via <code>datadoc chat &lt;file.csv&gt;</code>. The agent is provided native tool declarations to inspect dataset metadata, analyze column stats, run specific plugins, and answer natural language data engineering questions.</p>
 
             </div>
         </section>

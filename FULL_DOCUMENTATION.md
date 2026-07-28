@@ -77,7 +77,7 @@ clean_df = doc.engineer()
 
 # 4. Engineer the data (AI Planner)
 # Requires python-dotenv and a .env file with your API Key (e.g. GEMINI_API_KEY)
-clean_df_ai = doc.ai_engineer(
+clean_df = doc.agentic_engineer(
     model="gemini/gemini-1.5-flash",
     goal="Prepare this data for XGBoost Classification"
 )
@@ -130,7 +130,7 @@ Once defined, simply append it to `doc.plugins` inside `engine.py`.
 ---
 
 ## Privacy & The AI Planner
-Security is a massive concern in enterprise data. When you run `datadoc engineer --ai`, the LLM prompt looks like this:
+Security is a massive concern in enterprise data. When you run `datadoc agent`, the LLM prompt looks like this:
 
 ```json
 {
