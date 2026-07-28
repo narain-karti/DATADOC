@@ -5,13 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DATADOC | The Open Source OS for Dataset Engineering</title>
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        .code-block {
+            background: #111;
+            color: #5af78e;
+            padding: 1.2rem;
+            border-left: 4px solid var(--accent-color, #ff5e00);
+            border: 2px solid var(--text-color, #fff);
+            font-family: monospace;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+        .code-block pre {
+            margin: 0;
+        }
+    </style>
 </head>
 <body>
 
     <!-- Navbar -->
     <nav class="navbar">
         <div class="nav-brand">
-            [<span>DATADOC</span>]
+            <a href="index.html">[<span>DATADOC</span>]</a>
         </div>
         <div class="nav-links">
             <a href="index.html" class="active">FEATURES</a>
@@ -49,47 +66,57 @@
         <!-- Hero Section -->
         <section class="hero">
             <h1>BUILT FOR DATA SCIENTISTS.<br>MADE FOR THE FUTURE.</h1>
-            <p>The next-gen CLI and Python SDK for dataset engineering. Automate 80% of your data cleaning with a deterministic, blazing-fast Polars backend.</p>
+            <p>The next-gen CLI and Python SDK for dataset engineering. Automate 80% of your data wrangling with a deterministic, blazing-fast Polars backend and column-role awareness.</p>
             <div class="hero-btns">
-                <a href="#install" class="brutal-btn">QUICK START &rarr;</a>
-                <a href="api-docs.html" class="brutal-btn secondary">EXPLORE DOCS &rarr;</a>
+                <a href="setup.html" class="brutal-btn">QUICK START &rarr;</a>
+                <a href="sdk.html" class="brutal-btn secondary">PYTHON SDK GUIDE &rarr;</a>
             </div>
         </section>
 
-        <!-- Performance / Market Overview -->
+        <!-- Live Code Preview Card -->
         <section class="brutal-card card-overview">
             <div class="card-header">
                 <div class="icons">
                     <span></span><span></span><span></span>
                 </div>
-                PERFORMANCE METRICS
+                PYTHON SDK PREVIEW (2-LINE CLEANING)
                 <span style="font-family: monospace;">&#x21F1;</span>
             </div>
             
-            <div class="chart-area">
-                <!-- Visual placeholder for the chart -->
+            <div class="code-block">
+                <pre><code>from datadoc.core.engine import DATADOC
+
+# 1. Initialize with your raw CSV
+doc = DATADOC("messy_raw_data.csv")
+
+# 2. Automate cleaning & convert to Pandas for Scikit-Learn / XGBoost
+df_clean = doc.engineer().to_pandas()
+
+# Ready for model training!
+X = df_clean.drop(columns=["target"])
+y = df_clean["target"]</code></pre>
             </div>
 
             <div class="stats-grid">
                 <div class="stat-box">
-                    <label>Speed vs Pandas</label>
-                    <div class="val">100x</div>
-                    <div class="sub up">+10,000%</div>
+                    <label>Engine Backend</label>
+                    <div class="val">Polars</div>
+                    <div class="sub up">Rust-Powered</div>
                 </div>
                 <div class="stat-box">
-                    <label>Rows Processed</label>
-                    <div class="val">Millions</div>
-                    <div class="sub up">Sub-second</div>
+                    <label>Execution Speed</label>
+                    <div class="val">10x-50x</div>
+                    <div class="sub up">Faster vs Pandas</div>
                 </div>
                 <div class="stat-box">
-                    <label>Memory Overhead</label>
-                    <div class="val">Zero-Copy</div>
-                    <div class="sub up">Efficient</div>
+                    <label>Data Quality</label>
+                    <div class="val">100%</div>
+                    <div class="sub up">ML Ready</div>
                 </div>
             </div>
         </section>
 
-        <!-- Plugins / Trending Collections -->
+        <!-- Plugins Grid -->
         <section class="brutal-card card-plugins">
             <div class="card-header">
                 <div class="icons">
@@ -104,7 +131,7 @@
                         <span>❓</span>
                     </div>
                     <div class="info">
-                        <h4>MissingValue</h4>
+                        <h4>MissingValue (P10)</h4>
                         <p>Median/Mode imputation</p>
                     </div>
                 </div>
@@ -113,8 +140,8 @@
                         <span>📈</span>
                     </div>
                     <div class="info">
-                        <h4>Outliers</h4>
-                        <p>IQR dynamic clipping</p>
+                        <h4>Outliers (P20)</h4>
+                        <p>IQR boundary capping</p>
                     </div>
                 </div>
                 <div class="plugin-item">
@@ -122,15 +149,24 @@
                         <span>📅</span>
                     </div>
                     <div class="info">
-                        <h4>Datetime</h4>
-                        <p>Auto-extract temporal feats</p>
+                        <h4>Datetime (P30)</h4>
+                        <p>Year, Month, Day, Hour features</p>
+                    </div>
+                </div>
+                <div class="plugin-item">
+                    <div class="img-box">
+                        <span>🏷️</span>
+                    </div>
+                    <div class="info">
+                        <h4>Categorical (P40)</h4>
+                        <p>One-Hot Encoding</p>
                     </div>
                 </div>
             </div>
             <a href="api-docs.html#plugins" class="brutal-btn secondary" style="width: 100%; text-align: center; margin-top: 1rem;">VIEW ALL PLUGINS &rarr;</a>
         </section>
 
-        <!-- Why DATADOC? / Why XCHANGE? -->
+        <!-- Why DATADOC? -->
         <section class="brutal-card card-why">
             <div class="card-header">
                 WHY DATADOC?
@@ -139,73 +175,60 @@
             <ul class="feature-list">
                 <li>
                     <h4>⚡ BLAZING FAST</h4>
-                    <p>Built on Polars (Rust). Minimal memory footprint.</p>
+                    <p>Built on Polars (Rust). Minimal RAM overhead with zero-copy operations.</p>
+                </li>
+                <li>
+                    <h4>🔍 ROLE AWARE</h4>
+                    <p>Auto-detects IDs, names, UUIDs, and constants to prevent invalid transformations.</p>
                 </li>
                 <li>
                     <h4>🔒 ZERO BLACK-BOX</h4>
-                    <p>100% deterministic mathematical transformations.</p>
-                </li>
-                <li>
-                    <h4>🛡️ NO LEAKAGE</h4>
-                    <p>Built-in safeguards prevent data leakage during scaling.</p>
+                    <p>100% deterministic mathematical transformations (IQR, Medians).</p>
                 </li>
                 <li>
                     <h4>🤖 AI ORCHESTRATOR</h4>
-                    <p>Use LLMs to dynamically plan your engineering pipeline.</p>
+                    <p>Use LLMs via LiteLLM to dynamically plan customized pipelines.</p>
                 </li>
             </ul>
         </section>
 
-        <!-- Top Commands / Top Traders -->
+        <!-- Top CLI Commands -->
         <section class="brutal-card card-commands">
             <div class="card-header">
                 <div class="icons">
                     <span></span><span></span><span></span>
                 </div>
-                CLI COMMANDS
+                POPULAR CLI COMMANDS
                 <span style="font-family: monospace;">&#x21F1;</span>
             </div>
             <ul class="cmd-list">
                 <li>
-                    <span><span class="badge">01</span> datadoc analyze</span>
-                    <span>&rarr;</span>
+                    <span><span class="badge">01</span> datadoc analyze raw_data.csv</span>
                 </li>
                 <li>
-                    <span><span class="badge">02</span> datadoc recommend</span>
-                    <span>&rarr;</span>
+                    <span><span class="badge">02</span> datadoc recommend raw_data.csv</span>
                 </li>
                 <li>
-                    <span><span class="badge">03</span> datadoc engineer</span>
-                    <span>&rarr;</span>
+                    <span><span class="badge">03</span> datadoc engineer raw_data.csv</span>
                 </li>
                 <li>
-                    <span><span class="badge">04</span> datadoc chat</span>
-                    <span>&rarr;</span>
+                    <span><span class="badge">04</span> datadoc compare raw.csv clean.csv</span>
                 </li>
             </ul>
             <a href="api-docs.html#cli" class="brutal-btn secondary" style="width: 100%; text-align: center; margin-top: 1rem;">VIEW ALL COMMANDS &rarr;</a>
         </section>
 
-        <!-- Installation / Join the Future -->
+        <!-- Installation -->
         <section id="install" class="brutal-card card-install">
             <div>
-                <h2>AUTOMATE 80% OF<br>YOUR DATA CLEANING.</h2>
-                <p>Install via pip or uv. Works out of the box.</p>
-                <code>pip install datadoc-cli</code>
+                <h2>AUTOMATE 80% OF<br>YOUR DATA WRANGLING.</h2>
+                <p>Install via pip or uv from PyPI. Works out of the box.</p>
+                <div class="code-block">
+                    <pre><code>pip install datadoc-cli</code></pre>
+                </div>
             </div>
             <div>
-                <a href="sdk.html" class="brutal-btn">PYTHON SDK INSTRUCTIONS &rarr;</a>
-            </div>
-        </section>
-
-        <!-- AI Chat / Latest Event -->
-        <section class="brutal-card card-ai">
-            <h2>DATADOC AI<br>CHAT IS LIVE</h2>
-            <p>Interact with your dataset using autonomous tool-calling.</p>
-            <br>
-            <a href="api-docs.html#chat" class="brutal-btn secondary">LEARN MORE &rarr;</a>
-            <div style="margin-top: 1rem; font-family: monospace;">
-                o o o
+                <a href="sdk.html" class="brutal-btn">PYTHON SDK TUTORIAL &rarr;</a>
             </div>
         </section>
 
@@ -217,9 +240,6 @@
             <div class="footer-brand">
                 <h3 style="font-size: 2rem; font-family: var(--font-display);">[DATADOC]</h3>
                 <p style="margin-top: 1rem; font-family: monospace; color: #888;">The OS for Dataset Engineering.</p>
-                <div style="margin-top: 1rem; font-size: 1.5rem;">
-                    &#9733; &#9733; &#9733;
-                </div>
             </div>
             
             <div>
@@ -237,16 +257,7 @@
                 <ul>
                     <li><a href="https://github.com/narain-karti/DATADOC">GitHub Repo</a></li>
                     <li><a href="https://pypi.org/project/datadoc-cli/">PyPI Package</a></li>
-                    <li><a href="#">Report Issue</a></li>
                 </ul>
-            </div>
-            
-            <div>
-                <h4>STAY UPDATED</h4>
-                <div class="newsletter">
-                    <input type="email" placeholder="Enter your email">
-                    <button class="brutal-btn" style="width: 100%; font-size: 1rem;">SUBSCRIBE &rarr;</button>
-                </div>
             </div>
         </div>
         

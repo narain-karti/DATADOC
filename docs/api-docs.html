@@ -5,6 +5,42 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>API Documentation | DATADOC</title>
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        .code-block {
+            background: #111;
+            color: #5af78e;
+            padding: 1.2rem;
+            border-left: 4px solid var(--accent-color, #ff5e00);
+            border: 2px solid var(--text-color, #fff);
+            font-family: monospace;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            overflow-x: auto;
+            margin: 1rem 0 1.5rem 0;
+        }
+        .code-block pre {
+            margin: 0;
+        }
+        .api-card {
+            border: 2px solid var(--text-color, #fff);
+            background: #1a1a1a;
+            padding: 1rem 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .api-card h3 {
+            color: #ff5e00;
+            margin-top: 0;
+            font-family: monospace;
+        }
+        .badge-priority {
+            background: #ff5e00;
+            color: #000;
+            padding: 0.2rem 0.5rem;
+            font-weight: bold;
+            font-size: 0.8rem;
+            border-radius: 2px;
+        }
+    </style>
 </head>
 <body>
 
@@ -47,11 +83,12 @@
     <main class="container docs-layout">
         <aside class="sidebar">
             <div class="brutal-card">
-                <h3 style="margin-bottom: 1rem; border-bottom: var(--border-thick); padding-bottom: 0.5rem;">TABLE OF CONTENTS</h3>
+                <h3 style="margin-bottom: 1rem; border-bottom: var(--border-thick); padding-bottom: 0.5rem;">API TOC</h3>
                 <ul>
-                    <li><a href="#cli">CLI Commands</a></li>
-                    <li><a href="#python-api">Python API</a></li>
-                    <li><a href="#plugins">Plugins</a></li>
+                    <li><a href="#cli">CLI Reference</a></li>
+                    <li><a href="#python-api">DATADOC Class API</a></li>
+                    <li><a href="#plugin-system">Plugin Specifications</a></li>
+                    <li><a href="#role-detection">Column Role Detection</a></li>
                     <li><a href="#chat">AI Chat & Tool Calling</a></li>
                 </ul>
             </div>
@@ -59,39 +96,129 @@
         
         <section class="content">
             <div class="brutal-card">
-                <h1>API DOCUMENTATION</h1>
-                <p>Welcome to the official documentation for DATADOC. This page details the CLI commands and the Python Core Engine API.</p>
+                <h1>API DOCUMENTATION & TECHNICAL REFERENCE</h1>
+                <p>Complete reference manual for the DATADOC CLI, Python Engine API, core plugins, and column role detection system.</p>
 
-                <h2 id="cli">CLI Commands Reference</h2>
-                <p>DATADOC provides a powerful Command Line Interface for rapid dataset engineering.</p>
-                <pre><code>$ datadoc analyze raw_data.csv --ai
-$ datadoc recommend raw_data.csv
-$ datadoc engineer raw_data.csv
-$ datadoc compare raw_data.csv clean_raw_data.csv
-$ datadoc pipeline raw_data.csv
-$ datadoc chat raw_data.csv</code></pre>
+                <!-- CLI Reference -->
+                <h2 id="cli">1. CLI Commands Reference</h2>
+                <p>DATADOC provides a rich Command Line Interface built with <code>Typer</code> and <code>Rich</code>.</p>
                 
-                <h2 id="python-api">Python Core API</h2>
-                <p>You can also use DATADOC directly within your Python scripts or Jupyter Notebooks.</p>
-                <pre><code>from datadoc.core.engine import DATADOC
+                <div class="api-card">
+                    <h3>datadoc analyze &lt;file.csv&gt; [--ai]</h3>
+                    <p>Analyzes dataset health, profiling missing values, outliers, data types, and scaling issues.</p>
+                    <div class="code-block">
+                        <pre><code># Basic analysis
+$ datadoc analyze raw_data.csv
 
-doc = DATADOC("raw_data.csv")
-report = doc.analyze()
-clean_df = doc.engineer()
-clean_df.write_csv("clean_data.csv")</code></pre>
+# AI-enhanced analysis via LiteLLM
+$ datadoc analyze raw_data.csv --ai</code></pre>
+                    </div>
+                </div>
 
-                <h2 id="plugins">Core Plugins</h2>
-                <p>The DATADOC engine utilizes 5 deterministic plugins to engineer your dataset:</p>
-                <ul>
-                    <li><strong>MissingValuePlugin</strong>: Imputes missing numeric values with median, categorical with mode.</li>
-                    <li><strong>OutlierPlugin</strong>: Detects outliers via IQR and clips them dynamically.</li>
-                    <li><strong>DatetimePlugin</strong>: Extracts temporal features (year, month, day).</li>
-                    <li><strong>CategoricalEncoderPlugin</strong>: One-Hot Encodes low-cardinality strings.</li>
-                    <li><strong>ScalingPlugin</strong>: Standard scales numeric columns when max/min variance is high.</li>
+                <div class="api-card">
+                    <h3>datadoc recommend &lt;file.csv&gt;</h3>
+                    <p>Returns prioritized engineering recommendations for transforming raw columns into ML features.</p>
+                    <div class="code-block">
+                        <pre><code>$ datadoc recommend raw_data.csv</code></pre>
+                    </div>
+                </div>
+
+                <div class="api-card">
+                    <h3>datadoc engineer &lt;file.csv&gt; [--output clean.csv]</h3>
+                    <p>Executes the complete autonomous cleaning pipeline and exports the engineered CSV file.</p>
+                    <div class="code-block">
+                        <pre><code># Default output: clean_raw_data.csv
+$ datadoc engineer raw_data.csv
+
+# Specify custom output path
+$ datadoc engineer raw_data.csv --output processed_features.csv</code></pre>
+                    </div>
+                </div>
+
+                <div class="api-card">
+                    <h3>datadoc compare &lt;raw.csv&gt; &lt;clean.csv&gt;</h3>
+                    <p>Displays side-by-side terminal comparison tables comparing row counts, column counts, missing values, and scaling statistics.</p>
+                    <div class="code-block">
+                        <pre><code>$ datadoc compare raw_data.csv clean_raw_data.csv</code></pre>
+                    </div>
+                </div>
+
+                <div class="api-card">
+                    <h3>datadoc pipeline &lt;file.csv&gt;</h3>
+                    <p>Generates a standalone, reproducible Python script (<code>pipeline_&lt;filename&gt;.py</code>) that reproduces the exact cleaning pipeline.</p>
+                    <div class="code-block">
+                        <pre><code>$ datadoc pipeline raw_data.csv</code></pre>
+                    </div>
+                </div>
+
+                <!-- Python API -->
+                <h2 id="python-api">2. Python DATADOC Engine API</h2>
+                <p>The primary SDK class for interacting with DATADOC inside Python code:</p>
+
+                <div class="code-block">
+                    <pre><code>class DATADOC(filepath: str)</code></pre>
+                </div>
+                
+                <ul class="feature-list" style="grid-template-columns: 1fr;">
+                    <li><strong><code>__init__(filepath: str)</code></strong>: Loads the target dataset into an internal Polars DataFrame.</li>
+                    <li><strong><code>analyze() -> str</code></strong>: Runs all registered plugins' <code>analyze()</code> methods and returns a structured diagnostic report string.</li>
+                    <li><strong><code>recommend() -> list[str]</code></strong>: Collects actionable transformation recommendations from all plugins.</li>
+                    <li><strong><code>engineer(progress_callback=None) -> pl.DataFrame</code></strong>: Auto-detects column roles, prunes IDs/names, executes plugins by priority, drops constant columns, and returns a clean Polars DataFrame.</li>
+                    <li><strong><code>compare(clean_df: pl.DataFrame) -> str</code></strong>: Generates comparative metrics between original and clean DataFrames.</li>
+                    <li><strong><code>pipeline() -> str</code></strong>: Generates equivalent Python source code for replicating transformations.</li>
+                    <li><strong><code>ai_engineer(goal: str, model="groq/llama-3.3-70b-versatile", api_key=None) -> pl.DataFrame</code></strong>: Uses LiteLLM to plan and execute a customized plugin pipeline based on a user goal.</li>
                 </ul>
 
-                <h2 id="chat">AI Chat & Tool Calling</h2>
-                <p>DATADOC incorporates an interactive agentic orchestrator. By running <code>datadoc chat &lt;file&gt;</code>, the AI is granted direct tool-calling access to the underlying Python engine, allowing it to autonomously trigger plugins and clean your data conversationally.</p>
+                <!-- Plugin Specifications -->
+                <h2 id="plugin-system">3. Core Plugins Specifications</h2>
+                <p>DATADOC runs 5 deterministic plugins sequenced by strict priority:</p>
+
+                <div class="api-card">
+                    <h3>10: MissingValuePlugin <span class="badge-priority">PRIORITY 10</span></h3>
+                    <p><strong>Behavior:</strong> Detects null values. Imputes continuous numeric features with column <code>Median</code> and categorical/string features with column <code>Mode</code>.</p>
+                    <p><strong>Dependencies:</strong> None</p>
+                </div>
+
+                <div class="api-card">
+                    <h3>20: OutlierPlugin <span class="badge-priority">PRIORITY 20</span></h3>
+                    <p><strong>Behavior:</strong> Identifies outliers on numerical features using Interquartile Range (1.5x IQR). Clips values outside $[Q1 - 1.5 \times IQR, Q3 + 1.5 \times IQR]$. Excludes binary (0/1) indicators.</p>
+                    <p><strong>Dependencies:</strong> <code>MissingValuePlugin</code></p>
+                </div>
+
+                <div class="api-card">
+                    <h3>30: DatetimePlugin <span class="badge-priority">PRIORITY 30</span></h3>
+                    <p><strong>Behavior:</strong> Auto-parses datetime strings. Extracts temporal features (<code>year</code>, <code>month</code>, <code>day</code>, <code>dayofweek</code>, and <code>hour</code> if non-midnight times exist). Automatically drops the original datetime string and any zero-variance date features.</p>
+                    <p><strong>Dependencies:</strong> <code>MissingValuePlugin</code></p>
+                </div>
+
+                <div class="api-card">
+                    <h3>40: CategoricalEncoderPlugin <span class="badge-priority">PRIORITY 40</span></h3>
+                    <p><strong>Behavior:</strong> Detects low-cardinality string columns and applies One-Hot Encoding (with <code>drop_first=True</code>). Auto-identifies and drops high-cardinality identifier columns.</p>
+                    <p><strong>Dependencies:</strong> <code>MissingValuePlugin</code></p>
+                </div>
+
+                <div class="api-card">
+                    <h3>45: ScalingPlugin <span class="badge-priority">PRIORITY 45</span></h3>
+                    <p><strong>Behavior:</strong> Identifies continuous numerical features with large scale disparities (standard deviation ratio > 10). Applies Z-Score Normalization $(x - \mu)/\sigma$. Excludes binary 0/1 columns and constant features.</p>
+                    <p><strong>Dependencies:</strong> <code>OutlierPlugin</code>, <code>CategoricalEncoderPlugin</code></p>
+                </div>
+
+                <!-- Role Detection -->
+                <h2 id="role-detection">4. Column Role Detection System</h2>
+                <p>Before any plugins run, DATADOC's engine executes <code>_detect_column_roles()</code> to classify every column into one of four roles:</p>
+                
+                <div class="code-block">
+                    <pre><code>Roles:
+1. "id"      -> Monotonically increasing unique integer series (Dropped automatically)
+2. "name"    -> Unique string identifiers / UUIDs / high-cardinality names (Dropped automatically)
+3. "constant"-> Zero-variance single-value columns (Dropped automatically at pipeline end)
+4. "feature" -> Predictive numerical, categorical, or datetime features (Passed to plugins)</code></pre>
+                </div>
+
+                <!-- AI Chat -->
+                <h2 id="chat">5. AI Chat & Autonomous Tool Calling</h2>
+                <p>DATADOC includes an agentic chat assistant launched via <code>datadoc chat &lt;file.csv&gt;</code>. The agent is provided native tool declarations to inspect dataset metadata, analyze column stats, run specific plugins, and answer natural language data engineering questions.</p>
+
             </div>
         </section>
     </main>

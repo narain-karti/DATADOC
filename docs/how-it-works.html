@@ -5,13 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DATADOC | How It Works</title>
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        .code-block {
+            background: #111;
+            color: #5af78e;
+            padding: 1.2rem;
+            border-left: 4px solid var(--accent-color, #ff5e00);
+            border: 2px solid var(--text-color, #fff);
+            font-family: monospace;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            overflow-x: auto;
+            margin: 1rem 0 1.5rem 0;
+        }
+        .code-block pre {
+            margin: 0;
+        }
+    </style>
 </head>
 <body>
 
     <!-- Navbar -->
     <nav class="navbar">
         <div class="nav-brand">
-            [<span>DATADOC</span>]
+            <a href="index.html">[<span>DATADOC</span>]</a>
         </div>
         <div class="nav-links">
             <a href="index.html">FEATURES</a>
@@ -30,51 +47,76 @@
         
         <section class="brutal-card" style="margin-top: 2rem;">
             <div class="card-header">
-                ARCHITECTURE
+                ARCHITECTURE OVERVIEW
                 <span style="font-family: monospace;">&#x21F1;</span>
             </div>
             
             <h2 style="margin-top: 1rem;">The Plugin Orchestrator</h2>
             <p style="margin-top: 1rem;">
-                DATADOC operates as an intelligent orchestrator. It doesn't modify your data haphazardly. 
-                Instead, it passes your dataset through an isolated chain of plugins in a strict priority order. 
-                Each plugin analyzes the data, computes optimal transformations, and builds a reproducible execution graph.
+                DATADOC operates as a deterministic, high-speed dataset engineering orchestrator. 
+                Instead of modifying data arbitrarily, it runs raw datasets through a strict sequence:
+                first, **Column Role Detection** filters out non-predictive columns; next, an isolated chain of priority-ordered plugins transforms the remaining features.
             </p>
 
+            <!-- Mermaid Architecture Diagram -->
             <div style="background-color: var(--bg-card); border: 2px solid var(--text-color); margin-top: 2rem; padding: 2rem; overflow-x: auto;">
                 <pre class="mermaid" style="text-align: center; background: transparent;">
 flowchart TD
-    A["Raw Dataset CSV"] --> B("DATADOC Engine")
+    A["Raw Dataset CSV"] --> B("DATADOC Core Engine")
     
-    subgraph PluginPipeline ["Priority-Ordered Plugin Pipeline"]
+    subgraph RoleDetection ["1. Column Role Detection System"]
+        R1["_detect_column_roles()"]
+        R2["Filter out ID / Name / UUID columns"]
+        R1 --> R2
+    end
+    
+    B --> RoleDetection
+    
+    subgraph PluginPipeline ["2. Priority-Ordered Plugin Execution"]
         direction TB
-        P1["10: MissingValuePlugin<br/>Imputes nulls"]
-        P2["20: OutlierPlugin<br/>Clips via IQR"]
-        P3["30: DatetimePlugin<br/>Extracts components"]
-        P4["40: CategoricalEncoder<br/>One-Hot Encodings"]
-        P5["45: ScalingPlugin<br/>Standard Scaling"]
+        P1["10: MissingValuePlugin<br/>Imputes nulls with Median/Mode"]
+        P2["20: OutlierPlugin<br/>Caps values at 1.5x IQR"]
+        P3["30: DatetimePlugin<br/>Extracts year, month, day, hour"]
+        P4["40: CategoricalEncoderPlugin<br/>One-hot encodes low-cardinality strings"]
+        P5["45: ScalingPlugin<br/>Z-Score Normalization"]
         
         P1 --> P2 --> P3 --> P4 --> P5
     end
     
-    B --> PluginPipeline
+    RoleDetection --> PluginPipeline
     
-    PluginPipeline --> C{"Output Formats"}
-    C -->|"datadoc engineer"| D["Cleaned CSV"]
-    C -->|"datadoc pipeline"| E["Deterministic Python Script"]
-    C -->|"datadoc analyze"| F["Terminal Report"]
+    subgraph Cleanup ["3. Constant Column Purge"]
+        C1["Drop zero-variance constant features"]
+    end
+    
+    PluginPipeline --> Cleanup
+    
+    Cleanup --> Output{"Output Handlers"}
+    Output -->|"doc.engineer()"| D["Polars / Pandas DataFrame"]
+    Output -->|"datadoc engineer"| E["Engineered CSV File"]
+    Output -->|"datadoc pipeline"| F["Reproducible Python Script"]
                 </pre>
             </div>
 
-            <h2 style="margin-top: 2rem;">How Plugins Work</h2>
-            <p style="margin-top: 1rem;">
-                Every plugin implements a strict <code>BasePlugin</code> interface ensuring absolute safety and determinism:
-            </p>
-            <ul class="feature-list" style="margin-top: 1rem;">
-                <li><strong>analyze():</strong> Evaluates the column to check if the plugin's logic applies.</li>
-                <li><strong>apply():</strong> Applies the transformation mathematically and efficiently using Polars.</li>
-                <li><strong>rollback():</strong> Safely undoes the transformation if needed.</li>
-                <li><strong>generate_code():</strong> Generates equivalent Python source code for pipeline exportation.</li>
+            <h2 style="margin-top: 2rem;">Key Architectural Guarantees</h2>
+            
+            <ul class="feature-list" style="margin-top: 1rem; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
+                <li>
+                    <h4>🔍 COLUMN ROLE SENSITIVITY</h4>
+                    <p>Detects unique sequence integers, names, and UUIDs to drop them automatically. Prevents invalid scaling on ID variables.</p>
+                </li>
+                <li>
+                    <h4>⚡ POLARS RUST BACKEND</h4>
+                    <p>Processes millions of rows in memory using multi-threaded Rust execution for maximum throughput and minimal RAM usage.</p>
+                </li>
+                <li>
+                    <h4>🛡️ ZERO DATA LEAKAGE</h4>
+                    <p>Imputation and scaling statistics are strictly evaluated to prevent test-set leakage or artificial distribution warping.</p>
+                </li>
+                <li>
+                    <h4>⚙️ 100% REPRODUCIBILITY</h4>
+                    <p>Generates equivalent Python source code (<code>doc.pipeline()</code>) so your data engineering is fully audit-ready.</p>
+                </li>
             </ul>
 
         </section>
@@ -87,9 +129,6 @@ flowchart TD
             <div class="footer-brand">
                 <h3 style="font-size: 2rem; font-family: var(--font-display);">[DATADOC]</h3>
                 <p style="margin-top: 1rem; font-family: monospace; color: #888;">The OS for Dataset Engineering.</p>
-                <div style="margin-top: 1rem; font-size: 1.5rem;">
-                    &#9733; &#9733; &#9733;
-                </div>
             </div>
             
             <div>
@@ -107,10 +146,8 @@ flowchart TD
                 <ul>
                     <li><a href="https://github.com/narain-karti/DATADOC">GitHub Repo</a></li>
                     <li><a href="https://pypi.org/project/datadoc-cli/">PyPI Package</a></li>
-                    <li><a href="#">Report Issue</a></li>
                 </ul>
             </div>
-            
         </div>
         
         <div class="copyright">

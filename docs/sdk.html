@@ -3,8 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Python SDK | DATADOC</title>
+    <title>Python SDK Guide | DATADOC</title>
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        .code-block {
+            background: #111;
+            color: #5af78e;
+            padding: 1.2rem;
+            border-left: 4px solid var(--accent-color, #ff5e00);
+            border: 2px solid var(--text-color, #fff);
+            font-family: monospace;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            overflow-x: auto;
+            margin: 1rem 0 1.5rem 0;
+        }
+        .code-block pre {
+            margin: 0;
+        }
+        .tip-box {
+            background-color: #1a1a1a;
+            border: 2px solid #00e5ff;
+            padding: 1rem 1.5rem;
+            margin: 1.5rem 0;
+        }
+        .tip-box h4 {
+            color: #00e5ff;
+            margin-top: 0;
+        }
+    </style>
 </head>
 <body>
 
@@ -47,48 +74,175 @@
     <main class="container docs-layout">
         <aside class="sidebar">
             <div class="brutal-card">
-                <h3 style="margin-bottom: 1rem; border-bottom: var(--border-thick); padding-bottom: 0.5rem;">SDK SETUP</h3>
+                <h3 style="margin-bottom: 1rem; border-bottom: var(--border-thick); padding-bottom: 0.5rem;">SDK NAVIGATION</h3>
                 <ul>
-                    <li><a href="#install">Installation</a></li>
-                    <li><a href="#quickstart">Quickstart</a></li>
-                    <li><a href="#env">Environment Variables</a></li>
+                    <li><a href="#install">1. Installation</a></li>
+                    <li><a href="#quickstart">2. Two-Line Quickstart</a></li>
+                    <li><a href="#pandas-integration">3. Pandas vs Polars Integration</a></li>
+                    <li><a href="#analysis">4. Data Inspection & Analysis</a></li>
+                    <li><a href="#progress">5. Real-Time Execution Tracking</a></li>
+                    <li><a href="#ai-engineer">6. AI-Driven Auto-Engineering</a></li>
+                    <li><a href="#custom-plugins">7. Writing Custom Plugins</a></li>
+                    <li><a href="#kaggle-demo">8. Kaggle / Colab ML End-to-End</a></li>
                 </ul>
             </div>
         </aside>
         
         <section class="content">
             <div class="brutal-card">
-                <h1>PYTHON SDK INSTALLATION</h1>
-                <p>Integrate DATADOC's blazing-fast dataset engineering capabilities directly into your backend services, ML pipelines, or Jupyter Notebooks.</p>
+                <h1>DATADOC PYTHON SDK GUIDE</h1>
+                <p>Integrate DATADOC's high-performance dataset engineering engine directly into your Jupyter Notebooks, Google Colab, Kaggle competitions, or production backend ML pipelines.</p>
 
-                <h2 id="install">Installation</h2>
-                <p>DATADOC is published on PyPI. Install it using standard package managers:</p>
-                <pre><code># Standard pip installation
-pip install datadoc-cli
+                <!-- 1. Installation -->
+                <h2 id="install">1. Installation</h2>
+                <p>DATADOC is available directly from PyPI. Install it in your environment or notebook cell:</p>
+                <div class="code-block">
+                    <pre><code># Install in Jupyter / Colab / Kaggle
+!pip install datadoc-cli
 
-# If using uv (recommended for speed)
-uv pip install datadoc-cli</code></pre>
-                
-                <h2 id="quickstart">Quickstart SDK Usage</h2>
-                <pre><code>import polars as pl
+# Or using uv for ultra-fast installation
+!uv pip install datadoc-cli</code></pre>
+                </div>
+
+                <!-- 2. Quickstart -->
+                <h2 id="quickstart">2. Two-Line Quickstart</h2>
+                <p>Automate 80% of data wrangling without writing custom imputers, manual scalers, or one-hot encoders:</p>
+                <div class="code-block">
+                    <pre><code>from datadoc.core.engine import DATADOC
+
+# 1. Initialize engine with your raw CSV file path
+doc = DATADOC("messy_raw_data.csv")
+
+# 2. Execute full autonomous data engineering pipeline
+clean_df = doc.engineer()
+
+print("Cleaned DataFrame Shape:", clean_df.shape)</code></pre>
+                </div>
+
+                <!-- 3. Pandas vs Polars -->
+                <h2 id="pandas-integration">3. Pandas vs Polars Integration</h2>
+                <p>DATADOC processes datasets using a Rust-backed Polars engine for maximum speed and sub-second memory efficiency. However, ML frameworks like Scikit-Learn, XGBoost, and LightGBM often expect Pandas DataFrames.</p>
+                <p>You can instantly bridge both worlds using Polars' zero-copy conversion:</p>
+                <div class="code-block">
+                    <pre><code># Get cleaned data as a Pandas DataFrame for Scikit-Learn
+df_pandas = doc.engineer().to_pandas()
+
+# Split into X and y directly
+X = df_pandas.drop(columns=["target"])
+y = df_pandas["target"]</code></pre>
+                </div>
+
+                <div class="tip-box">
+                    <h4>💡 Why Polars Backend + Pandas Export?</h4>
+                    <p>Polars executes data operations (imputation, IQR capping, datetime parsing, one-hot encoding) in parallel across all CPU cores. <code>to_pandas()</code> converts the final result in RAM in milliseconds right before model training.</p>
+                </div>
+
+                <!-- 4. Analysis -->
+                <h2 id="analysis">4. Data Inspection & Analysis</h2>
+                <p>Before applying transformations, inspect what issues DATADOC discovered in your raw dataset:</p>
+                <div class="code-block">
+                    <pre><code># Generate a human-readable diagnostic report
+report = doc.analyze()
+print(report)
+
+# Get specific recommendations
+recs = doc.recommend()
+for r in recs:
+    print("Suggest:", r)</code></pre>
+                </div>
+
+                <!-- 5. Real-Time Tracking -->
+                <h2 id="progress">5. Real-Time Execution Tracking</h2>
+                <p>Track plugin progress step-by-step using custom callbacks during pipeline execution:</p>
+                <div class="code-block">
+                    <pre><code>def track_pipeline(plugin_name, status, details):
+    if status == "applied":
+        print(f"✅ {plugin_name}: {details[0]}")
+    elif status == "skipped":
+        print(f"⏭️ {plugin_name}: Not required.")
+
+clean_df = doc.engineer(progress_callback=track_pipeline)</code></pre>
+                </div>
+
+                <!-- 6. AI Engineer -->
+                <h2 id="ai-engineer">6. AI-Driven Auto-Engineering (<code>ai_engineer</code>)</h2>
+                <p>Leverage Generative AI (via LiteLLM) to analyze your dataset and generate an optimized plugin plan based on your plain-English objective:</p>
+                <div class="code-block">
+                    <pre><code># Run AI-guided engineering with your custom goal
+clean_df = doc.ai_engineer(
+    goal="Optimize features for a churn classification model",
+    model="groq/llama-3.3-70b-versatile",
+    api_key="your_api_key_here"
+)</code></pre>
+                </div>
+
+                <!-- 7. Custom Plugins -->
+                <h2 id="custom-plugins">7. Writing Custom Plugins</h2>
+                <p>Extend DATADOC by subclassing <code>BasePlugin</code> to introduce custom domain-specific transformations:</p>
+                <div class="code-block">
+                    <pre><code>import polars as pl
+from datadoc.plugins.base import BasePlugin
+
+class CustomLogTransformPlugin(BasePlugin):
+    @property
+    def name(self) -> str:
+        return "CustomLogTransformPlugin"
+    
+    @property
+    def description(self) -> str:
+        return "Applies log1p transformation to skewed numerical features."
+    
+    @property
+    def priority(self) -> int:
+        return 25  # Runs after Outliers (20) and before Scaling (40)
+    
+    def analyze(self, df: pl.DataFrame) -> dict:
+        skewed_cols = [c for c in df.columns if df[c].dtype.is_numeric() and df[c].skew() > 2.0]
+        return {"has_skew": len(skewed_cols) > 0, "skewed_cols": skewed_cols}
+    
+    def apply(self, df: pl.DataFrame) -> pl.DataFrame:
+        res = self.analyze(df)
+        if not res["has_skew"]:
+            return df
+        return df.with_columns([pl.col(c).log1p().alias(c) for c in res["skewed_cols"]])
+
+# Register plugin into DATADOC
+doc = DATADOC("raw_data.csv")
+doc.register_plugin(CustomLogTransformPlugin())
+clean_df = doc.engineer()</code></pre>
+                </div>
+
+                <!-- 8. End-to-End Kaggle Demo -->
+                <h2 id="kaggle-demo">8. Kaggle / Google Colab End-to-End ML Pipeline</h2>
+                <p>Here is a complete production-grade snippet showing how DATADOC turns messy data into a trained Random Forest classifier in under 15 lines of code:</p>
+                <div class="code-block">
+                    <pre><code>import pandas as pd
 from datadoc.core.engine import DATADOC
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report
 
-# Initialize engine
-doc = DATADOC("your_raw_dataset.csv")
+# 1. Load and Auto-Clean Dataset via DATADOC
+# Automatically drops IDs/Names, imputes missing values, caps outliers, extracts dates, & one-hot encodes
+doc = DATADOC("customer_churn_raw.csv")
+df_clean = doc.engineer().to_pandas()
 
-# Autonomously engineer
-clean_dataframe = doc.engineer()
+# 2. Separate Features & Target
+X = df_clean.drop(columns=["Churn"])
+y = df_clean["Churn"]
 
-# Save output
-clean_dataframe.write_csv("engineered_dataset.csv")</code></pre>
+# 3. Train-Test Split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-                <h2 id="env">Environment Variables</h2>
-                <p>If you plan to use the Agentic Orchestrator (<code>--ai</code>) via the Python SDK or CLI, ensure you configure your API keys.</p>
-                <pre><code># Create a .env file in your working directory
-DATADOC_MODEL=groq/llama-3.3-70b-versatile
-GROQ_API_KEY=gsk_your_api_key_here
-GEMINI_API_KEY=AIza_your_api_key_here</code></pre>
-                <p>The SDK automatically loads <code>.env</code> variables at runtime.</p>
+# 4. Train Scikit-Learn Model
+model = RandomForestClassifier(n_estimators=100, random_state=42)
+model.fit(X_train, y_train)
+
+# 5. Evaluate Performance
+preds = model.predict(X_test)
+print(classification_report(y_test, preds))</code></pre>
+                </div>
+
             </div>
         </section>
     </main>
