@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Contribute | DATADOC</title>
     <link rel="stylesheet" href="css/style.css">
+    <!-- Prism CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/toolbar/prism-toolbar.min.css" rel="stylesheet" />
 </head>
 <body>
 
@@ -52,7 +55,7 @@
 
                 <h2 id="custom-plugins">Building Custom Plugins</h2>
                 <p>To add a new feature to the DATADOC pipeline, you must create a class that inherits from <code>BasePlugin</code>.</p>
-                <pre><code>from datadoc.plugins.base import BasePlugin
+                <pre><code class="language-python">from datadoc.plugins.base import BasePlugin
 import polars as pl
 
 class MyCustomPlugin(BasePlugin):
@@ -124,5 +127,11 @@ class MyCustomPlugin(BasePlugin):
         </div>
     </footer>
 
+    <!-- PrismJS Syntax Highlighting & Copy Button -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/toolbar/prism-toolbar.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/copy-to-clipboard/prism-copy-to-clipboard.min.js"></script>
 </body>
 </html>

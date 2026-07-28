@@ -381,6 +381,9 @@ a {
 }
 .feature-list p {
   font-size: 0.8rem;
+  color: #555;
+}
+.card-why .feature-list p {
   color: #ddd;
 }
 
@@ -513,6 +516,7 @@ footer ul li a:hover {
 }
 .content pre {
   background: var(--black);
+  color: #ccc; /* Fallback if PrismJS fails */
   padding: 1.5rem;
   border: var(--border-thick);
   overflow-x: auto;
@@ -534,8 +538,7 @@ div.code-toolbar > .toolbar {
   opacity: 1 !important;
 }
 div.code-toolbar > .toolbar a,
-div.code-toolbar > .toolbar button,
-div.code-toolbar > .toolbar span {
+div.code-toolbar > .toolbar button {
   background: var(--neon) !important;
   color: var(--black) !important;
   border: 2px solid var(--black) !important;
@@ -543,10 +546,18 @@ div.code-toolbar > .toolbar span {
   border-radius: 0 !important;
   box-shadow: 2px 2px 0px var(--black) !important;
   transition: transform 0.1s !important;
+  padding: 0.2rem 0.6rem !important;
+  cursor: pointer !important;
 }
 div.code-toolbar > .toolbar a:hover,
-div.code-toolbar > .toolbar button:hover,
-div.code-toolbar > .toolbar span:hover {
+div.code-toolbar > .toolbar button:hover {
   transform: translate(1px, 1px) !important;
   box-shadow: 1px 1px 0px var(--black) !important;
+}
+div.code-toolbar > .toolbar span {
+  /* Reset span styles to prevent nested artifacts */
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
 }
