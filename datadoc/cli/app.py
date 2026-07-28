@@ -633,6 +633,32 @@ def version():
 
 
 # ──────────────────────────────────────────────────────────────
+# COMMAND: agent
+# ──────────────────────────────────────────────────────────────
+@app.command()
+def agent(
+    file_path: str,
+    model: str = typer.Option(DEFAULT_MODEL, "--model", help="The LiteLLM model string to use.")
+):
+    """
+    Launch the Autonomous Agentic Data Engineer.
+    """
+    print_banner()
+    doc = load_dataset(file_path)
+    api_key = _get_api_key(model)
+    
+    clean_df = doc.agentic_engineer(model=model, goal="", api_key=api_key, interactive=True)
+    
+    if hasattr(doc, 'last_agent_code') and doc.last_agent_code:
+        output_filename = f"agent_pipeline_{os.path.basename(file_path).split('.')[0]}.py"
+        doc.export_agent_pipeline(output_filename)
+        
+        # Save output csv
+        clean_path = f"clean_{os.path.basename(file_path)}"
+        clean_df.write_csv(clean_path)
+        print(f"\n✅ Clean dataset saved to {clean_path}")
+
+# ──────────────────────────────────────────────────────────────
 # COMMAND: chat
 # ──────────────────────────────────────────────────────────────
 @app.command()
