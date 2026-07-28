@@ -291,4 +291,89 @@ Respond in plain text formatted nicely with bullet points and paragraphs where a
         planner_response = self._generate_ai_plan(model, goal, api_key)
         return [{"plugin": step.plugin_name, "reason": step.reason} for step in planner_response.plan]
 
-    
+    def agentic_engineer(self, model: str, goal: str, api_key: str = None, interactive: bool = True) -> pl.DataFrame:
+        """
+        Launches the Autonomous AI Data Engineer to plan, write, and execute custom pipeline code.
+        If interactive=True, it will ask questions via input().
+        If interactive=False, it will execute autonomously based on the goal.
+        """
+        metadata = self._extract_metadata()
+        agent = AgenticEngineer(metadata=metadata, api_key=api_key, model=model)
+        
+        console = Console()
+        console.print(Panel.fit("[bold magenta]🤖 DATADOC Agentic Engineer initializing...[/bold magenta]", border_style="cyan"))
+        
+        # 1. Interview Phase
+        if interactive:
+            console.print(f"\n[bold green]AI:[/bold green] {agent.chat_step('')}")
+            while True:
+                user_msg = console.input("\n[bold cyan]You:[/bold cyan] ")
+                if user_msg.strip().lower() in ['plan', 'go', 'execute', 'done', 'yes', 'y']:
+                    break
+                console.print(f"\n[bold green]AI:[/bold green] {agent.chat_step(user_msg)}")
+        else:
+            agent.chat_step(f"My goal is: {goal}. Please generate the plan.")
+            
+        # 2. Plan Phase
+        console.print("\n[bold yellow]⚙️ Generating Implementation Plan...[/bold yellow]")
+        plan = agent.generate_plan()
+        console.print(Panel(Markdown(plan), title="[bold cyan]AI IMPLEMENTATION PLAN[/bold cyan]", border_style="cyan"))
+        
+        if interactive:
+            approve = console.input("[bold yellow]Do you approve this plan? (Y/N): [/bold yellow]")
+            if approve.strip().lower() not in ['y', 'yes']:
+                console.print("[bold red]Aborting.[/bold red]")
+                return self.df
+                
+        # 3. Code Generation Phase
+        console.print("\n[bold yellow]💻 Generating Custom Pipeline Code...[/bold yellow]")
+        code = agent.generate_code()
+        self.last_agent_code = code
+        console.print(Panel(code, title="[bold cyan]GENERATED PIPELINE[/bold cyan]", border_style="cyan"))
+        
+        if interactive:
+            approve_code = console.input("[bold yellow]Do you want to execute this code now? (Y/N): [/bold yellow]")
+            if approve_code.strip().lower() not in ['y', 'yes']:
+                console.print("[bold red]Execution aborted. The code is saved in `doc.last_agent_code`.[/bold red]")
+                return self.df
+                
+        # 4. Execution Phase
+        console.print("\n[bold yellow]🚀 Executing Custom Pipeline...[/bold yellow]")
+        # Create a safe local namespace to execute the function
+        local_vars = {}
+        try:
+            exec(code, globals(), local_vars)
+            if 'clean_data' not in local_vars:
+                raise ValueError("The AI failed to generate a `clean_data` function.")
+                
+            clean_func = local_vars['clean_data']
+            # Pass the dataframe to the function
+            import pandas as pd
+            clean_df = clean_func(self.df.clone())
+            
+            # Ensure it returned a dataframe
+            if not isinstance(clean_df, (pl.DataFrame, pd.DataFrame)):
+                raise TypeError(f"Expected a DataFrame, but got {type(clean_df)}")
+                
+            # Convert back to polars if it was pandas
+            if not isinstance(clean_df, pl.DataFrame):
+                clean_df = pl.from_pandas(clean_df)
+                
+            console.print("[bold green]✅ Execution Successful![/bold green]")
+            return clean_df
+            
+        except Exception as e:
+            console.print(f"\n[bold red]❌ Execution Failed: {e}[/bold red]")
+            console.print(traceback.format_exc())
+            console.print("[bold yellow]The generated code might contain errors. You can inspect it via `doc.last_agent_code`.[/bold yellow]")
+            return self.df
+            
+    def export_agent_pipeline(self, filename: str) -> None:
+        """Saves the last generated AI pipeline code to a file."""
+        if not hasattr(self, 'last_agent_code') or not self.last_agent_code:
+            raise ValueError("No AI code has been generated yet. Run `agentic_engineer()` first.")
+            
+        with open(filename, 'w') as f:
+            f.write(self.last_agent_code)
+        console = Console()
+        console.print(f"[bold green]✅ Pipeline exported to {filename}[/bold green]")
