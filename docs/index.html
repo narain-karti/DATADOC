@@ -1,322 +1,144 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DATADOC | Leakage-Safe Tabular Data Preparation</title>
-    <link rel="stylesheet" href="css/style.css">
-    
-    <!-- Prism CSS -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/toolbar/prism-toolbar.min.css" rel="stylesheet" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="DATADOC documentation: leakage-safe tabular data preparation with CLI, Python SDK, and local web UI.">
+  <title>DATADOC Docs | Overview</title>
+  <link rel="stylesheet" href="css/docs.css">
 </head>
 <body>
-
-    <!-- Navbar -->
-    <nav class="navbar">
-        <div class="nav-brand">
-            <a href="index.html">[<span>DATADOC</span>]</a>
-        </div>
-        <div class="nav-links">
-            <a href="index.html" class="active">FEATURES</a>
-            <a href="how-it-works.html">HOW IT WORKS</a>
-            <a href="setup.html">SETUP & USAGE</a>
-            <a href="api-docs.html">API DOCS</a>
-            <a href="sdk.html">PYTHON SDK</a>
-            <a href="pipeline.html">PIPELINE GUIDE</a>
-            <a href="contribute.html">CONTRIBUTE</a>
-            <a href="license.html">LICENSE</a>
-        </div>
-        <a href="setup.html" class="brutal-btn nav-cta">GET STARTED</a>
+  <header class="site-header">
+    <a class="brand" href="index.html"><span class="brand-mark">DD</span><span>DATADOC <span class="muted">/ docs</span></span></a>
+    <nav class="header-nav" aria-label="Primary navigation">
+      <a class="active" data-page-link href="index.html">Docs</a>
+      <a data-page-link href="pipeline.html">Pipeline</a>
+      <a data-page-link href="api-docs.html">API</a>
+      <a data-page-link href="sdk.html">SDK</a>
+      <a data-page-link href="ui.html">UI</a>
+      <a href="https://github.com/narain-karti/DATADOC">GitHub ↗</a>
     </nav>
-
-    <!-- Scrolling Ticker -->
-    <div class="ticker-wrap">
-        <div class="ticker">
-            <span>• LIGHTNING FAST</span>
-            <span>• POLARS BACKEND</span>
-            <span>• DETERMINISTIC</span>
-            <span>• LEAKAGE-SAFE</span>
-            <span>• ARTIFACT-DRIVEN</span>
-            <span>• MACHINE LEARNING PIPELINE</span>
-            <span>• LIGHTNING FAST</span>
-            <span>• POLARS BACKEND</span>
-            <span>• DETERMINISTIC</span>
-            <span>• LEAKAGE-SAFE</span>
-            <span>• ARTIFACT-DRIVEN</span>
-            <span>• MACHINE LEARNING PIPELINE</span>
-        </div>
+    <div class="header-tools">
+      <label class="search-box" aria-label="Search documentation">
+        <span aria-hidden="true">⌕</span><input data-search-input type="search" placeholder="Search docs" autocomplete="off">
+      </label>
+      <span class="version-badge">v0.4.0</span>
+      <button class="menu-button" type="button" data-menu-toggle aria-label="Open navigation" aria-expanded="false">☰</button>
     </div>
+  </header>
+  <nav class="topic-bar" aria-label="Documentation topics">
+    <a class="active" href="index.html">Overview</a><a href="setup.html">Getting started</a><a href="pipeline.html">Pipeline</a><a href="cli.html">CLI</a><a href="sdk.html">Python SDK</a><a href="api-docs.html">API reference</a><a href="ui.html">Web UI</a><a href="production.html">Production</a>
+  </nav>
+  <div class="mobile-overlay"></div>
+  <div class="docs-frame">
+    <aside class="sidebar" aria-label="Documentation navigation">
+      <div class="side-group"><div class="side-label">Start here</div><a class="side-link active" data-page-link href="index.html">Overview</a><a class="side-link" data-page-link href="setup.html">Installation</a><a class="side-link" href="#quickstart">Quickstart</a></div>
+      <div class="side-group"><div class="side-label">Core workflow</div><a class="side-link" data-page-link href="how-it-works.html">How it works</a><a class="side-link" data-page-link href="pipeline.html">Fitted pipeline</a><a class="side-link" href="pipeline.html#evaluation">Evaluation</a></div>
+      <div class="side-group"><div class="side-label">Interfaces</div><a class="side-link" data-page-link href="cli.html">CLI reference</a><a class="side-link" data-page-link href="sdk.html">Python SDK</a><a class="side-link" data-page-link href="api-docs.html">API reference</a><a class="side-link" data-page-link href="ui.html">Local web UI</a></div>
+      <div class="side-group"><div class="side-label">Operate</div><a class="side-link" data-page-link href="production.html">Production & release</a><a class="side-link" data-page-link href="contribute.html">Contributing</a><a class="side-link" data-page-link href="license.html">License</a></div>
+      <div class="sidebar-note">Local-first by design. AI and model evaluation are optional extras.</div>
+    </aside>
 
-    <!-- Main Content Grid -->
-    <main class="container bento-grid">
-        
-        <!-- Hero Section -->
-        <section class="hero">
-            <h1>LEAKAGE-SAFE.<br>REPRODUCIBLE PIPELINES.</h1>
-            <p>A local-first CLI and Python SDK for tabular data preparation. Turn repeated wrangling into deterministic, fitted pipelines that prevent data leakage and serialize to simple JSON artifacts.</p>
-            <div class="hero-btns">
-                <a href="setup.html" class="brutal-btn">QUICK START &rarr;</a>
-                <a href="sdk.html" class="brutal-btn secondary">PYTHON SDK GUIDE &rarr;</a>
-            </div>
-        </section>
+    <main class="main-content">
+      <div class="eyebrow">DATADOC / DOCUMENTATION</div>
+      <h1>Prepare data once.<br>Reuse it safely.</h1>
+      <p class="lead">DATADOC profiles tabular data, proposes explainable transformations, fits them on training data only, and gives you a reusable artifact for validation, test, and inference.</p>
+      <div class="page-meta"><span class="meta-chip accent">v0.4.0</span><span class="meta-chip">Python 3.10–3.12</span><span class="meta-chip">CSV + Parquet</span><span class="meta-chip">Offline core</span></div>
+      <div class="page-actions"><a class="button primary" href="setup.html">Get started →</a><a class="button" href="#quickstart">Run quickstart</a><button class="button ghost" type="button" data-copy-page>Copy page</button></div>
 
-        <!-- Live Code Preview Card -->
-        <section class="brutal-card card-overview">
-            <div class="card-header">
-                <div class="icons">
-                    <span></span><span></span><span></span>
-                </div>
-                PYTHON SDK PREVIEW (2-LINE CLEANING)
-                <span style="font-family: monospace;">&#x21F1;</span>
-            </div>
-            
-            <div class="code-block">
-                <pre><code class="language-python">from datadoc import DataDocPipeline, PipelineConfig
-import polars as pl
+      <section class="hero-grid" aria-label="Quick overview">
+        <div class="surface-raised quickstart"><div><div class="terminal-label">FIRST COMMAND</div><h2>Inspect before you change.</h2><p>Start with a read-only profile. Every later decision can be reviewed, overridden, and reproduced.</p></div><code class="terminal-line">datadoc profile train.csv --target churn</code></div>
+        <div class="diagram surface"><div class="diagram-content"><div class="diagram-node"><strong>profile → plan → fit</strong><span>frozen artifact → transform → evaluate</span></div></div></div>
+      </section>
 
-# 1. Fit the pipeline on training data ONLY
-train_df = pl.read_csv("train.csv")
-pipeline = DataDocPipeline(PipelineConfig(target="churn")).fit(train_df)
-pipeline.save("pipeline.json")
+      <section id="quickstart">
+        <h2>Quickstart</h2>
+        <div class="section-intro"><p>Use a training file with an optional target. DATADOC writes JSON and Parquet artifacts without requiring a notebook.</p></div>
+        <div class="tabs">
+          <div class="tab-list" role="tablist"><button class="tab-button active" data-tab="bash" role="tab">bash</button><button class="tab-button" data-tab="python" role="tab">Python</button><button class="tab-button" data-tab="powershell" role="tab">PowerShell</button></div>
+          <div class="tab-panel active" data-panel="bash"><pre class="code-block" data-copy><div class="code-caption"><span class="lang">Terminal</span><span>train → transform → evaluate</span></div><code>pip install datadoc-cli
+datadoc profile train.csv --target churn --output profile.json
+datadoc plan train.csv --target churn --task classification --output plan.json
+datadoc fit train.csv --target churn --output artifacts/churn-pipeline.json
+datadoc transform validation.csv \
+  --pipeline artifacts/churn-pipeline.json \
+  --output validation-features.parquet</code></pre></div>
+          <div class="tab-panel" data-panel="python"><pre class="code-block" data-copy><div class="code-caption"><span class="lang">Python</span><span>same artifact, any process</span></div><code>import polars as pl
+from datadoc import DataDocPipeline, PipelineConfig
 
-# 2. Transform unseen validation/test data deterministically
-validation_df = pl.read_csv("validation.csv")
-features = pipeline.transform(validation_df)</code></pre>
-            </div>
+train = pl.read_csv("train.csv")
+validation = pl.read_csv("validation.csv")
+pipeline = DataDocPipeline(
+    PipelineConfig(target="churn", task="classification")
+).fit(train)
 
-            <div class="stats-grid">
-                <div class="stat-box">
-                    <label>Engine Backend</label>
-                    <div class="val">Polars</div>
-                    <div class="sub up">Rust-Powered</div>
-                </div>
-                <div class="stat-box">
-                    <label>Execution Speed</label>
-                    <div class="val">10x-50x</div>
-                    <div class="sub up">Faster vs Pandas</div>
-                </div>
-                <div class="stat-box">
-                    <label>Data Quality</label>
-                    <div class="val">100%</div>
-                    <div class="sub up">ML Ready</div>
-                </div>
-            </div>
-        </section>
+features = pipeline.transform(validation)
+pipeline.save("artifacts/churn-pipeline.json")</code></pre></div>
+          <div class="tab-panel" data-panel="powershell"><pre class="code-block" data-copy><div class="code-caption"><span class="lang">PowerShell</span><span>Windows-friendly</span></div><code>python -m pip install datadoc-cli
+datadoc fit .\train.csv --target churn `
+  --output .\artifacts\churn-pipeline.json
+datadoc transform .\validation.csv `
+  --pipeline .\artifacts\churn-pipeline.json `
+  --output .\validation-features.parquet</code></pre></div>
+        </div>
+        <div class="callout info"><strong>What happens here?</strong><p><code>fit</code> learns medians, category vocabularies, datetime rules, and optional scaling statistics from <em>train.csv</em>. <code>transform</code> reuses those frozen values; it never learns from validation rows.</p></div>
+      </section>
 
-        <!-- Plugins Grid -->
-        <section class="brutal-card card-plugins">
-            <div class="card-header">
-                <div class="icons">
-                    <span></span><span></span><span></span>
-                </div>
-                CORE PLUGINS
-                <span style="font-family: monospace;">&#x21F1;</span>
-            </div>
-            <div class="plugin-list">
-                <div class="plugin-item">
-                    <div class="img-box">
-                        <span>❓</span>
-                    </div>
-                    <div class="info">
-                        <h4>MissingValue (P10)</h4>
-                        <p>Median/Mode imputation</p>
-                    </div>
-                </div>
-                <div class="plugin-item">
-                    <div class="img-box">
-                        <span>📈</span>
-                    </div>
-                    <div class="info">
-                        <h4>Outliers (P20)</h4>
-                        <p>Optional IQR clipping</p>
-                    </div>
-                </div>
-                <div class="plugin-item">
-                    <div class="img-box">
-                        <span>📅</span>
-                    </div>
-                    <div class="info">
-                        <h4>Datetime (P30)</h4>
-                        <p>Year, Month, Day, Hour features</p>
-                    </div>
-                </div>
-                <div class="plugin-item">
-                    <div class="img-box">
-                        <span>🏷️</span>
-                    </div>
-                    <div class="info">
-                        <h4>Categorical (P40)</h4>
-                        <p>One-Hot Encoding</p>
-                    </div>
-                </div>
-            </div>
-            <a href="api-docs.html#plugin-system" class="brutal-btn secondary" style="width: 100%; text-align: center; margin-top: 1rem;">VIEW ALL PLUGINS &rarr;</a>
-        </section>
+      <section id="workflow">
+        <h2>One mental model</h2>
+        <div class="section-intro"><p>Every DATADOC interface maps to the same six-step workflow. If you understand this flow, you understand the CLI, SDK, and web UI.</p></div>
+        <div class="workflow">
+          <a class="workflow-step" href="how-it-works.html#profile"><span class="step-number">01</span><strong>Profile</strong><span>Find nulls, duplicates, constants, IDs, roles, and schema risks.</span></a>
+          <a class="workflow-step" href="how-it-works.html#plan"><span class="step-number">02</span><strong>Plan</strong><span>Review proposed operations before any data is modified.</span></a>
+          <a class="workflow-step" href="pipeline.html#fit"><span class="step-number">03</span><strong>Fit</strong><span>Learn train-only statistics and save a versioned artifact.</span></a>
+          <a class="workflow-step" href="pipeline.html#transform"><span class="step-number">04</span><strong>Transform</strong><span>Apply the same output schema to validation, test, or new data.</span></a>
+          <a class="workflow-step" href="pipeline.html#evaluate"><span class="step-number">05</span><strong>Evaluate</strong><span>Compare a candidate against a baseline for a declared task.</span></a>
+          <a class="workflow-step" href="production.html#ship"><span class="step-number">06</span><strong>Ship</strong><span>Export code, lineage, and artifacts that another person can inspect.</span></a>
+        </div>
+      </section>
 
-        <!-- Why DATADOC? -->
-        <section class="brutal-card card-why">
-            <div class="card-header">
-                WHY DATADOC?
-                <span style="font-family: monospace;">&#x21F1;</span>
-            </div>
-            <ul class="feature-list">
-                <li>
-                    <h4>⚡ BLAZING FAST</h4>
-                    <p>Built on Polars (Rust). Minimal RAM overhead with zero-copy operations.</p>
-                </li>
-                <li>
-                    <h4>🔍 ROLE AWARE</h4>
-                    <p>Auto-detects IDs, constants, targets, and dates, with configurable policies.</p>
-                </li>
-                <li>
-                    <h4>🔒 LEAKAGE-SAFE</h4>
-                    <p>Calculates statistics (like medians and scaling bounds) on training data only.</p>
-                </li>
-                <li>
-                    <h4>📦 PORTABLE ARTIFACTS</h4>
-                    <p>Pipelines compile to simple JSON state files, meaning 100% reproducibility in production.</p>
-                </li>
-            </ul>
-        </section>
+      <section id="capabilities">
+        <h2>What DATADOC handles</h2>
+        <div class="feature-grid">
+          <article class="feature"><div class="number">01 / PROFILE</div><h3>Data-quality findings</h3><p>Missingness, duplicates, constants, cardinality, invalid values, datetime confidence, and suspected leakage.</p></article>
+          <article class="feature"><div class="number">02 / TRANSFORM</div><h3>Safe preparation</h3><p>Train-fitted imputation, missing indicators, category encoding, datetime features, optional clipping, and scaling.</p></article>
+          <article class="feature"><div class="number">03 / ARTIFACT</div><h3>Portable state</h3><p>Save the input contract, output schema, configuration, plan, fitted values, and artifact version as JSON.</p></article>
+          <article class="feature"><div class="number">04 / EVALUATE</div><h3>Measured outcomes</h3><p>Use classification or regression baselines with stratified, ordered, or group-aware validation.</p></article>
+          <article class="feature"><div class="number">05 / UI</div><h3>Local workspace</h3><p>Review findings, approve a plan, preview output, and download artifacts from the local dashboard.</p></article>
+          <article class="feature"><div class="number">06 / OPEN SOURCE</div><h3>Inspectable by default</h3><p>No cloud dependency for the core. Optional AI is advisory and cannot execute generated code.</p></article>
+        </div>
+      </section>
 
+      <section id="paths">
+        <h2>Choose your path</h2>
+        <div class="tabs">
+          <div class="tab-list"><button class="tab-button active" data-tab="cli">CLI users</button><button class="tab-button" data-tab="sdk">Python users</button><button class="tab-button" data-tab="ui">Dashboard users</button></div>
+          <div class="tab-panel active" data-panel="cli"><p>Best for repeatable batch jobs and CI.</p><a class="button" href="cli.html">Read the CLI reference →</a></div>
+          <div class="tab-panel" data-panel="sdk"><p>Best for notebooks, services, and custom orchestration.</p><a class="button" href="sdk.html">Read the Python SDK →</a></div>
+          <div class="tab-panel" data-panel="ui"><p>Best for exploring a dataset locally with visual feedback.</p><a class="button" href="ui.html">Read the UI guide →</a></div>
+        </div>
+      </section>
 
-        <!-- Real-World Problems Solved -->
-        <section class="brutal-card card-problems" style="grid-column: span 12; background: var(--purple); color: var(--white); margin-bottom: 2rem;">
-            <div class="card-header" style="color: var(--white); border-bottom-color: var(--white);">
-                <div class="icons">
-                    <span style="background: var(--white);"></span>
-                    <span style="background: var(--white);"></span>
-                    <span style="background: var(--white);"></span>
-                </div>
-                REAL-WORLD PROBLEMS WE SOLVE
-                <span style="font-family: monospace;">&#x21F1;</span>
-            </div>
-            
-            <div class="problems-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
-                
-                <div class="problem-box" style="background: var(--black); padding: 1.5rem; border: var(--border-thick);">
-                    <h4 style="color: var(--neon); margin-bottom: 0.5rem; font-family: monospace; font-size: 1.1rem;">[FAIL] THE "ID SCALING" DISASTER</h4>
-                    <p style="font-size: 0.9rem; color: #ccc; margin-bottom: 1rem;">
-                        <strong>Problem:</strong> Standard auto-scalers blindly apply Z-Scores to <code>user_id</code> and <code>transaction_id</code> columns, completely ruining predictive integrity.
-                    </p>
-                    <p style="font-size: 0.9rem; color: #fff;">
-                        <strong>DATADOC Fix:</strong> Native <em>Column Role Detection</em> flags likely sequence integers, UUIDs, and names with rationale; dropping remains an explicit user choice.
-                    </p>
-                </div>
+      <section id="outputs">
+        <h2>What you get back</h2>
+        <div class="table-wrap"><table><thead><tr><th>Output</th><th>Purpose</th><th>When it appears</th></tr></thead><tbody><tr><td><code>profile.json</code></td><td>Facts, roles, findings, and schema fingerprint.</td><td><code>profile</code> or <code>run</code></td></tr><tr><td><code>plan.json</code></td><td>Explainable operations and rationales.</td><td><code>plan</code> or <code>run</code></td></tr><tr><td><code>pipeline.json</code></td><td>Frozen train-only transformation state.</td><td><code>fit</code> or <code>run</code></td></tr><tr><td><code>evaluation.json</code></td><td>Baseline, candidate, metric, split, and warnings.</td><td><code>evaluate</code> or <code>run --evaluate</code></td></tr><tr><td><code>manifest.json</code></td><td>Lineage: input fingerprint, config, output schema, and artifact links.</td><td><code>run</code></td></tr></tbody></table></div>
+      </section>
 
-                <div class="problem-box" style="background: var(--black); padding: 1.5rem; border: var(--border-thick);">
-                    <h4 style="color: var(--neon); margin-bottom: 0.5rem; font-family: monospace; font-size: 1.1rem;">[FAIL] BLACK-BOX AUTO-ML</h4>
-                    <p style="font-size: 0.9rem; color: #ccc; margin-bottom: 1rem;">
-                        <strong>Problem:</strong> You use an AutoML tool, it works, but you have absolutely no idea what it did to your data under the hood. Impossible to audit.
-                    </p>
-                    <p style="font-size: 0.9rem; color: #fff;">
-                        <strong>DATADOC Fix:</strong> Review a plan, fit a JSON artifact, and export a reproducible wrapper with <code>datadoc export</code>.
-                    </p>
-                </div>
-
-                <div class="problem-box" style="background: var(--black); padding: 1.5rem; border: var(--border-thick);">
-                    <h4 style="color: var(--neon); margin-bottom: 0.5rem; font-family: monospace; font-size: 1.1rem;">[FAIL] PANDAS OUT-OF-MEMORY</h4>
-                    <p style="font-size: 0.9rem; color: #ccc; margin-bottom: 1rem;">
-                        <strong>Problem:</strong> Your dataset is large. You try to One-Hot Encode high cardinality data and Pandas instantly crashes with an OOM error.
-                    </p>
-                    <p style="font-size: 0.9rem; color: #fff;">
-                        <strong>DATADOC Fix:</strong> Built purely on the <em>Polars Rust Backend</em>. Executes parallel data mutations on all CPU cores with minimal RAM overhead.
-                    </p>
-                </div>
-
-                <div class="problem-box" style="background: var(--black); padding: 1.5rem; border: var(--border-thick);">
-                    <h4 style="color: var(--neon); margin-bottom: 0.5rem; font-family: monospace; font-size: 1.1rem;">[FAIL] THE 80% TIME SINK</h4>
-                    <p style="font-size: 0.9rem; color: #ccc; margin-bottom: 1rem;">
-                        <strong>Problem:</strong> Data scientists repeatedly write the same median-imputation and feature-preparation boilerplate for every project.
-                    </p>
-                    <p style="font-size: 0.9rem; color: #fff;">
-                        <strong>DATADOC Fix:</strong> <code>datadoc fit</code> learns safe transformations from training data and reuses them for validation, test, and inference.
-                    </p>
-                </div>
-
-            </div>
-        </section>
-
-        <!-- Top CLI Commands -->
-        <section class="brutal-card card-commands">
-            <div class="card-header">
-                <div class="icons">
-                    <span></span><span></span><span></span>
-                </div>
-                POPULAR CLI COMMANDS
-                <span style="font-family: monospace;">&#x21F1;</span>
-            </div>
-            <ul class="cmd-list">
-                <li>
-                    <span><span class="badge">01</span> datadoc profile raw_data.csv --target churn</span>
-                </li>
-                <li>
-                    <span><span class="badge">02</span> datadoc plan raw_data.csv --target churn</span>
-                </li>
-                <li>
-                    <span><span class="badge">03</span> datadoc fit train.csv --target churn</span>
-                </li>
-                <li>
-                    <span><span class="badge">04</span> datadoc compare raw.csv clean.csv</span>
-                </li>
-            </ul>
-            <a href="api-docs.html#cli" class="brutal-btn secondary" style="width: 100%; text-align: center; margin-top: 1rem;">VIEW ALL COMMANDS &rarr;</a>
-        </section>
-
-        <!-- Installation -->
-        <section id="install" class="brutal-card card-install">
-            <div>
-                <h2>MAKE YOUR DATA<br>PREPARATION REPEATABLE.</h2>
-                <p>Install via pip or uv from PyPI. Works out of the box.</p>
-                <div class="code-block">
-                    <pre><code class="language-bash">pip install datadoc-cli</code></pre>
-                </div>
-            </div>
-            <div>
-                <a href="sdk.html" class="brutal-btn">PYTHON SDK TUTORIAL &rarr;</a>
-            </div>
-        </section>
-
+      <section id="errors">
+        <h2>When something goes wrong</h2>
+        <div class="callout warning"><strong>Target errors</strong><p>If the target is missing, null, or accidentally transformed, stop and fix the declaration. Use <code>--target column_name</code>; DATADOC never guesses a supervised target.</p></div>
+        <div class="callout warning"><strong>Schema errors</strong><p>If transform reports missing columns or incompatible types, compare the new file with the artifact’s <code>input_schema</code>. Do not silently rename columns in production.</p></div>
+        <div class="callout danger"><strong>Unexpected score changes</strong><p>Check the evaluation split, target leakage findings, estimator family, and whether the selected pipeline actually beat the baseline. “No improvement found” is a valid result.</p></div>
+      </section>
     </main>
 
-    <!-- Footer -->
-    <footer>
-        <div class="footer-grid">
-            <div class="footer-brand">
-                <h3 style="font-size: 2rem; font-family: var(--font-display);">[DATADOC]</h3>
-                <p style="margin-top: 1rem; font-family: monospace; color: #888;">The OS for Dataset Engineering.</p>
-            </div>
-            
-            <div>
-                <h4>RESOURCES</h4>
-                <ul>
-                    <li><a href="api-docs.html">API Docs</a></li>
-                    <li><a href="sdk.html">Python SDK</a></li>
-                    <li><a href="contribute.html">Contributions</a></li>
-                    <li><a href="license.html">License</a></li>
-                </ul>
-            </div>
-            
-            <div>
-                <h4>PROJECT</h4>
-                <ul>
-                    <li><a href="https://github.com/narain-karti/DATADOC">GitHub Repo</a></li>
-                    <li><a href="https://pypi.org/project/datadoc-cli/">PyPI Package</a></li>
-                </ul>
-            </div>
-        </div>
-        
-        <div class="copyright">
-            &copy; 2026 DATADOC Contributors. All rights reserved. Licensed under MIT.
-        </div>
-    </footer>
-
-    <!-- PrismJS Syntax Highlighting & Copy Button -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/toolbar/prism-toolbar.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/copy-to-clipboard/prism-copy-to-clipboard.min.js"></script>
+    <aside class="right-rail" aria-label="On this page">
+      <div class="right-label">On this page</div><a class="right-link" data-section-link href="#quickstart">Quickstart</a><a class="right-link" data-section-link href="#workflow">One mental model</a><a class="right-link" data-section-link href="#capabilities">What DATADOC handles</a><a class="right-link" data-section-link href="#paths">Choose your path</a><a class="right-link" data-section-link href="#outputs">What you get back</a><a class="right-link" data-section-link href="#errors">Error recovery</a>
+      <div class="right-card"><div class="right-label">Need a specific answer?</div><p><a class="muted" href="api-docs.html">API reference →</a></p><p><a class="muted" href="cli.html">CLI options →</a></p><p><a class="muted" href="production.html">Release checklist →</a></p></div>
+    </aside>
+  </div>
+  <footer class="footer">DATADOC v0.4.0 · MIT licensed · <a href="https://github.com/narain-karti/DATADOC">GitHub</a> · <a href="https://pypi.org/project/datadoc-cli/">PyPI</a></footer>
+  <div class="search-results" aria-live="polite"></div>
+  <script src="js/docs.js"></script>
 </body>
 </html>

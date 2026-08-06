@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="DATADOC production, artifact, CI, release, and PyPI guidance."><title>DATADOC Docs | Production</title><link rel="stylesheet" href="css/docs.css"></head>
+<body>
+<header class="site-header"><a class="brand" href="index.html"><span class="brand-mark">DD</span><span>DATADOC <span class="muted">/ docs</span></span></a><nav class="header-nav" aria-label="Primary navigation"><a data-page-link href="index.html">Docs</a><a data-page-link href="pipeline.html">Pipeline</a><a data-page-link href="api-docs.html">API</a><a data-page-link href="sdk.html">SDK</a><a data-page-link href="ui.html">UI</a><a href="https://github.com/narain-karti/DATADOC">GitHub ↗</a></nav><div class="header-tools"><label class="search-box" aria-label="Search documentation"><span>⌕</span><input data-search-input type="search" placeholder="Search docs"></label><span class="version-badge">v0.4.0</span><button class="menu-button" type="button" data-menu-toggle aria-label="Open navigation" aria-expanded="false">☰</button></div></header>
+<nav class="topic-bar" aria-label="Documentation topics"><a href="index.html">Overview</a><a href="setup.html">Getting started</a><a href="pipeline.html">Pipeline</a><a href="cli.html">CLI</a><a href="sdk.html">Python SDK</a><a href="api-docs.html">API reference</a><a href="ui.html">Web UI</a><a class="active" href="production.html">Production</a></nav><div class="mobile-overlay"></div>
+<div class="docs-frame">
+<aside class="sidebar"><div class="side-group"><div class="side-label">Production</div><a class="side-link active" data-page-link href="production.html">Overview</a><a class="side-link" data-section-link href="#contract">Data contract</a><a class="side-link" data-section-link href="#ship">Ship artifacts</a><a class="side-link" data-section-link href="#ci">CI gates</a><a class="side-link" data-section-link href="#release">PyPI release</a></div><div class="side-group"><div class="side-label">Open source</div><a class="side-link" data-page-link href="contribute.html">Contributing</a><a class="side-link" data-page-link href="license.html">License</a></div></aside>
+<main class="main-content"><div class="eyebrow">OPERATE / PRODUCTION</div><h1>Make every transformation accountable.</h1><p class="lead">Production readiness is more than a successful transform. Keep the artifact, configuration, schema fingerprint, evaluation report, and test evidence together so another developer can reproduce the decision.</p><div class="page-meta"><span class="meta-chip accent">artifact + lineage</span><span class="meta-chip">CI matrix</span><span class="meta-chip">PyPI 0.4.0</span></div><div class="page-actions"><a class="button primary" href="#ship">Ship checklist →</a><button class="button ghost" type="button" data-copy-page>Copy page</button></div>
+<section id="contract"><h2>1. Define the data contract</h2><div class="table-wrap"><table><thead><tr><th>Contract</th><th>Check</th><th>Failure action</th></tr></thead><tbody><tr><td>Input schema</td><td>Required columns, types, and target are present.</td><td>Stop and inspect the artifact schema.</td></tr><tr><td>Role policy</td><td>Identifiers, protected columns, and time/group columns are deliberate.</td><td>Update configuration; do not silently drop data.</td></tr><tr><td>Split policy</td><td>Classification is stratified; time/group data uses matching split strategy.</td><td>Rerun evaluation with explicit columns.</td></tr><tr><td>Output schema</td><td>Feature names and order stay stable for inference.</td><td>Reject the artifact and investigate drift.</td></tr></tbody></table></div></section>
+<section id="ship"><h2>2. Ship the artifact, not a notebook cell</h2><pre class="code-block" data-copy><div class="code-caption"><span class="lang">Terminal</span><span>recommended run bundle</span></div><code>datadoc run data.csv \
+  --target churn \
+  --task classification \
+  --output-dir runs/churn-v1 \
+  --evaluate
+
+# inspect before deployment
+Get-ChildItem runs/churn-v1  # PowerShell
+ls runs/churn-v1            # Unix</code></pre><p>Keep at minimum: <code>pipeline.json</code>, <code>manifest.json</code>, the approved <code>plan.json</code>, the evaluation report, and the package version. The JSON artifact is the source of truth for transform behavior.</p><div class="callout warning"><strong>Do not upload secrets or raw production data.</strong><p>Artifacts can contain category values and fitted statistics. Treat them as data assets; review privacy and retention requirements before publishing them.</p></div></section>
+<section id="ci"><h2>3. CI gates for contributors</h2><pre class="code-block" data-copy><div class="code-caption"><span class="lang">Terminal</span><span>local equivalent of CI</span></div><code>python -m pytest -q
+python -m ruff check datadoc tests
+python -m ruff format --check datadoc tests
+python -m compileall -q datadoc
+uv lock --check
+uv build
+
+cd web
+npm ci
+npm run build</code></pre><p>The repository matrix covers Python 3.10–3.12, multiple operating systems, package building, and frontend compilation.</p><div class="callout info"><strong>Open-source rule</strong><p>Optional dependencies remain optional. A user who only wants local profiling should not need an API key, scikit-learn, or a web server.</p></div></section>
+<section id="release"><h2>4. Release to PyPI</h2><p>Version <code>0.4.0</code> is the current release candidate. Before upload, commit the source and docs, push to GitHub, wait for CI, tag the same version, and validate the artifacts.</p><pre class="code-block" data-copy><div class="code-caption"><span class="lang">Terminal</span><span>maintainer flow</span></div><code>python -m pip install --upgrade twine
+python -m twine check dist/*
+python -m twine upload dist/datadoc_cli-0.4.0*</code></pre><div class="callout danger"><strong>Never put a PyPI token in source control.</strong><p>Use trusted publishing or a short-lived token stored in the environment. See <code>RELEASE_CHECKLIST.md</code> in the repository for the complete sequence.</p></div></section>
+<section id="observability"><h2>5. What to monitor after release</h2><ul><li>Input schema drift and unseen categories.</li><li>Null and missingness rates compared with the profile baseline.</li><li>Output feature count and names.</li><li>Model performance on a separately governed evaluation set.</li><li>Artifact version and package version used in every job.</li></ul></section>
+</main>
+<aside class="right-rail"><div class="right-label">On this page</div><a class="right-link" data-section-link href="#contract">Data contract</a><a class="right-link" data-section-link href="#ship">Ship artifacts</a><a class="right-link" data-section-link href="#ci">CI gates</a><a class="right-link" data-section-link href="#release">PyPI release</a><a class="right-link" data-section-link href="#observability">Monitor</a><div class="right-card"><div class="right-label">Open source</div><p><a class="muted" href="contribute.html">Contribute safely →</a></p></div></aside>
+</div><footer class="footer">DATADOC v0.4.0 · <a href="index.html">Documentation home</a> · <a href="https://github.com/narain-karti/DATADOC">GitHub</a></footer><div class="search-results"></div><script src="js/docs.js"></script>
+</body></html>
+
+

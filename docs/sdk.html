@@ -1,193 +1,77 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Python SDK Guide | DATADOC</title>
-    <link rel="stylesheet" href="css/style.css">
-    <style>
-        .tip-box {
-            background-color: #1a1a1a;
-            color: #ffffff;
-            border: 2px solid #00e5ff;
-            padding: 1rem 1.5rem;
-            margin: 1.5rem 0;
-        }
-        .tip-box h4 {
-            color: #00e5ff;
-            margin-top: 0;
-        }
-    </style>
-    <!-- Prism CSS -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/toolbar/prism-toolbar.min.css" rel="stylesheet" />
-</head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="DATADOC Python SDK guide with fitting, serialization, evaluation, and errors."><title>DATADOC Docs | Python SDK</title><link rel="stylesheet" href="css/docs.css"></head>
 <body>
-
-    <!-- Navbar -->
-    <nav class="navbar">
-        <div class="nav-brand">
-            <a href="index.html">[<span>DATADOC</span>]</a>
-        </div>
-        <div class="nav-links">
-            <a href="index.html">FEATURES</a>
-            <a href="how-it-works.html">HOW IT WORKS</a>
-            <a href="setup.html">SETUP & USAGE</a>
-            <a href="api-docs.html">API DOCS</a>
-            <a href="sdk.html" class="active">PYTHON SDK</a>
-            <a href="pipeline.html">PIPELINE GUIDE</a>
-            <a href="contribute.html">CONTRIBUTE</a>
-            <a href="license.html">LICENSE</a>
-        </div>
-        <a href="setup.html" class="brutal-btn nav-cta">GET STARTED</a>
-    </nav>
-
-    <!-- Scrolling Ticker -->
-    <div class="ticker-wrap">
-        <div class="ticker">
-            <span>• LIGHTNING FAST</span>
-            <span>• POLARS BACKEND</span>
-            <span>• DETERMINISTIC</span>
-            <span>• LEAKAGE-SAFE</span>
-            <span>• ARTIFACT-DRIVEN</span>
-            <span>• MACHINE LEARNING PIPELINE</span>
-            <span>• LIGHTNING FAST</span>
-            <span>• POLARS BACKEND</span>
-            <span>• DETERMINISTIC</span>
-            <span>• LEAKAGE-SAFE</span>
-            <span>• ARTIFACT-DRIVEN</span>
-            <span>• MACHINE LEARNING PIPELINE</span>
-        </div>
-    </div>
-
-    <!-- Docs Layout -->
-    <main class="container docs-layout">
-        <aside class="sidebar">
-            <div class="brutal-card">
-                <h3 style="margin-bottom: 1rem; border-bottom: var(--border-thick); padding-bottom: 0.5rem;">SDK NAVIGATION</h3>
-                <ul>
-                    <li><a href="#install">1. Installation</a></li>
-                    <li><a href="#quickstart">2. Quickstart (Fit & Transform)</a></li>
-                    <li><a href="#config">3. Configuring the Pipeline</a></li>
-                    <li><a href="#leakage">4. Why Split Fit/Transform?</a></li>
-                    <li><a href="#evaluate">5. Evaluating the Pipeline</a></li>
-                </ul>
-            </div>
-        </aside>
-        
-        <section class="content">
-            <div class="brutal-card">
-                <h1>DATADOC PYTHON SDK GUIDE</h1>
-                <p>Integrate DATADOC's high-performance, leakage-safe dataset engineering engine directly into your backend ML pipelines.</p>
-
-                <div class="tip-box">
-                    <h4>⚠️ LEGACY API DEPRECATED</h4>
-                    <p>The old <code>doc.engineer()</code> API has been fully deprecated due to data leakage concerns. Use the new <code>DataDocPipeline</code> architecture below.</p>
-                </div>
-
-                <!-- 1. Installation -->
-                <h2 id="install">1. Installation</h2>
-                <p>DATADOC is available directly from PyPI. Install it in your environment or notebook cell:</p>
-                <div class="code-block">
-                    <pre><code class="language-bash">pip install "datadoc-cli[ml]"</code></pre>
-                </div>
-
-                <!-- 2. Quickstart -->
-                <h2 id="quickstart">2. Quickstart (Fit & Transform)</h2>
-                <p>DATADOC is a stateful pipeline. You must fit it on your training data, save the artifact, and then transform unseen validation data:</p>
-                <div class="code-block">
-                    <pre><code class="language-python">import polars as pl
+<header class="site-header"><a class="brand" href="index.html"><span class="brand-mark">DD</span><span>DATADOC <span class="muted">/ docs</span></span></a><nav class="header-nav" aria-label="Primary navigation"><a data-page-link href="index.html">Docs</a><a data-page-link href="pipeline.html">Pipeline</a><a data-page-link href="api-docs.html">API</a><a class="active" data-page-link href="sdk.html">SDK</a><a data-page-link href="ui.html">UI</a><a href="https://github.com/narain-karti/DATADOC">GitHub ↗</a></nav><div class="header-tools"><label class="search-box" aria-label="Search documentation"><span>⌕</span><input data-search-input type="search" placeholder="Search docs"></label><span class="version-badge">v0.4.0</span><button class="menu-button" type="button" data-menu-toggle aria-label="Open navigation" aria-expanded="false">☰</button></div></header>
+<nav class="topic-bar" aria-label="Documentation topics"><a href="index.html">Overview</a><a href="setup.html">Getting started</a><a href="pipeline.html">Pipeline</a><a href="cli.html">CLI</a><a class="active" href="sdk.html">Python SDK</a><a href="api-docs.html">API reference</a><a href="ui.html">Web UI</a><a href="production.html">Production</a></nav><div class="mobile-overlay"></div>
+<div class="docs-frame">
+<aside class="sidebar"><div class="side-group"><div class="side-label">Python SDK</div><a class="side-link active" data-page-link href="sdk.html">Guide</a><a class="side-link" data-section-link href="#install">Install</a><a class="side-link" data-section-link href="#quickstart">Quickstart</a><a class="side-link" data-section-link href="#config">Configuration</a><a class="side-link" data-section-link href="#evaluate">Evaluation</a></div><div class="side-group"><div class="side-label">Deep dives</div><a class="side-link" data-page-link href="api-docs.html">Domain objects</a><a class="side-link" data-page-link href="pipeline.html">Pipeline guide</a><a class="side-link" data-page-link href="production.html">Testing artifacts</a></div></aside>
+<main class="main-content"><div class="eyebrow">INTERFACES / PYTHON SDK</div><h1>Build the pipeline into your application.</h1><p class="lead">The SDK exposes the same safe lifecycle as the CLI, but returns typed Python objects and Polars DataFrames for notebooks, services, and scheduled jobs.</p><div class="page-meta"><span class="meta-chip accent">from datadoc import DataDocPipeline</span><span class="meta-chip">Polars DataFrame</span><span class="meta-chip">JSON save/load</span></div><div class="page-actions"><a class="button primary" href="#quickstart">Copy the quickstart →</a><button class="button ghost" type="button" data-copy-page>Copy page</button></div>
+<section id="install"><h2>1. Install</h2><pre class="code-block" data-copy><div class="code-caption"><span class="lang">Terminal</span><span>core + optional ML</span></div><code>python -m pip install datadoc-cli
+python -m pip install "datadoc-cli[ml]"</code></pre><p>The core SDK does not import scikit-learn until <code>evaluate</code> is called. This keeps preparation usable offline and keeps optional dependencies explicit.</p></section>
+<section id="quickstart"><h2>2. Quickstart</h2><pre class="code-block" data-copy><div class="code-caption"><span class="lang">Python</span><span>profile → plan → fit → transform</span></div><code>import polars as pl
 from datadoc import DataDocPipeline, PipelineConfig
 
-# 1. Load data
-train_df = pl.read_csv("train.csv")
-test_df = pl.read_csv("test.csv")
+train = pl.read_csv("train.csv")
+validation = pl.read_csv("validation.csv")
 
-# 2. Configure & Fit the pipeline on TRAINING data ONLY
-config = PipelineConfig(target="churn", scaling="standard")
+config = PipelineConfig(
+    target="churn",
+    task="classification",
+    scaling="standard",
+    clip_outliers=False,
+    random_seed=42,
+)
+
 pipeline = DataDocPipeline(config)
-pipeline.fit(train_df)
+profile = pipeline.profile(train)
+plan = pipeline.plan(train)
+pipeline.fit(train)
 
-# 3. Save the learned artifact (medians, IQR bounds, vocabularies)
-pipeline.save("pipeline_artifact.json")
+features = pipeline.transform(validation)
+pipeline.save("artifacts/churn-pipeline.json")
+print(profile.to_dict())
+print(plan.to_dict())
+print(features.shape)</code></pre><div class="callout info"><strong>The target stays available.</strong><p>DATADOC protects the target from feature operations but leaves it in the returned frame. Separate <code>X</code> and <code>y</code> in the model layer when you are ready.</p></div></section>
+<section id="config"><h2>3. Configure deliberate behavior</h2><pre class="code-block" data-copy><div class="code-caption"><span class="lang">Python</span><span>common controls</span></div><code>config = PipelineConfig(
+    target="churn",
+    task="classification",       # or regression
+    scaling="robust",             # none, standard, robust, auto
+    drop_identifiers=False,
+    clip_outliers=False,
+    time_column=None,
+    group_column=None,
+    strict_schema=True,
+    random_seed=42,
+)</code></pre><div class="table-wrap"><table><thead><tr><th>Config</th><th>Default</th><th>Use it when</th></tr></thead><tbody><tr><td><code>target</code></td><td><code>None</code></td><td>You have a supervised label to protect.</td></tr><tr><td><code>scaling</code></td><td><code>auto</code></td><td>Linear or distance-based models need normalized features.</td></tr><tr><td><code>drop_identifiers</code></td><td><code>False</code></td><td>You have reviewed the profile and want explicit removal.</td></tr><tr><td><code>strict_schema</code></td><td><code>True</code></td><td>You want inference failures to be visible rather than silently coerced.</td></tr></tbody></table></div></section>
+<section id="serialization"><h2>4. Save and load across processes</h2><pre class="code-block" data-copy><div class="code-caption"><span class="lang">Python</span><span>artifact boundary</span></div><code>pipeline.save("artifacts/pipeline.json")
 
-# 4. Transform unseen data deterministically
-X_test = pipeline.transform(test_df)</code></pre>
-                </div>
+loaded = DataDocPipeline.load("artifacts/pipeline.json")
+features = loaded.transform(new_rows)</code></pre><p>Artifacts include the configuration, input schema, output schema, plan, profile, and fitted state. Loading fails when the artifact version is unsupported.</p></section>
+<section id="evaluate"><h2>5. Evaluate from Python</h2><pre class="code-block" data-copy><div class="code-caption"><span class="lang">Python</span><span>requires datadoc-cli[ml]</span></div><code>report = DataDocPipeline(
+    PipelineConfig(
+        target="churn",
+        task="classification",
+        estimator_family="linear",
+        time_column=None,
+        group_column=None,
+    )
+).evaluate(train, target="churn")
 
-                <!-- 3. Configuring -->
-                <h2 id="config">3. Configuring the Pipeline</h2>
-                <p>You can fine-tune how the pipeline behaves via <code>PipelineConfig</code>:</p>
-                <div class="code-block">
-                    <pre><code class="language-python">config = PipelineConfig(
-    target="price",
-    drop_identifiers=True,
-    scaling="robust",
-    clip_outliers=False
-)</code></pre>
-                </div>
+print(report.to_dict())</code></pre><p>The report names the task, metric, estimator family, split strategy, baseline score, selected score, improvement, feature count, selected pipeline, and warnings.</p><div class="callout warning"><strong>Use an external final test set.</strong><p>Built-in evaluation gives structured evidence on the supplied data. Keep the final production test set untouched until you have selected the preparation strategy.</p></div></section>
+<section id="errors"><h2>6. Handle SDK errors</h2><pre class="code-block" data-copy><div class="code-caption"><span class="lang">Python</span><span>actionable failure</span></div><code>from datadoc import DataDocPipeline, PipelineConfig
+from datadoc.core.pipeline import DataDocError
 
-                <!-- 4. Leakage -->
-                <h2 id="leakage">4. Why Split Fit/Transform? (Leakage-Safety)</h2>
-                <p>If you impute missing values with the median of your <em>entire dataset</em>, your model is cheating because it learned statistics from the test set. DATADOC prevents this by strictly learning statistics during <code>.fit()</code> and applying those exact frozen statistics during <code>.transform()</code>.</p>
-                
-                <!-- 5. Evaluate -->
-                <h2 id="evaluate">5. Evaluating the Pipeline</h2>
-                <p>DATADOC includes optional model benchmarking through <code>DataDocPipeline.evaluate()</code> or the <code>datadoc evaluate</code> command:</p>
-                <div class="code-block">
-                    <pre><code class="language-python">metrics = pipeline.evaluate(train_df, target="churn")
-print(metrics)</code></pre>
-                </div>
+try:
+    pipeline = DataDocPipeline(
+        PipelineConfig(target="churn")
+    ).fit(train)
+    features = pipeline.transform(inference)
+except DataDocError as error:
+    print(f"DATADOC input contract failed: {error}")</code></pre><ul><li>Missing target: pass the correct target name or use an unsupervised preparation flow.</li><li>Missing source columns: compare the input file with <code>pipeline.input_schema_</code>.</li><li>Unseen category: safe by default; the output schema remains stable.</li><li>Unsupported file: read it into Polars, then pass the DataFrame to the SDK.</li></ul></section>
+</main>
+<aside class="right-rail"><div class="right-label">On this page</div><a class="right-link" data-section-link href="#install">Install</a><a class="right-link" data-section-link href="#quickstart">Quickstart</a><a class="right-link" data-section-link href="#config">Configuration</a><a class="right-link" data-section-link href="#serialization">Save + load</a><a class="right-link" data-section-link href="#evaluate">Evaluate</a><a class="right-link" data-section-link href="#errors">Errors</a><div class="right-card"><div class="right-label">Related</div><p><a class="muted" href="api-docs.html">Domain objects →</a></p></div></aside>
+</div><footer class="footer">DATADOC v0.4.0 · <a href="index.html">Documentation home</a> · <a href="https://github.com/narain-karti/DATADOC">GitHub</a></footer><div class="search-results"></div><script src="js/docs.js"></script>
+</body></html>
 
-            </div>
-        </section>
-    </main>
 
-    <!-- Footer -->
-    <footer>
-        <div class="footer-grid">
-            <div class="footer-brand">
-                <h3 style="font-size: 2rem; font-family: var(--font-display);">[DATADOC]</h3>
-                <p style="margin-top: 1rem; font-family: monospace; color: #888;">Leakage-safe tabular data preparation.</p>
-            </div>
-            
-            <div>
-                <h4>RESOURCES</h4>
-                <ul>
-                    <li><a href="api-docs.html">API Docs</a></li>
-                    <li><a href="sdk.html">Python SDK</a></li>
-                    <li><a href="contribute.html">Contributions</a></li>
-                    <li><a href="license.html">License</a></li>
-                </ul>
-            </div>
-            
-            <div>
-                <h4>PROJECT</h4>
-                <ul>
-                    <li><a href="https://github.com/narain-karti/DATADOC">GitHub Repo</a></li>
-                    <li><a href="https://pypi.org/project/datadoc-cli/">PyPI Package</a></li>
-                </ul>
-            </div>
-            
-            <div>
-                <h4>STAY UPDATED</h4>
-                <div class="newsletter">
-                    <input type="email" placeholder="Enter your email">
-                    <button class="brutal-btn" style="width: 100%; font-size: 1rem;">SUBSCRIBE &rarr;</button>
-                </div>
-            </div>
-        </div>
-        
-        <div class="copyright">
-            &copy; 2026 DATADOC Contributors. All rights reserved. Licensed under MIT.
-        </div>
-    </footer>
-
-    <!-- PrismJS Syntax Highlighting & Copy Button -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/toolbar/prism-toolbar.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/copy-to-clipboard/prism-copy-to-clipboard.min.js"></script>
-</body>
-</html>

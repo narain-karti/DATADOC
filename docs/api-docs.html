@@ -1,241 +1,35 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API Documentation | DATADOC</title>
-    <link rel="stylesheet" href="css/style.css">
-    <style>
-        .api-card {
-            border: 2px solid var(--text-color, #fff);
-            background: #1a1a1a;
-            color: #ffffff;
-            padding: 1rem 1.5rem;
-            margin-bottom: 1.5rem;
-        }
-        .api-card h3 {
-            color: #ff5e00;
-            margin-top: 0;
-            font-family: monospace;
-        }
-        .badge-priority {
-            background: #ff5e00;
-            color: #000;
-            padding: 0.2rem 0.5rem;
-            font-weight: bold;
-            font-size: 0.8rem;
-            border-radius: 2px;
-        }
-    </style>
-    <!-- Prism CSS -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/toolbar/prism-toolbar.min.css" rel="stylesheet" />
-</head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="DATADOC API reference for domain objects, CLI surfaces, UI endpoints, and error contracts."><title>DATADOC Docs | API Reference</title><link rel="stylesheet" href="css/docs.css"></head>
 <body>
-
-    <!-- Navbar -->
-    <nav class="navbar">
-        <div class="nav-brand">
-            <a href="index.html">[<span>DATADOC</span>]</a>
-        </div>
-        <div class="nav-links">
-            <a href="index.html">FEATURES</a>
-            <a href="how-it-works.html">HOW IT WORKS</a>
-            <a href="setup.html">SETUP & USAGE</a>
-            <a href="api-docs.html" class="active">API DOCS</a>
-            <a href="sdk.html">PYTHON SDK</a>
-            <a href="pipeline.html">PIPELINE GUIDE</a>
-            <a href="contribute.html">CONTRIBUTE</a>
-            <a href="license.html">LICENSE</a>
-        </div>
-        <a href="setup.html" class="brutal-btn nav-cta">GET STARTED</a>
-    </nav>
-
-    <!-- Scrolling Ticker -->
-    <div class="ticker-wrap">
-        <div class="ticker">
-            <span>• LIGHTNING FAST</span>
-            <span>• POLARS BACKEND</span>
-            <span>• ZERO BLACK-BOX AI</span>
-            <span>• DETERMINISTIC</span>
-            <span>• NO DATA LEAKAGE</span>
-            <span>• AGENTIC ORCHESTRATOR</span>
-            <span>• LIGHTNING FAST</span>
-            <span>• POLARS BACKEND</span>
-            <span>• ZERO BLACK-BOX AI</span>
-            <span>• DETERMINISTIC</span>
-            <span>• NO DATA LEAKAGE</span>
-            <span>• AGENTIC ORCHESTRATOR</span>
-        </div>
-    </div>
-
-    <!-- Docs Layout -->
-    <main class="container docs-layout">
-        <aside class="sidebar">
-            <div class="brutal-card">
-                <h3 style="margin-bottom: 1rem; border-bottom: var(--border-thick); padding-bottom: 0.5rem;">API TOC</h3>
-                <ul>
-                    <li><a href="#cli">CLI Reference</a></li>
-                    <li><a href="#python-api">DataDocPipeline API</a></li>
-                    <li><a href="#plugin-system">Plugin Specifications</a></li>
-                    <li><a href="#role-detection">Column Role Detection</a></li>
-                    <li><a href="#chat">AI Chat & Tool Calling</a></li>
-                </ul>
-            </div>
-        </aside>
-        
-        <section class="content">
-            <div class="brutal-card">
-                <h1>API DOCUMENTATION & TECHNICAL REFERENCE</h1>
-                <p>Complete reference manual for the DATADOC CLI, Python Engine API, core plugins, and column role detection system.</p>
-
-                <h2>1. CLI Commands</h2>
-                <p>DATADOC provides a rich Command Line Interface built with <code>Typer</code> and <code>Rich</code>.</p>
-                
-                <div class="api-block">
-                    <h3>datadoc profile &lt;file.csv&gt; [--target col]</h3>
-                    <p>Profiles schema, nulls, cardinality, duplicates, findings, and confidence-scored roles without applying transformations.</p>
-                </div>
-
-                <div class="api-block">
-                    <h3>datadoc plan &lt;file.csv&gt; [--target col]</h3>
-                    <p>Generates an explainable deterministic plan without modifying the dataset. AI is an optional advisory layer and is never required.</p>
-                </div>
-
-                <div class="api-block">
-                    <h3>datadoc fit &lt;train.csv&gt; [--output pipeline.json]</h3>
-                    <p>Learns statistics (medians, IQR boundaries, vocabularies) from the training data and serializes the state to a JSON artifact.</p>
-                </div>
-
-                <div class="api-block">
-                    <h3>datadoc transform &lt;test.csv&gt; --pipeline pipeline.json</h3>
-                    <p>Deterministically applies a previously fitted pipeline artifact to unseen validation or inference data.</p>
-                </div>
-
-                <div class="api-block">
-                    <h3>datadoc evaluate &lt;train.csv&gt; --task classification</h3>
-                    <p>Compares a candidate against a minimal scikit-learn baseline using leakage-aware validation and a holdout. Install <code>datadoc-cli[ml]</code>; use <code>--time-column</code> or <code>--group-column</code> when required.</p>
-                </div>
-
-                <div class="api-block">
-                    <h3>datadoc run &lt;file.csv&gt;</h3>
-                    <p>A convenience command that persists profile, plan, fitted artifact, transformed Parquet output, and a lineage manifest. It is a starting point, not a substitute for an explicit production holdout.</p>
-                </div>
-
-                <h2 id="python-api">2. Python DataDocPipeline API</h2>
-                <p>The primary SDK class for interacting with DATADOC inside Python code:</p>
-                <div class="api-block">
-                    <pre><code class="language-python">class DataDocPipeline(config: PipelineConfig)</code></pre>
-                    <p><strong>Methods:</strong></p>
-                    <ul>
-                        <li><strong><code>fit(df: pl.DataFrame) -> self</code></strong>: Calculates all statistics and learns transformation rules from the provided training DataFrame.</li>
-                        <li><strong><code>transform(df: pl.DataFrame) -> pl.DataFrame</code></strong>: Applies the learned rules to the provided DataFrame, ensuring zero data leakage.</li>
-                        <li><strong><code>save(filepath: str)</code></strong>: Serializes the fitted pipeline to a JSON artifact.</li>
-                        <li><strong><code>load(filepath: str) -> DataDocPipeline</code></strong>: Deserializes a pipeline from a JSON artifact.</li>
-                    </ul>
-                </div>
-
-                <!-- Plugin Specifications -->
-                <h2 id="plugin-system">3. Core Plugins Specifications</h2>
-                <p>The fitted pipeline contains five deterministic transformation concepts. The legacy plugin classes remain available for compatibility; production state is learned and serialized by <code>DataDocPipeline</code>.</p>
-
-                <div class="api-card">
-                    <h3>10: MissingValuePlugin <span class="badge-priority">PRIORITY 10</span></h3>
-                    <p><strong>Behavior:</strong> Fits numeric medians and categorical missing-value rules on training data. All-null columns become explicit findings.</p>
-                    <p><strong>Dependencies:</strong> None</p>
-                </div>
-
-                <div class="api-card">
-                    <h3>20: OutlierPlugin <span class="badge-priority">PRIORITY 20</span></h3>
-                    <p><strong>Behavior:</strong> Offers opt-in IQR clipping using bounds learned on training data. It excludes binary, target, identifier, and datetime-derived fields.</p>
-                    <p><strong>Dependencies:</strong> <code>MissingValuePlugin</code></p>
-                </div>
-
-                <div class="api-card">
-                    <h3>30: DatetimePlugin <span class="badge-priority">PRIORITY 30</span></h3>
-                    <p><strong>Behavior:</strong> Parses date-like fields only when confidence passes the configured threshold, extracts stable calendar features, and reports parse warnings.</p>
-                    <p><strong>Dependencies:</strong> <code>MissingValuePlugin</code></p>
-                </div>
-
-                <div class="api-card">
-                    <h3>40: CategoricalEncoderPlugin <span class="badge-priority">PRIORITY 40</span></h3>
-                    <p><strong>Behavior:</strong> Fits one-hot vocabularies for categorical features and handles unseen categories safely. High-cardinality fields are reported and are not silently dropped.</p>
-                    <p><strong>Dependencies:</strong> <code>MissingValuePlugin</code></p>
-                </div>
-
-                <div class="api-card">
-                    <h3>45: ScalingPlugin <span class="badge-priority">PRIORITY 45</span></h3>
-                    <p><strong>Behavior:</strong> Applies configured standard or robust scaling to eligible numeric features, fit on training data only. Binary and protected fields are excluded.</p>
-                    <p><strong>Dependencies:</strong> <code>OutlierPlugin</code>, <code>CategoricalEncoderPlugin</code></p>
-                </div>
-
-                <!-- Role Detection -->
-                <h2 id="role-detection">4. Column Role Detection System</h2>
-                <p>The profiler classifies columns with confidence and rationale. It does not silently drop identifiers unless the user enables that policy.</p>
-                
-                <div class="code-block">
-                    <pre><code class="language-none">Roles:
-target              -> Explicit user-declared label (never transformed)
-feature_numeric     -> Numeric feature with train-fitted statistics
-feature_categorical -> String feature encoded from training vocabulary
-feature_datetime    -> Parsed calendar features
-identifier          -> Suspected ID; retained unless explicitly dropped
-constant            -> Zero-variance or all-null feature</code></pre>
-                </div>
-
-                <!-- AI Chat -->
-                <h2 id="chat">5. Optional AI advisory layer</h2>
-                <p>AI is not part of the deterministic core. When enabled, it may receive opt-in minimized metadata and return a constrained, schema-validated plan. Generated code is never executed automatically.</p>
-
-            </div>
-        </section>
-    </main>
-
-    <!-- Footer -->
-    <footer>
-        <div class="footer-grid">
-            <div class="footer-brand">
-                <h3 style="font-size: 2rem; font-family: var(--font-display);">[DATADOC]</h3>
-                <p style="margin-top: 1rem; font-family: monospace; color: #888;">Leakage-safe tabular data preparation.</p>
-            </div>
-            
-            <div>
-                <h4>RESOURCES</h4>
-                <ul>
-                    <li><a href="api-docs.html">API Docs</a></li>
-                    <li><a href="sdk.html">Python SDK</a></li>
-                    <li><a href="contribute.html">Contributions</a></li>
-                    <li><a href="license.html">License</a></li>
-                </ul>
-            </div>
-            
-            <div>
-                <h4>PROJECT</h4>
-                <ul>
-                    <li><a href="https://github.com/narain-karti/DATADOC">GitHub Repo</a></li>
-                    <li><a href="https://pypi.org/project/datadoc-cli/">PyPI Package</a></li>
-                </ul>
-            </div>
-            
-            <div>
-                <h4>STAY UPDATED</h4>
-                <div class="newsletter">
-                    <input type="email" placeholder="Enter your email">
-                    <button class="brutal-btn" style="width: 100%; font-size: 1rem;">SUBSCRIBE &rarr;</button>
-                </div>
-            </div>
-        </div>
-        
-        <div class="copyright">
-            &copy; 2026 DATADOC Contributors. All rights reserved. Licensed under MIT.
-        </div>
-    </footer>
-
-    <!-- PrismJS Syntax Highlighting & Copy Button -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/toolbar/prism-toolbar.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/copy-to-clipboard/prism-copy-to-clipboard.min.js"></script>
-</body>
-</html>
+<header class="site-header"><a class="brand" href="index.html"><span class="brand-mark">DD</span><span>DATADOC <span class="muted">/ docs</span></span></a><nav class="header-nav" aria-label="Primary navigation"><a data-page-link href="index.html">Docs</a><a data-page-link href="pipeline.html">Pipeline</a><a class="active" data-page-link href="api-docs.html">API</a><a data-page-link href="sdk.html">SDK</a><a data-page-link href="ui.html">UI</a><a href="https://github.com/narain-karti/DATADOC">GitHub ↗</a></nav><div class="header-tools"><label class="search-box" aria-label="Search documentation"><span>⌕</span><input data-search-input type="search" placeholder="Search docs"></label><span class="version-badge">v0.4.0</span><button class="menu-button" type="button" data-menu-toggle aria-label="Open navigation" aria-expanded="false">☰</button></div></header>
+<nav class="topic-bar" aria-label="Documentation topics"><a href="index.html">Overview</a><a href="setup.html">Getting started</a><a href="pipeline.html">Pipeline</a><a href="cli.html">CLI</a><a href="sdk.html">Python SDK</a><a class="active" href="api-docs.html">API reference</a><a href="ui.html">Web UI</a><a href="production.html">Production</a></nav><div class="mobile-overlay"></div>
+<div class="docs-frame">
+<aside class="sidebar"><div class="side-group"><div class="side-label">Reference</div><a class="side-link active" data-page-link href="api-docs.html">API overview</a><a class="side-link" data-section-link href="#objects">Domain objects</a><a class="side-link" data-section-link href="#methods">Pipeline methods</a><a class="side-link" data-section-link href="#endpoints">UI endpoints</a><a class="side-link" data-section-link href="#errors">Error contract</a></div><div class="side-group"><div class="side-label">Implementation</div><a class="side-link" data-page-link href="how-it-works.html">How it works</a><a class="side-link" data-page-link href="contribute.html">Plugin contract</a></div></aside>
+<main class="main-content"><div class="eyebrow">REFERENCE / API SURFACE</div><h1>The interfaces behind the workflow.</h1><p class="lead">DATADOC has one source of truth: the fitted pipeline. The CLI, Python SDK, and local UI all call the same domain objects and enforce the same safety rules.</p><div class="page-meta"><span class="meta-chip accent">DataDocPipeline</span><span class="meta-chip">PipelineConfig</span><span class="meta-chip">DataDocError</span></div><div class="page-actions"><a class="button primary" href="sdk.html">Start with the SDK →</a><button class="button ghost" type="button" data-copy-page>Copy page</button></div>
+<section id="objects"><h2>Domain objects</h2><div class="table-wrap"><table><thead><tr><th>Object</th><th>Purpose</th><th>Important fields</th></tr></thead><tbody><tr><td><code>PipelineConfig</code></td><td>Controls target, task, policy, split columns, and resource behavior.</td><td><code>target</code>, <code>task</code>, <code>scaling</code>, <code>strict_schema</code></td></tr><tr><td><code>DatasetProfile</code></td><td>Describes schema, quality findings, roles, and fingerprint.</td><td><code>roles</code>, <code>findings</code>, <code>null_counts</code></td></tr><tr><td><code>TransformPlan</code></td><td>Ordered, explainable transformation operations.</td><td><code>operations</code>, <code>protected_columns</code></td></tr><tr><td><code>EvaluationReport</code></td><td>Compares the baseline and selected preparation choice.</td><td><code>metric</code>, <code>split_strategy</code>, <code>improvement</code></td></tr><tr><td><code>DataDocError</code></td><td>Actionable compatibility and input-contract failure.</td><td>message text identifies the failing column or option</td></tr></tbody></table></div><pre class="code-block" data-copy><div class="code-caption"><span class="lang">Python</span><span>public imports</span></div><code>from datadoc import DataDocPipeline, PipelineConfig
+from datadoc.core.pipeline import (
+    DataDocError,
+    DatasetProfile,
+    EvaluationReport,
+    TransformPlan,
+)</code></pre></section>
+<section id="methods"><h2>Pipeline methods</h2><div class="endpoint"><div class="endpoint-head"><span class="method-badge">METHOD</span><span class="path">pipeline.profile(df)</span></div><p>Returns a <code>DatasetProfile</code>. Read-only and safe before fit.</p></div><div class="endpoint"><div class="endpoint-head"><span class="method-badge">METHOD</span><span class="path">pipeline.plan(df)</span></div><p>Returns a <code>TransformPlan</code> with operations, findings, and protected columns.</p></div><div class="endpoint"><div class="endpoint-head"><span class="method-badge">METHOD</span><span class="path">pipeline.fit(train_df, target=None)</span></div><p>Fits train-only state and returns the same pipeline instance.</p></div><div class="endpoint"><div class="endpoint-head"><span class="method-badge">METHOD</span><span class="path">pipeline.transform(df)</span></div><p>Validates schema and applies frozen state. Raises <code>DataDocError</code> when the input contract fails.</p></div><div class="endpoint"><div class="endpoint-head"><span class="method-badge">METHOD</span><span class="path">pipeline.save(path) / DataDocPipeline.load(path)</span></div><p>Serialize and restore an artifact. Save only after fit; load before inference.</p></div><div class="endpoint"><div class="endpoint-head"><span class="method-badge">METHOD</span><span class="path">pipeline.evaluate(df, target=None)</span></div><p>Runs the optional scikit-learn benchmark. Requires <code>datadoc-cli[ml]</code> and a non-null target.</p></div></section>
+<section id="endpoints"><h2>Local UI API endpoints</h2><p>The FastAPI UI uses a local session header. The browser should not create a second transformation implementation.</p><div class="table-wrap"><table><thead><tr><th>Endpoint</th><th>Input</th><th>Returns</th></tr></thead><tbody><tr><td><code>GET /api/dataset/metadata</code></td><td><code>X-DATADOC-SESSION</code></td><td>Loaded file, row/column counts, metadata.</td></tr><tr><td><code>GET /api/pipeline/profile</code></td><td>Optional <code>target</code></td><td>Serialized profile.</td></tr><tr><td><code>POST /api/pipeline/plan</code></td><td>Pipeline request JSON</td><td>Serialized plan.</td></tr><tr><td><code>POST /api/pipeline/fit</code></td><td>Pipeline request JSON</td><td>Fitted flag, profile, plan, input/output schema.</td></tr><tr><td><code>GET /api/pipeline/preview</code></td><td>Session header</td><td>Output schema and preview rows.</td></tr><tr><td><code>GET /api/pipeline/export/code</code></td><td>Session header</td><td>Text Python wrapper.</td></tr></tbody></table></div><pre class="code-block" data-copy><div class="code-caption"><span class="lang">JavaScript</span><span>UI request shape</span></div><code>await axios.post("/api/pipeline/fit", {
+  target: "churn",
+  task: "classification",
+  scaling: "auto",
+  drop_identifiers: false,
+  clip_outliers: false,
+}, {
+  headers: { "X-DATADOC-SESSION": "local" },
+});</code></pre></section>
+<section id="errors"><h2>Error contract</h2><div class="callout danger"><strong>422 validation error</strong><p>Use when task, scaling, target, file type, or pipeline configuration is invalid. The response detail should tell the user what to change.</p></div><div class="callout warning"><strong>400 state error</strong><p>Use when a session exists but a pipeline has not been fitted—for example, requesting a preview before clicking Fit.</p></div><div class="callout warning"><strong>404 session error</strong><p>Use when the session header does not map to an initialized local job.</p></div><pre class="code-block" data-copy><div class="code-caption"><span class="lang">Python</span><span>consumer-side handling</span></div><code>try:
+  transformed = pipeline.transform(rows)
+except DataDocError as error:
+  # Log the artifact version and input schema before retrying.
+  raise RuntimeError(f"Input contract failed: {error}") from error</code></pre></section>
+</main>
+<aside class="right-rail"><div class="right-label">On this page</div><a class="right-link" data-section-link href="#objects">Domain objects</a><a class="right-link" data-section-link href="#methods">Methods</a><a class="right-link" data-section-link href="#endpoints">UI endpoints</a><a class="right-link" data-section-link href="#errors">Errors</a><div class="right-card"><div class="right-label">Related</div><p><a class="muted" href="contribute.html">Extend the lifecycle →</a></p></div></aside>
+</div><footer class="footer">DATADOC v0.4.0 · <a href="index.html">Documentation home</a> · <a href="https://github.com/narain-karti/DATADOC">GitHub</a></footer><div class="search-results"></div><script src="js/docs.js"></script>
+</body></html>

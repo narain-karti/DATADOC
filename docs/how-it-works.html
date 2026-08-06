@@ -1,178 +1,39 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DATADOC | How It Works</title>
-    <link rel="stylesheet" href="css/style.css">
-    
-    <!-- Prism CSS -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/toolbar/prism-toolbar.min.css" rel="stylesheet" />
-</head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="How DATADOC profiles, plans, fits, transforms, and evaluates tabular data."><title>DATADOC Docs | How It Works</title><link rel="stylesheet" href="css/docs.css"></head>
 <body>
+<header class="site-header"><a class="brand" href="index.html"><span class="brand-mark">DD</span><span>DATADOC <span class="muted">/ docs</span></span></a><nav class="header-nav" aria-label="Primary navigation"><a data-page-link href="index.html">Docs</a><a data-page-link href="pipeline.html">Pipeline</a><a data-page-link href="api-docs.html">API</a><a data-page-link href="sdk.html">SDK</a><a data-page-link href="ui.html">UI</a><a href="https://github.com/narain-karti/DATADOC">GitHub ↗</a></nav><div class="header-tools"><label class="search-box" aria-label="Search documentation"><span>⌕</span><input data-search-input type="search" placeholder="Search docs"></label><span class="version-badge">v0.4.0</span><button class="menu-button" type="button" data-menu-toggle aria-label="Open navigation" aria-expanded="false">☰</button></div></header>
+<nav class="topic-bar" aria-label="Documentation topics"><a href="index.html">Overview</a><a href="setup.html">Getting started</a><a class="active" href="pipeline.html">Pipeline</a><a href="cli.html">CLI</a><a href="sdk.html">Python SDK</a><a href="api-docs.html">API reference</a><a href="ui.html">Web UI</a><a href="production.html">Production</a></nav><div class="mobile-overlay"></div>
+<div class="docs-frame">
+<aside class="sidebar"><div class="side-group"><div class="side-label">Core workflow</div><a class="side-link active" data-page-link href="how-it-works.html">How it works</a><a class="side-link" data-section-link href="#profile">Profile</a><a class="side-link" data-section-link href="#plan">Plan</a><a class="side-link" data-section-link href="#fit">Fit and transform</a><a class="side-link" data-section-link href="#leakage">Leakage safety</a></div><div class="side-group"><div class="side-label">Read next</div><a class="side-link" data-page-link href="pipeline.html">Pipeline guide</a><a class="side-link" data-page-link href="api-docs.html">API reference</a><a class="side-link" data-page-link href="production.html">Production</a></div></aside>
+<main class="main-content"><div class="eyebrow">CORE CONCEPTS / HOW IT WORKS</div><h1>A pipeline that can explain itself.</h1><p class="lead">DATADOC separates observation, decision, learning, and application. That separation is the product: users can see what will happen, inspect the learned state, and apply it consistently later.</p><div class="page-meta"><span class="meta-chip accent">Read-only profile first</span><span class="meta-chip">Train-only fit</span><span class="meta-chip">Versioned JSON</span></div><div class="page-actions"><a class="button primary" href="pipeline.html">Follow the full pipeline →</a><button class="button ghost" type="button" data-copy-page>Copy page</button></div>
+<section id="profile"><h2>Profile: observe the dataset</h2><p>Profiling is a factual pass. It does not impute, encode, scale, clip, or drop your columns. It records enough context to make the next decision inspectable.</p><div class="feature-grid"><article class="feature"><div class="number">SCHEMA</div><h3>Types and fingerprint</h3><p>Column names, Polars dtypes, row/column counts, and a stable schema fingerprint.</p></article><article class="feature"><div class="number">QUALITY</div><h3>Findings</h3><p>Nulls, duplicates, constants, infinite values, mixed types, and unsupported text warnings.</p></article><article class="feature"><div class="number">ROLES</div><h3>Confidence + rationale</h3><p>Target, numeric, categorical, datetime, identifier, text, ignored, and constant roles.</p></article></div><pre class="code-block" data-copy><div class="code-caption"><span class="lang">Terminal</span><span>read-only</span></div><code>datadoc profile data.csv \
+  --target churn \
+  --output profile.json</code></pre><div class="callout warning"><strong>Identifier decisions are not guesses.</strong><p>A numeric column is not an ID just because every value is unique. DATADOC combines names and values, reports confidence, and only drops identifiers when <code>drop_identifiers</code> is explicitly enabled.</p></div></section>
+<section id="plan"><h2>Plan: review proposed work</h2><p>A plan converts findings into ordered operations and reasons. It is safe to show to a teammate or include in a pull request before fitting anything.</p><div class="table-wrap"><table><thead><tr><th>Finding</th><th>Default operation</th><th>Policy</th></tr></thead><tbody><tr><td>Numeric missing values</td><td>Training median + indicator</td><td>Fit only on training rows.</td></tr><tr><td>Categorical values</td><td>Training vocabulary + unseen-safe encoding</td><td>High cardinality is reported, not silently deleted.</td></tr><tr><td>Datetime strings</td><td>Calendar features if parse confidence passes</td><td>Preserve parse warnings.</td></tr><tr><td>Outliers</td><td>No clipping by default</td><td>Enable IQR clipping deliberately.</td></tr><tr><td>Identifiers</td><td>Retain by default</td><td>Drop only by explicit policy.</td></tr></tbody></table></div><pre class="code-block" data-copy><div class="code-caption"><span class="lang">JSON shape</span><span>plan.json</span></div><code>{
+  "operations": [
+    {"operation": "numeric_imputation", "column": "age",
+     "reason": "Median learned from training data."}
+  ],
+  "findings": [],
+  "protected_columns": ["churn"]
+}</code></pre></section>
+<section id="fit"><h2>Fit and transform: learn once, apply many times</h2><p><code>fit</code> learns state. <code>transform</code> consumes state. That boundary is the rule that prevents test-set leakage.</p><div class="workflow"><div class="workflow-step"><span class="step-number">A</span><strong>Training rows</strong><span>Calculate medians, vocabularies, bounds, and scaling centers.</span></div><div class="workflow-step"><span class="step-number">B</span><strong>pipeline.json</strong><span>Serialize configuration, input schema, output schema, and fitted state.</span></div><div class="workflow-step"><span class="step-number">C</span><strong>New rows</strong><span>Validate compatibility and apply exactly the saved state.</span></div></div><pre class="code-block" data-copy><div class="code-caption"><span class="lang">Python</span><span>SDK lifecycle</span></div><code>pipeline = DataDocPipeline(config)
+pipeline.fit(train_df)          # learns state
+validation = pipeline.transform(validation_df)  # applies state
+pipeline.save("pipeline.json")</code></pre><div class="callout info"><strong>Target columns are protected.</strong><p>If you declare <code>target="churn"</code>, DATADOC does not impute, encode, scale, clip, or drop it as a feature. The transformed frame keeps the target so your code can separate labels explicitly.</p></div></section>
+<section id="leakage"><h2>Leakage safety in plain language</h2><p>Leakage happens when a model gets information it would not have at prediction time. A common example is calculating an imputation median from train and test rows together.</p><div class="tabs"><div class="tab-list"><button class="tab-button active" data-tab="bad">Risky pattern</button><button class="tab-button" data-tab="safe">Safe pattern</button></div><div class="tab-panel active" data-panel="bad"><pre class="code-block" data-copy><div class="code-caption"><span class="lang">Avoid</span><span>test data influences fit</span></div><code>all_rows = pl.concat([train, test])
+median = all_rows["income"].median()
+train = train.with_columns(pl.col("income").fill_null(median))
+test = test.with_columns(pl.col("income").fill_null(median))</code></pre></div><div class="tab-panel" data-panel="safe"><pre class="code-block" data-copy><div class="code-caption"><span class="lang">Use</span><span>fit state is frozen</span></div><code>pipeline = DataDocPipeline(
+    PipelineConfig(scaling="none")
+).fit(train)
+test_features = pipeline.transform(test)</code></pre></div></div><div class="callout danger"><strong>Evaluation is evidence, not a guarantee.</strong><p>DATADOC compares a baseline and candidate under a declared split. It can report “no improvement found,” which is often the correct conclusion.</p></div></section>
+</main>
+<aside class="right-rail"><div class="right-label">On this page</div><a class="right-link" data-section-link href="#profile">Profile</a><a class="right-link" data-section-link href="#plan">Plan</a><a class="right-link" data-section-link href="#fit">Fit + transform</a><a class="right-link" data-section-link href="#leakage">Leakage safety</a><div class="right-card"><div class="right-label">Next step</div><p><a class="muted" href="pipeline.html">See the full command workflow →</a></p></div></aside>
+</div><footer class="footer">DATADOC v0.4.0 · <a href="index.html">Documentation home</a> · <a href="https://github.com/narain-karti/DATADOC">GitHub</a></footer><div class="search-results"></div><script src="js/docs.js"></script>
+</body></html>
 
-    <!-- Navbar -->
-    <nav class="navbar">
-        <div class="nav-brand">
-            <a href="index.html">[<span>DATADOC</span>]</a>
-        </div>
-        <div class="nav-links">
-            <a href="index.html">FEATURES</a>
-            <a href="how-it-works.html" class="active">HOW IT WORKS</a>
-            <a href="setup.html">SETUP & USAGE</a>
-            <a href="api-docs.html">API DOCS</a>
-            <a href="sdk.html">PYTHON SDK</a>
-            <a href="pipeline.html">PIPELINE GUIDE</a>
-            <a href="contribute.html">CONTRIBUTE</a>
-            <a href="license.html">LICENSE</a>
-        </div>
-        <a href="setup.html" class="brutal-btn nav-cta">GET STARTED</a>
-    </nav>
 
-    <!-- Main Content Grid -->
-    <main class="container">
-        
-        <section class="brutal-card" style="margin-top: 2rem;">
-            <div class="card-header">
-                ARCHITECTURE OVERVIEW
-                <span style="font-family: monospace;">&#x21F1;</span>
-            </div>
-            
-            <h2 style="margin-top: 1rem;">The Leakage-Safe Pipeline</h2>
-            <p style="margin-top: 1rem;">
-                DATADOC operates as a deterministic, stateful machine learning pipeline. 
-                Instead of modifying data arbitrarily, it separates learning (<code>fit</code>) from applying (<code>transform</code>).
-                During the <strong>Fit Phase</strong>, it detects column roles and learns statistics (like median values or IQR boundaries) strictly from the training dataset. These learned rules are serialized into a JSON artifact. During the <strong>Transform Phase</strong>, it strictly applies those exact frozen rules to unseen data to guarantee zero test-set leakage.
-            </p>
 
-            <!-- Mermaid Architecture Diagram -->
-            <div class="brutal-card dark" style="margin-top: 2rem; padding: 2rem; overflow-x: auto;">
-                <pre class="mermaid" style="text-align: center; background: transparent;">
-flowchart TD
-    %% Brutalist Styling
-    classDef default fill:#ccff00,stroke:#000,stroke-width:3px,color:#000,font-weight:bold,font-size:14px,rx:0,ry:0;
-    classDef darkNode fill:#000,stroke:#ccff00,stroke-width:3px,color:#ccff00,font-weight:bold,font-size:14px,rx:0,ry:0;
-    classDef accent fill:#5a32fa,stroke:#000,stroke-width:3px,color:#fff,font-weight:bold,font-size:14px,rx:0,ry:0;
-    classDef subtle fill:#111,stroke:#444,stroke-width:2px,color:#ddd,rx:0,ry:0;
 
-    A["📄 TRAINING DATASET CSV"]:::accent --> B["⚙️ DATADOC PIPELINE (FIT)"]:::darkNode
-    
-    subgraph RoleDetection ["1. COLUMN ROLE DETECTION"]
-        direction TB
-        R1["Profile Columns"]:::default
-        R2["Identify Target, Features, IDs"]:::subtle
-        R1 --> R2
-    end
-    
-    B --> RoleDetection
-    
-    subgraph PluginPipeline ["2. LEARN STATISTICS (FIT)"]
-        direction TB
-        P1["MissingValue (Calculate Median)"]:::default
-        P2["Outliers (Calculate IQR Bounds)"]:::default
-        P3["Categorical (Build Vocab)"]:::default
-        P4["Scaling (Calculate Mean/Std)"]:::default
-        
-        P1 --> P2 --> P3 --> P4
-    end
-    
-    RoleDetection --> PluginPipeline
-    
-    subgraph Artifact ["3. SERIALIZATION"]
-        C1["Export pipeline.json"]:::subtle
-    end
-    
-    PluginPipeline --> Artifact
-    
-    Artifact --> Output{"TRANSFORM PHASE"}:::accent
-    Output -->|"pipeline.transform(test_df)"| D["📊 Leakage-Free Features"]:::darkNode
-                </pre>
-            </div>
-
-            <h2 style="margin-top: 2rem;">Key Architectural Guarantees</h2>
-            
-            <ul class="feature-list" style="margin-top: 1rem; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
-                <li>
-                    <h4>🔍 COLUMN ROLE SENSITIVITY</h4>
-                    <p>Combines column names and value patterns to flag likely identifiers with confidence and rationale. Numeric uniqueness alone never causes an automatic drop.</p>
-                </li>
-                <li>
-                    <h4>⚡ POLARS RUST BACKEND</h4>
-                    <p>Processes millions of rows in memory using multi-threaded Rust execution for maximum throughput and minimal RAM usage.</p>
-                </li>
-                <li>
-                    <h4>🛡️ ZERO DATA LEAKAGE</h4>
-                    <p>Imputation and scaling statistics are strictly learned only on training data and locked, guaranteeing zero test-set leakage.</p>
-                </li>
-                <li>
-                    <h4>⚙️ 100% REPRODUCIBILITY</h4>
-                    <p>Generates equivalent JSON artifacts (<code>pipeline.json</code>) so your data engineering is fully portable and audit-ready.</p>
-                </li>
-            </ul>
-
-        </section>
-
-    </main>
-
-    <!-- Footer -->
-    <footer>
-        <div class="footer-grid">
-            <div class="footer-brand">
-                <h3 style="font-size: 2rem; font-family: var(--font-display);">[DATADOC]</h3>
-                <p style="margin-top: 1rem; font-family: monospace; color: #888;">Leakage-safe tabular data preparation.</p>
-            </div>
-            
-            <div>
-                <h4>RESOURCES</h4>
-                <ul>
-                    <li><a href="api-docs.html">API Docs</a></li>
-                    <li><a href="sdk.html">Python SDK</a></li>
-                    <li><a href="contribute.html">Contributions</a></li>
-                    <li><a href="license.html">License</a></li>
-                </ul>
-            </div>
-            
-            <div>
-                <h4>PROJECT</h4>
-                <ul>
-                    <li><a href="https://github.com/narain-karti/DATADOC">GitHub Repo</a></li>
-                    <li><a href="https://pypi.org/project/datadoc-cli/">PyPI Package</a></li>
-                </ul>
-            </div>
-        </div>
-        
-        <div class="copyright">
-            &copy; 2026 DATADOC Contributors. All rights reserved. Licensed under MIT.
-        </div>
-    </footer>
-
-    <!-- Mermaid.js integration -->
-    <script type="module">
-      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-      mermaid.initialize({ 
-          startOnLoad: true, 
-          theme: 'base',
-          themeVariables: {
-              primaryColor: '#ccff00',
-              primaryTextColor: '#000',
-              primaryBorderColor: '#000',
-              lineColor: '#5af78e',
-              secondaryColor: '#1a1a1a',
-              tertiaryColor: '#1a1a1a',
-              fontFamily: 'monospace',
-              edgeLabelBackground: '#000'
-          },
-          flowchart: {
-              curve: 'step'
-          }
-      });
-    </script>
-    <!-- PrismJS Syntax Highlighting & Copy Button -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/toolbar/prism-toolbar.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/copy-to-clipboard/prism-copy-to-clipboard.min.js"></script>
-</body>
-</html>

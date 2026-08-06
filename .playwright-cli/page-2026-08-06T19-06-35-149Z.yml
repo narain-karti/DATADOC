@@ -1,0 +1,293 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - link "DD DATADOC / docs" [ref=e3] [cursor=pointer]:
+      - /url: index.html
+      - generic [ref=e4]: DD
+      - generic [ref=e5]: DATADOC / docs
+    - navigation "Primary navigation" [ref=e6]:
+      - link "Docs" [ref=e7] [cursor=pointer]:
+        - /url: index.html
+      - link "Pipeline" [ref=e8] [cursor=pointer]:
+        - /url: pipeline.html
+      - link "API" [ref=e9] [cursor=pointer]:
+        - /url: api-docs.html
+      - link "SDK" [ref=e10] [cursor=pointer]:
+        - /url: sdk.html
+      - link "UI" [ref=e11] [cursor=pointer]:
+        - /url: ui.html
+      - link "GitHub ↗" [ref=e12] [cursor=pointer]:
+        - /url: https://github.com/narain-karti/DATADOC
+    - generic [ref=e13]:
+      - generic "Search documentation" [ref=e14]:
+        - generic [ref=e15]: ⌕
+        - searchbox "Search documentation" [ref=e16]
+      - generic [ref=e17]: v0.4.0
+  - navigation "Documentation topics" [ref=e18]:
+    - link "Overview" [ref=e19] [cursor=pointer]:
+      - /url: index.html
+    - link "Getting started" [ref=e20] [cursor=pointer]:
+      - /url: setup.html
+    - link "Pipeline" [ref=e21] [cursor=pointer]:
+      - /url: pipeline.html
+    - link "CLI" [ref=e22] [cursor=pointer]:
+      - /url: cli.html
+    - link "Python SDK" [ref=e23] [cursor=pointer]:
+      - /url: sdk.html
+    - link "API reference" [ref=e24] [cursor=pointer]:
+      - /url: api-docs.html
+    - link "Web UI" [ref=e25] [cursor=pointer]:
+      - /url: ui.html
+    - link "Production" [ref=e26] [cursor=pointer]:
+      - /url: production.html
+  - generic [ref=e27]:
+    - complementary "Documentation navigation" [ref=e28]:
+      - generic [ref=e29]:
+        - generic [ref=e30]: Start here
+        - link "Overview" [ref=e31] [cursor=pointer]:
+          - /url: index.html
+        - link "Installation" [ref=e32] [cursor=pointer]:
+          - /url: setup.html
+        - link "Quickstart" [ref=e33] [cursor=pointer]:
+          - /url: "#quickstart"
+      - generic [ref=e34]:
+        - generic [ref=e35]: Core workflow
+        - link "How it works" [ref=e36] [cursor=pointer]:
+          - /url: how-it-works.html
+        - link "Fitted pipeline" [ref=e37] [cursor=pointer]:
+          - /url: pipeline.html
+        - link "Evaluation" [ref=e38] [cursor=pointer]:
+          - /url: pipeline.html#evaluation
+      - generic [ref=e39]:
+        - generic [ref=e40]: Interfaces
+        - link "CLI reference" [ref=e41] [cursor=pointer]:
+          - /url: cli.html
+        - link "Python SDK" [ref=e42] [cursor=pointer]:
+          - /url: sdk.html
+        - link "API reference" [ref=e43] [cursor=pointer]:
+          - /url: api-docs.html
+        - link "Local web UI" [ref=e44] [cursor=pointer]:
+          - /url: ui.html
+      - generic [ref=e45]:
+        - generic [ref=e46]: Operate
+        - link "Production & release" [ref=e47] [cursor=pointer]:
+          - /url: production.html
+        - link "Contributing" [ref=e48] [cursor=pointer]:
+          - /url: contribute.html
+        - link "License" [ref=e49] [cursor=pointer]:
+          - /url: license.html
+      - generic [ref=e50]: Local-first by design. AI and model evaluation are optional extras.
+    - main [ref=e51]:
+      - generic [ref=e52]: DATADOC / DOCUMENTATION
+      - heading "Prepare data once. Reuse it safely." [level=1] [ref=e53]: Prepare data once.Reuse it safely.
+      - paragraph [ref=e54]: DATADOC profiles tabular data, proposes explainable transformations, fits them on training data only, and gives you a reusable artifact for validation, test, and inference.
+      - generic [ref=e55]:
+        - generic [ref=e56]: v0.4.0
+        - generic [ref=e57]: Python 3.10–3.12
+        - generic [ref=e58]: CSV + Parquet
+        - generic [ref=e59]: Offline core
+      - generic [ref=e60]:
+        - link "Get started →" [ref=e61] [cursor=pointer]:
+          - /url: setup.html
+        - link "Run quickstart" [ref=e62] [cursor=pointer]:
+          - /url: "#quickstart"
+        - button "Copy page" [ref=e63] [cursor=pointer]
+      - region "Quick overview" [ref=e64]:
+        - generic [ref=e65]:
+          - generic [ref=e66]:
+            - generic [ref=e67]: FIRST COMMAND
+            - heading "Inspect before you change." [level=2] [ref=e68]
+            - paragraph [ref=e69]: Start with a read-only profile. Every later decision can be reviewed, overridden, and reproduced.
+          - code [ref=e70]: $ datadoc profile train.csv --target churn
+        - generic [ref=e73]:
+          - strong [ref=e74]: profile → plan → fit
+          - generic [ref=e75]: frozen artifact → transform → evaluate
+      - generic [ref=e76]:
+        - heading "Quickstart" [level=2] [ref=e77]
+        - paragraph [ref=e79]: Use a training file with an optional target. DATADOC writes JSON and Parquet artifacts without requiring a notebook.
+        - generic [ref=e80]:
+          - tablist [ref=e81]:
+            - tab "bash" [ref=e82] [cursor=pointer]
+            - tab "Python" [ref=e83] [cursor=pointer]
+            - tab "PowerShell" [ref=e84] [cursor=pointer]
+          - generic [ref=e86]:
+            - generic [ref=e87]:
+              - generic [ref=e88]: Terminal
+              - generic [ref=e89]: train → transform → evaluate
+            - code [ref=e90]: pip install datadoc-cli datadoc profile train.csv --target churn --output profile.json datadoc plan train.csv --target churn --task classification --output plan.json datadoc fit train.csv --target churn --output artifacts/churn-pipeline.json datadoc transform validation.csv \ --pipeline artifacts/churn-pipeline.json \ --output validation-features.parquet
+            - button "Copy code to clipboard" [ref=e91] [cursor=pointer]: Copy
+        - generic [ref=e92]:
+          - strong [ref=e93]: What happens here?
+          - paragraph [ref=e94]:
+            - code [ref=e95]: fit
+            - text: learns medians, category vocabularies, datetime rules, and optional scaling statistics from
+            - emphasis [ref=e96]: train.csv
+            - text: .
+            - code [ref=e97]: transform
+            - text: reuses those frozen values; it never learns from validation rows.
+      - generic [ref=e98]:
+        - heading "One mental model" [level=2] [ref=e99]
+        - paragraph [ref=e101]: Every DATADOC interface maps to the same six-step workflow. If you understand this flow, you understand the CLI, SDK, and web UI.
+        - generic [ref=e102]:
+          - link "01 Profile Find nulls, duplicates, constants, IDs, roles, and schema risks." [ref=e103] [cursor=pointer]:
+            - /url: how-it-works.html#profile
+            - generic [ref=e104]: "01"
+            - strong [ref=e105]: Profile
+            - generic [ref=e106]: Find nulls, duplicates, constants, IDs, roles, and schema risks.
+          - link "02 Plan Review proposed operations before any data is modified." [ref=e107] [cursor=pointer]:
+            - /url: how-it-works.html#plan
+            - generic [ref=e108]: "02"
+            - strong [ref=e109]: Plan
+            - generic [ref=e110]: Review proposed operations before any data is modified.
+          - link "03 Fit Learn train-only statistics and save a versioned artifact." [ref=e111] [cursor=pointer]:
+            - /url: pipeline.html#fit
+            - generic [ref=e112]: "03"
+            - strong [ref=e113]: Fit
+            - generic [ref=e114]: Learn train-only statistics and save a versioned artifact.
+          - link "04 Transform Apply the same output schema to validation, test, or new data." [ref=e115] [cursor=pointer]:
+            - /url: pipeline.html#transform
+            - generic [ref=e116]: "04"
+            - strong [ref=e117]: Transform
+            - generic [ref=e118]: Apply the same output schema to validation, test, or new data.
+          - link "05 Evaluate Compare a candidate against a baseline for a declared task." [ref=e119] [cursor=pointer]:
+            - /url: pipeline.html#evaluate
+            - generic [ref=e120]: "05"
+            - strong [ref=e121]: Evaluate
+            - generic [ref=e122]: Compare a candidate against a baseline for a declared task.
+          - link "06 Ship Export code, lineage, and artifacts that another person can inspect." [ref=e123] [cursor=pointer]:
+            - /url: production.html#ship
+            - generic [ref=e124]: "06"
+            - strong [ref=e125]: Ship
+            - generic [ref=e126]: Export code, lineage, and artifacts that another person can inspect.
+      - generic [ref=e127]:
+        - heading "What DATADOC handles" [level=2] [ref=e128]
+        - generic [ref=e129]:
+          - article [ref=e130]:
+            - generic [ref=e131]: 01 / PROFILE
+            - heading "Data-quality findings" [level=3] [ref=e132]
+            - paragraph [ref=e133]: Missingness, duplicates, constants, cardinality, invalid values, datetime confidence, and suspected leakage.
+          - article [ref=e134]:
+            - generic [ref=e135]: 02 / TRANSFORM
+            - heading "Safe preparation" [level=3] [ref=e136]
+            - paragraph [ref=e137]: Train-fitted imputation, missing indicators, category encoding, datetime features, optional clipping, and scaling.
+          - article [ref=e138]:
+            - generic [ref=e139]: 03 / ARTIFACT
+            - heading "Portable state" [level=3] [ref=e140]
+            - paragraph [ref=e141]: Save the input contract, output schema, configuration, plan, fitted values, and artifact version as JSON.
+          - article [ref=e142]:
+            - generic [ref=e143]: 04 / EVALUATE
+            - heading "Measured outcomes" [level=3] [ref=e144]
+            - paragraph [ref=e145]: Use classification or regression baselines with stratified, ordered, or group-aware validation.
+          - article [ref=e146]:
+            - generic [ref=e147]: 05 / UI
+            - heading "Local workspace" [level=3] [ref=e148]
+            - paragraph [ref=e149]: Review findings, approve a plan, preview output, and download artifacts from the local dashboard.
+          - article [ref=e150]:
+            - generic [ref=e151]: 06 / OPEN SOURCE
+            - heading "Inspectable by default" [level=3] [ref=e152]
+            - paragraph [ref=e153]: No cloud dependency for the core. Optional AI is advisory and cannot execute generated code.
+      - generic [ref=e154]:
+        - heading "Choose your path" [level=2] [ref=e155]
+        - generic [ref=e156]:
+          - generic [ref=e157]:
+            - button "CLI users" [ref=e158] [cursor=pointer]
+            - button "Python users" [ref=e159] [cursor=pointer]
+            - button "Dashboard users" [ref=e160] [cursor=pointer]
+          - generic [ref=e161]:
+            - paragraph [ref=e162]: Best for repeatable batch jobs and CI.
+            - link "Read the CLI reference →" [ref=e163] [cursor=pointer]:
+              - /url: cli.html
+      - generic [ref=e164]:
+        - heading "What you get back" [level=2] [ref=e165]
+        - table [ref=e167]:
+          - rowgroup [ref=e168]:
+            - row [ref=e169]:
+              - columnheader "Output" [ref=e170]
+              - columnheader "Purpose" [ref=e171]
+              - columnheader "When it appears" [ref=e172]
+          - rowgroup [ref=e173]:
+            - row [ref=e174]:
+              - cell [ref=e175]:
+                - code [ref=e176]: profile.json
+              - cell "Facts, roles, findings, and schema fingerprint." [ref=e177]
+              - cell [ref=e178]:
+                - code [ref=e179]: profile
+                - text: or
+                - code [ref=e180]: run
+            - row [ref=e181]:
+              - cell [ref=e182]:
+                - code [ref=e183]: plan.json
+              - cell "Explainable operations and rationales." [ref=e184]
+              - cell [ref=e185]:
+                - code [ref=e186]: plan
+                - text: or
+                - code [ref=e187]: run
+            - row [ref=e188]:
+              - cell [ref=e189]:
+                - code [ref=e190]: pipeline.json
+              - cell "Frozen train-only transformation state." [ref=e191]
+              - cell [ref=e192]:
+                - code [ref=e193]: fit
+                - text: or
+                - code [ref=e194]: run
+            - row [ref=e195]:
+              - cell [ref=e196]:
+                - code [ref=e197]: evaluation.json
+              - cell "Baseline, candidate, metric, split, and warnings." [ref=e198]
+              - cell [ref=e199]:
+                - code [ref=e200]: evaluate
+                - text: or
+                - code [ref=e201]: run --evaluate
+            - row [ref=e202]:
+              - cell [ref=e203]:
+                - code [ref=e204]: manifest.json
+              - 'cell "Lineage: input fingerprint, config, output schema, and artifact links." [ref=e205]'
+              - cell [ref=e206]:
+                - code [ref=e207]: run
+      - generic [ref=e208]:
+        - heading "When something goes wrong" [level=2] [ref=e209]
+        - generic [ref=e210]:
+          - strong [ref=e211]: Target errors
+          - paragraph [ref=e212]:
+            - text: If the target is missing, null, or accidentally transformed, stop and fix the declaration. Use
+            - code [ref=e213]: "--target column_name"
+            - text: ; DATADOC never guesses a supervised target.
+        - generic [ref=e214]:
+          - strong [ref=e215]: Schema errors
+          - paragraph [ref=e216]:
+            - text: If transform reports missing columns or incompatible types, compare the new file with the artifact’s
+            - code [ref=e217]: input_schema
+            - text: . Do not silently rename columns in production.
+        - generic [ref=e218]:
+          - strong [ref=e219]: Unexpected score changes
+          - paragraph [ref=e220]: Check the evaluation split, target leakage findings, estimator family, and whether the selected pipeline actually beat the baseline. “No improvement found” is a valid result.
+    - complementary "On this page" [ref=e221]:
+      - link "Quickstart" [ref=e223] [cursor=pointer]:
+        - /url: "#quickstart"
+      - link "One mental model" [ref=e224] [cursor=pointer]:
+        - /url: "#workflow"
+      - link "What DATADOC handles" [ref=e225] [cursor=pointer]:
+        - /url: "#capabilities"
+      - link "Choose your path" [ref=e226] [cursor=pointer]:
+        - /url: "#paths"
+      - link "What you get back" [ref=e227] [cursor=pointer]:
+        - /url: "#outputs"
+      - link "Error recovery" [ref=e228] [cursor=pointer]:
+        - /url: "#errors"
+      - generic [ref=e229]:
+        - generic [ref=e230]: Need a specific answer?
+        - paragraph [ref=e231]:
+          - link "API reference →" [ref=e232] [cursor=pointer]:
+            - /url: api-docs.html
+        - paragraph [ref=e233]:
+          - link "CLI options →" [ref=e234] [cursor=pointer]:
+            - /url: cli.html
+        - paragraph [ref=e235]:
+          - link "Release checklist →" [ref=e236] [cursor=pointer]:
+            - /url: production.html
+  - contentinfo [ref=e237]:
+    - text: DATADOC v0.4.0 · MIT licensed ·
+    - link "GitHub" [ref=e238] [cursor=pointer]:
+      - /url: https://github.com/narain-karti/DATADOC
+    - text: ·
+    - link "PyPI" [ref=e239] [cursor=pointer]:
+      - /url: https://pypi.org/project/datadoc-cli/

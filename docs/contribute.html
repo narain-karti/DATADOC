@@ -1,143 +1,43 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Contribute | DATADOC</title>
-    <link rel="stylesheet" href="css/style.css">
-    <!-- Prism CSS -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/toolbar/prism-toolbar.min.css" rel="stylesheet" />
-</head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Contribute safe transformations, tests, docs, and UI improvements to DATADOC."><title>DATADOC Docs | Contributing</title><link rel="stylesheet" href="css/docs.css"></head>
 <body>
+<header class="site-header"><a class="brand" href="index.html"><span class="brand-mark">DD</span><span>DATADOC <span class="muted">/ docs</span></span></a><nav class="header-nav" aria-label="Primary navigation"><a data-page-link href="index.html">Docs</a><a data-page-link href="pipeline.html">Pipeline</a><a data-page-link href="api-docs.html">API</a><a data-page-link href="sdk.html">SDK</a><a data-page-link href="ui.html">UI</a><a href="https://github.com/narain-karti/DATADOC">GitHub ↗</a></nav><div class="header-tools"><label class="search-box" aria-label="Search documentation"><span>⌕</span><input data-search-input type="search" placeholder="Search docs"></label><span class="version-badge">v0.4.0</span><button class="menu-button" type="button" data-menu-toggle aria-label="Open navigation" aria-expanded="false">☰</button></div></header>
+<nav class="topic-bar" aria-label="Documentation topics"><a href="index.html">Overview</a><a href="setup.html">Getting started</a><a href="pipeline.html">Pipeline</a><a href="cli.html">CLI</a><a href="sdk.html">Python SDK</a><a href="api-docs.html">API reference</a><a href="ui.html">Web UI</a><a href="production.html">Production</a></nav><div class="mobile-overlay"></div>
+<div class="docs-frame">
+<aside class="sidebar"><div class="side-group"><div class="side-label">Open source</div><a class="side-link active" data-page-link href="contribute.html">Contributing</a><a class="side-link" data-section-link href="#principles">Principles</a><a class="side-link" data-section-link href="#transformer">Transformation contract</a><a class="side-link" data-section-link href="#tests">Tests</a><a class="side-link" data-section-link href="#pull">Pull requests</a></div><div class="side-group"><div class="side-label">Project</div><a class="side-link" data-page-link href="production.html">Release checklist</a><a class="side-link" data-page-link href="license.html">MIT license</a></div></aside>
+<main class="main-content"><div class="eyebrow">OPEN SOURCE / CONTRIBUTING</div><h1>Make the safe path easier.</h1><p class="lead">DATADOC is useful when its decisions are explainable to data scientists and maintainers. Contributions should favor clear contracts, small changes, and tests that prove no leakage.</p><div class="page-actions"><a class="button primary" href="https://github.com/narain-karti/DATADOC">Open GitHub ↗</a><button class="button ghost" type="button" data-copy-page>Copy page</button></div>
+<section id="principles"><h2>Principles</h2><div class="feature-grid"><article class="feature"><div class="number">01</div><h3>Train-only state</h3><p>Any median, vocabulary, clipping bound, scaler, or selection decision belongs in <code>fit</code>, never in <code>transform</code>.</p></article><article class="feature"><div class="number">02</div><h3>Explain decisions</h3><p>Findings and operations need a rationale that a reviewer can read without opening implementation internals.</p></article><article class="feature"><div class="number">03</div><h3>Keep extras optional</h3><p>Core profiling and transformation must work offline without AI, UI, or scikit-learn.</p></article></div></section>
+<section id="transformer"><h2>Transformation contract</h2><p>A new transformation should fit the project lifecycle. This example is intentionally small; production code should also define its schema and serialization behavior.</p><pre class="code-block" data-copy><div class="code-caption"><span class="lang">Python</span><span>train-only plugin shape</span></div><code>import polars as pl
 
-    <!-- Navbar -->
-    <nav class="navbar">
-        <div class="nav-brand">
-            <a href="index.html">[<span>DATADOC</span>]</a>
-        </div>
-        <div class="nav-links">
-            <a href="index.html">FEATURES</a>
-            <a href="how-it-works.html">HOW IT WORKS</a>
-            <a href="setup.html">SETUP & USAGE</a>
-            <a href="api-docs.html">API DOCS</a>
-            <a href="sdk.html">PYTHON SDK</a>
-            <a href="pipeline.html">PIPELINE GUIDE</a>
-            <a href="contribute.html" class="active">CONTRIBUTE</a>
-            <a href="license.html">LICENSE</a>
-        </div>
-        <a href="setup.html" class="brutal-btn nav-cta">GET STARTED</a>
-    </nav>
-
-    <!-- Docs Layout -->
-    <main class="container docs-layout">
-        <aside class="sidebar">
-            <div class="brutal-card">
-                <h3 style="margin-bottom: 1rem; border-bottom: var(--border-thick); padding-bottom: 0.5rem;">CONTRIBUTING</h3>
-                <ul>
-                    <li><a href="#rules">Rules</a></li>
-                    <li><a href="#custom-plugins">Custom Plugins</a></li>
-                    <li><a href="#github">GitHub Workflow</a></li>
-                </ul>
-            </div>
-        </aside>
-        
-        <section class="content">
-            <div class="brutal-card">
-                <h1>GITHUB CONTRIBUTIONS</h1>
-                <p>DATADOC is an open-source project and we welcome contributions! Before creating a Pull Request, please ensure you follow our core tenets.</p>
-
-                <h2 id="rules">Core Tenets</h2>
-                <ul>
-                    <li><strong>No Black Boxes:</strong> Data cleaning must be deterministic. Do not propose plugins that use generative AI to alter dataset rows blindly. Mathematical standardizations only.</li>
-                    <li><strong>Polars First:</strong> The engine runs entirely on <code>polars</code>. Do not import <code>pandas</code>. Do not convert to pandas and back. All transformations must use Polars Expressions for zero-copy efficiency.</li>
-                    <li><strong>Zero Leakage:</strong> If building scaling or encoding plugins, ensure logic is strictly applied per-column without row-wise leakage.</li>
-                </ul>
-
-                <h2 id="custom-plugins">Building Safe Transformations</h2>
-                <p>The production contract is a fitted lifecycle. A transformation may inspect data in <code>analyze</code>, but every learned value must be calculated in <code>fit</code> and reused unchanged in <code>transform</code>.</p>
-                <pre><code class="language-python">import polars as pl
-
-class MyCustomPlugin:
-    name = "my_custom_plugin"
+class CenterAmount:
+    name = "center_amount"
 
     def analyze(self, df, context):
         return {"code": "CUSTOM_FINDING", "message": "Explain the finding"}
 
     def fit(self, train_df, context):
-        # Learn state from train_df only.
         return {"center": train_df["amount"].median()}
 
     def transform(self, df, fitted_state, context):
+        center = fitted_state["center"]
         return df.with_columns(
-            (pl.col("amount") - fitted_state["center"]).alias("amount_centered")
+            (pl.col("amount") - center).alias("amount_centered")
         )
 
     def validate(self, input_df, output_df, fitted_state):
-        return {"valid": "amount_centered" in output_df.columns}
+        return {"valid": "amount_centered" in output_df.columns}</code></pre><div class="callout warning"><strong>Do not add arbitrary code execution.</strong><p>AI may suggest a constrained operation, but registered code and deterministic validation must control what runs.</p></div></section>
+<section id="tests"><h2>Tests you should add</h2><div class="table-wrap"><table><thead><tr><th>Test</th><th>Question it answers</th></tr></thead><tbody><tr><td>Unit</td><td>Does the transformation handle nulls, empty data, binary values, and invalid dates?</td></tr><tr><td>Leakage</td><td>Can validation values change medians, vocabularies, bounds, or feature selection?</td></tr><tr><td>Round trip</td><td>Does save/load produce the same schema and values?</td></tr><tr><td>CLI</td><td>Do paths, extensions, and error messages work from a clean command?</td></tr><tr><td>UI</td><td>Can two sessions remain independent and do invalid orders fail?</td></tr></tbody></table></div><pre class="code-block" data-copy><div class="code-caption"><span class="lang">Terminal</span><span>before opening a PR</span></div><code>python -m pytest -q
+python -m ruff check datadoc tests
+python -m ruff format --check datadoc tests
+python -m compileall -q datadoc</code></pre></section>
+<section id="pull"><h2>Pull request workflow</h2><ol><li>Fork the repository and create a focused branch.</li><li>Explain the user problem and the behavior change.</li><li>Update docs and examples when a public command changes.</li><li>Add tests before asking for review.</li><li>Run the local checks and describe any known boundaries.</li><li>Keep generated datasets, secrets, build directories, and local artifacts out of the commit.</li></ol><pre class="code-block" data-copy><div class="code-caption"><span class="lang">Git</span><span>small, reviewable change</span></div><code>git switch -c feat/safer-datetime-transform
+git add datadoc tests docs
+git commit -m "feat: make datetime transform safer"
+git push -u origin feat/safer-datetime-transform</code></pre></section>
+</main>
+<aside class="right-rail"><div class="right-label">On this page</div><a class="right-link" data-section-link href="#principles">Principles</a><a class="right-link" data-section-link href="#transformer">Contract</a><a class="right-link" data-section-link href="#tests">Tests</a><a class="right-link" data-section-link href="#pull">Pull requests</a><div class="right-card"><div class="right-label">Maintainer path</div><p><a class="muted" href="production.html">Prepare a release →</a></p></div></aside>
+</div><footer class="footer">DATADOC v0.4.0 · <a href="index.html">Documentation home</a> · <a href="https://github.com/narain-karti/DATADOC">GitHub</a></footer><div class="search-results"></div><script src="js/docs.js"></script>
+</body></html>
 
-    def export_code(self, fitted_state):
-        return "# Reproduce the same fitted state"
-</code></pre>
-                <p>Add unit tests for nulls, empty data, unseen categories, serialization, schema validation, and a leakage case proving that validation values cannot change fitted state. See <code>tests/test_pipeline.py</code> for the project style.</p>
 
-                <h2 id="github">GitHub Workflow</h2>
-                <ol>
-                    <li>Fork the repository.</li>
-                    <li>Create a new branch (<code>git checkout -b feat/my-plugin</code>).</li>
-                    <li>Write tests in the <code>tests/</code> directory.</li>
-                    <li>Run <code>pytest tests/</code> and ensure 100% pass rate.</li>
-                    <li>Submit a Pull Request.</li>
-                </ol>
-            </div>
-        </section>
-    </main>
-
-    <!-- Footer -->
-    <footer>
-        <div class="footer-grid">
-            <div class="footer-brand">
-                <h3 style="font-size: 2rem; font-family: var(--font-display);">[DATADOC]</h3>
-                <p style="margin-top: 1rem; font-family: monospace; color: #888;">Leakage-safe tabular data preparation.</p>
-            </div>
-            
-            <div>
-                <h4>RESOURCES</h4>
-                <ul>
-                    <li><a href="api-docs.html">API Docs</a></li>
-                    <li><a href="sdk.html">Python SDK</a></li>
-                    <li><a href="contribute.html">Contributions</a></li>
-                    <li><a href="license.html">License</a></li>
-                </ul>
-            </div>
-            
-            <div>
-                <h4>PROJECT</h4>
-                <ul>
-                    <li><a href="https://github.com/narain-karti/DATADOC">GitHub Repo</a></li>
-                    <li><a href="https://pypi.org/project/datadoc-cli/">PyPI Package</a></li>
-                </ul>
-            </div>
-            
-            <div>
-                <h4>STAY UPDATED</h4>
-                <div class="newsletter">
-                    <input type="email" placeholder="Enter your email">
-                    <button class="brutal-btn" style="width: 100%; font-size: 1rem;">SUBSCRIBE &rarr;</button>
-                </div>
-            </div>
-        </div>
-        
-        <div class="copyright">
-            &copy; 2026 DATADOC Contributors. All rights reserved. Licensed under MIT.
-        </div>
-    </footer>
-
-    <!-- PrismJS Syntax Highlighting & Copy Button -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/toolbar/prism-toolbar.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/copy-to-clipboard/prism-copy-to-clipboard.min.js"></script>
-</body>
-</html>
