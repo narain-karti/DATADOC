@@ -26,6 +26,7 @@ Thumbs.db
 clean_*.csv
 pipeline_*.py
 report_*.md
+.release-verify/
 
 # Testing
 .pytest_cache/

@@ -1,4 +1,5 @@
 import os
+import json
 from pathlib import Path
 from dataclasses import dataclass
 from fastapi import FastAPI, Header, HTTPException
@@ -9,6 +10,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 
 from datadoc.core.engine import DATADOC
+from datadoc.core.pipeline import DataDocError, DataDocPipeline, PipelineConfig
 from datadoc.core.agent import AgenticEngineer
 
 app = FastAPI(title="DATADOC UI Server")
@@ -29,6 +31,9 @@ app.add_middleware(
 class SessionState:
     doc: DATADOC
     agent: Optional[AgenticEngineer]
+    pipeline: Optional[DataDocPipeline] = None
+    profile: Optional[dict] = None
+    plan: Optional[dict] = None
 
 
 _sessions: dict[str, SessionState] = {}
@@ -40,6 +45,14 @@ class PluginRequest(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str
+
+
+class PipelineRequest(BaseModel):
+    target: Optional[str] = None
+    task: str = "auto"
+    drop_identifiers: bool = False
+    scaling: str = "auto"
+    clip_outliers: bool = False
 
 
 def init_server(file_path: str):
@@ -62,6 +75,24 @@ def _state(session_id: str) -> SessionState:
     return state
 
 
+def _pipeline_config(req: PipelineRequest) -> PipelineConfig:
+    if req.task not in {"auto", "classification", "regression"}:
+        raise HTTPException(
+            status_code=422, detail="task must be auto, classification, or regression."
+        )
+    if req.scaling not in {"auto", "none", "standard", "robust"}:
+        raise HTTPException(
+            status_code=422, detail="scaling must be auto, none, standard, or robust."
+        )
+    return PipelineConfig(
+        target=req.target,
+        task=req.task,
+        drop_identifiers=req.drop_identifiers,
+        scaling=req.scaling,
+        clip_outliers=req.clip_outliers,
+    )
+
+
 @app.get("/api/dataset/metadata")
 def get_metadata(session_id: str = Header("local", alias="X-DATADOC-SESSION")):
     doc = _state(session_id).doc
@@ -80,13 +111,112 @@ def recommend_pipeline(session_id: str = Header("local", alias="X-DATADOC-SESSIO
     return {"plugins": doc.list_plugins()}
 
 
+@app.get("/api/pipeline/profile")
+def pipeline_profile(
+    target: Optional[str] = None,
+    session_id: str = Header("local", alias="X-DATADOC-SESSION"),
+):
+    state = _state(session_id)
+    try:
+        state.profile = (
+            DataDocPipeline(PipelineConfig(target=target)).profile(state.doc._original_df).to_dict()
+        )
+        return state.profile
+    except DataDocError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@app.post("/api/pipeline/plan")
+def pipeline_plan(
+    req: PipelineRequest,
+    session_id: str = Header("local", alias="X-DATADOC-SESSION"),
+):
+    state = _state(session_id)
+    try:
+        state.plan = DataDocPipeline(_pipeline_config(req)).plan(state.doc._original_df).to_dict()
+        return state.plan
+    except DataDocError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@app.post("/api/pipeline/fit")
+def pipeline_fit(
+    req: PipelineRequest,
+    session_id: str = Header("local", alias="X-DATADOC-SESSION"),
+):
+    state = _state(session_id)
+    try:
+        state.pipeline = DataDocPipeline(_pipeline_config(req)).fit(state.doc._original_df)
+        state.profile = state.pipeline.profile_.to_dict() if state.pipeline.profile_ else None
+        state.plan = state.pipeline.plan_.to_dict() if state.pipeline.plan_ else None
+        transformed = state.pipeline.transform(state.doc._original_df)
+        return {
+            "profile": state.profile,
+            "plan": state.plan,
+            "input_schema": state.pipeline.input_schema_,
+            "output_schema": state.pipeline.output_schema_,
+            "rows": transformed.height,
+            "columns": transformed.width,
+            "fitted": True,
+        }
+    except DataDocError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@app.get("/api/pipeline/preview")
+def pipeline_preview(session_id: str = Header("local", alias="X-DATADOC-SESSION")):
+    state = _state(session_id)
+    if not state.pipeline:
+        raise HTTPException(status_code=400, detail="Fit a pipeline before requesting a preview.")
+    try:
+        transformed = state.pipeline.transform(state.doc._original_df)
+        return {"schema": state.pipeline.output_schema_, "rows": transformed.head(8).to_dicts()}
+    except DataDocError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@app.get("/api/pipeline/export/code")
+def pipeline_export_code(session_id: str = Header("local", alias="X-DATADOC-SESSION")):
+    state = _state(session_id)
+    if not state.pipeline:
+        raise HTTPException(status_code=400, detail="Fit a pipeline before exporting code.")
+    artifact = json.dumps(state.pipeline.to_dict(), indent=2)
+    code = f"""import json
+import polars as pl
+from datadoc.core.pipeline import DataDocPipeline, PipelineConfig, read_dataset
+
+ARTIFACT = json.loads({artifact!r})
+
+def transform_file(input_path: str, output_path: str) -> None:
+    pipeline = DataDocPipeline(PipelineConfig(**ARTIFACT["config"]))
+    pipeline.input_schema_ = ARTIFACT["input_schema"]
+    pipeline.output_schema_ = ARTIFACT["output_schema"]
+    pipeline.state_ = ARTIFACT["state"]
+    pipeline.fitted_ = True
+    transformed = pipeline.transform(read_dataset(input_path))
+    if output_path.endswith(".parquet"):
+        transformed.write_parquet(output_path)
+    else:
+        transformed.write_csv(output_path)
+"""
+    from fastapi.responses import Response
+
+    return Response(
+        content=code,
+        media_type="text/plain",
+        headers={"Content-Disposition": "attachment; filename=pipeline.py"},
+    )
+
+
 @app.get("/api/dataset/export/csv")
 def export_csv(session_id: str = Header("local", alias="X-DATADOC-SESSION")):
     doc = _state(session_id).doc
 
     from fastapi.responses import Response
 
-    csv_bytes = doc.df.write_csv()
+    state = _state(session_id)
+    output = state.pipeline.transform(doc._original_df) if state.pipeline else doc.df
+    csv_bytes = output.write_csv()
     return Response(
         content=csv_bytes,
         media_type="text/csv",

@@ -44,6 +44,7 @@
             <a href="setup.html">SETUP & USAGE</a>
             <a href="api-docs.html" class="active">API DOCS</a>
             <a href="sdk.html">PYTHON SDK</a>
+            <a href="pipeline.html">PIPELINE GUIDE</a>
             <a href="contribute.html">CONTRIBUTE</a>
             <a href="license.html">LICENSE</a>
         </div>
@@ -93,12 +94,12 @@
                 
                 <div class="api-block">
                     <h3>datadoc profile &lt;file.csv&gt; [--target col]</h3>
-                    <p>Analyzes the dataset and determines column roles (Identifier, Target, Numeric, Categorical) without applying transformations.</p>
+                    <p>Profiles schema, nulls, cardinality, duplicates, findings, and confidence-scored roles without applying transformations.</p>
                 </div>
 
                 <div class="api-block">
-                    <h3>datadoc plan &lt;file.csv&gt; [--ai]</h3>
-                    <p>Generates a natural-language explainable plan for how the dataset will be transformed. Use <code>--ai</code> for LLM-assisted explanations.</p>
+                    <h3>datadoc plan &lt;file.csv&gt; [--target col]</h3>
+                    <p>Generates an explainable deterministic plan without modifying the dataset. AI is an optional advisory layer and is never required.</p>
                 </div>
 
                 <div class="api-block">
@@ -113,12 +114,12 @@
 
                 <div class="api-block">
                     <h3>datadoc evaluate &lt;train.csv&gt; --task classification</h3>
-                    <p>Benchmarks the pipeline's effectiveness by training a baseline Scikit-Learn model (Random Forest / XGBoost).</p>
+                    <p>Compares a candidate against a minimal scikit-learn baseline using leakage-aware validation and a holdout. Install <code>datadoc-cli[ml]</code>; use <code>--time-column</code> or <code>--group-column</code> when required.</p>
                 </div>
 
                 <div class="api-block">
                     <h3>datadoc run &lt;file.csv&gt;</h3>
-                    <p>A convenience command that automatically runs profile, plan, and fit in sequence for rapid prototyping.</p>
+                    <p>A convenience command that persists profile, plan, fitted artifact, transformed Parquet output, and a lineage manifest. It is a starting point, not a substitute for an explicit production holdout.</p>
                 </div>
 
                 <h2 id="python-api">2. Python DataDocPipeline API</h2>
@@ -136,52 +137,55 @@
 
                 <!-- Plugin Specifications -->
                 <h2 id="plugin-system">3. Core Plugins Specifications</h2>
-                <p>DATADOC runs 5 deterministic plugins sequenced by strict priority:</p>
+                <p>The fitted pipeline contains five deterministic transformation concepts. The legacy plugin classes remain available for compatibility; production state is learned and serialized by <code>DataDocPipeline</code>.</p>
 
                 <div class="api-card">
                     <h3>10: MissingValuePlugin <span class="badge-priority">PRIORITY 10</span></h3>
-                    <p><strong>Behavior:</strong> Detects null values. Imputes continuous numeric features with column <code>Median</code> and categorical/string features with column <code>Mode</code>.</p>
+                    <p><strong>Behavior:</strong> Fits numeric medians and categorical missing-value rules on training data. All-null columns become explicit findings.</p>
                     <p><strong>Dependencies:</strong> None</p>
                 </div>
 
                 <div class="api-card">
                     <h3>20: OutlierPlugin <span class="badge-priority">PRIORITY 20</span></h3>
-                    <p><strong>Behavior:</strong> Identifies outliers on numerical features using Interquartile Range (1.5x IQR). Clips values outside $[Q1 - 1.5 \times IQR, Q3 + 1.5 \times IQR]$. Excludes binary (0/1) indicators.</p>
+                    <p><strong>Behavior:</strong> Offers opt-in IQR clipping using bounds learned on training data. It excludes binary, target, identifier, and datetime-derived fields.</p>
                     <p><strong>Dependencies:</strong> <code>MissingValuePlugin</code></p>
                 </div>
 
                 <div class="api-card">
                     <h3>30: DatetimePlugin <span class="badge-priority">PRIORITY 30</span></h3>
-                    <p><strong>Behavior:</strong> Auto-parses datetime strings. Extracts temporal features (<code>year</code>, <code>month</code>, <code>day</code>, <code>dayofweek</code>, and <code>hour</code> if non-midnight times exist). Automatically drops the original datetime string and any zero-variance date features.</p>
+                    <p><strong>Behavior:</strong> Parses date-like fields only when confidence passes the configured threshold, extracts stable calendar features, and reports parse warnings.</p>
                     <p><strong>Dependencies:</strong> <code>MissingValuePlugin</code></p>
                 </div>
 
                 <div class="api-card">
                     <h3>40: CategoricalEncoderPlugin <span class="badge-priority">PRIORITY 40</span></h3>
-                    <p><strong>Behavior:</strong> Detects low-cardinality string columns and applies One-Hot Encoding (with <code>drop_first=True</code>). Auto-identifies and drops high-cardinality identifier columns.</p>
+                    <p><strong>Behavior:</strong> Fits one-hot vocabularies for categorical features and handles unseen categories safely. High-cardinality fields are reported and are not silently dropped.</p>
                     <p><strong>Dependencies:</strong> <code>MissingValuePlugin</code></p>
                 </div>
 
                 <div class="api-card">
                     <h3>45: ScalingPlugin <span class="badge-priority">PRIORITY 45</span></h3>
-                    <p><strong>Behavior:</strong> Identifies continuous numerical features with large scale disparities (standard deviation ratio > 10). Applies Z-Score Normalization $(x - \mu)/\sigma$. Excludes binary 0/1 columns and constant features.</p>
+                    <p><strong>Behavior:</strong> Applies configured standard or robust scaling to eligible numeric features, fit on training data only. Binary and protected fields are excluded.</p>
                     <p><strong>Dependencies:</strong> <code>OutlierPlugin</code>, <code>CategoricalEncoderPlugin</code></p>
                 </div>
 
                 <!-- Role Detection -->
                 <h2 id="role-detection">4. Column Role Detection System</h2>
-                <p>Before any plugins run, DATADOC's engine executes <code>_detect_column_roles()</code> to classify every column into one of four roles:</p>
+                <p>The profiler classifies columns with confidence and rationale. It does not silently drop identifiers unless the user enables that policy.</p>
                 
                 <div class="code-block">
                     <pre><code class="language-none">Roles:
-1. "id"      -> Monotonically increasing unique integer series (Dropped automatically)
-2. "name"    -> Unique string identifiers / UUIDs / high-cardinality names (Dropped automatically)
-3. "constant"-> Zero-variance single-value columns (Dropped automatically at pipeline end)
-4. "feature" -> Predictive numerical, categorical, or datetime features (Passed to plugins)</code></pre>
+target              -> Explicit user-declared label (never transformed)
+feature_numeric     -> Numeric feature with train-fitted statistics
+feature_categorical -> String feature encoded from training vocabulary
+feature_datetime    -> Parsed calendar features
+identifier          -> Suspected ID; retained unless explicitly dropped
+constant            -> Zero-variance or all-null feature</code></pre>
                 </div>
 
                 <!-- AI Chat -->
-                <h2 id="chat">5. AI Chat & Autonomous Tool Calling</h2>
+                <h2 id="chat">5. Optional AI advisory layer</h2>
+                <p>AI is not part of the deterministic core. When enabled, it may receive opt-in minimized metadata and return a constrained, schema-validated plan. Generated code is never executed automatically.</p>
 
             </div>
         </section>

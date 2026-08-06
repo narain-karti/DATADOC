@@ -125,9 +125,9 @@ def read_dataset(path: str | Path) -> pl.DataFrame:
     path = Path(path)
     suffix = path.suffix.lower()
     if suffix == ".csv":
-        return pl.read_csv(path, infer_schema_length=10_000)
+        return _normalize_numeric_missing(pl.read_csv(path, infer_schema_length=10_000))
     if suffix in {".parquet", ".pq"}:
-        return pl.read_parquet(path)
+        return _normalize_numeric_missing(pl.read_parquet(path))
     raise DataDocError("Only CSV and Parquet files are supported.")
 
 
@@ -153,6 +153,16 @@ def _is_string(dtype: pl.DataType) -> bool:
     return dtype == pl.String
 
 
+def _normalize_numeric_missing(df: pl.DataFrame) -> pl.DataFrame:
+    """Represent floating-point NaN values as nulls throughout the pipeline."""
+    expressions = [
+        pl.when(pl.col(name).is_nan()).then(None).otherwise(pl.col(name)).alias(name)
+        for name, dtype in df.schema.items()
+        if dtype.is_float()
+    ]
+    return df.with_columns(expressions) if expressions else df
+
+
 def _datetime_ratio(series: pl.Series) -> float:
     if not _is_string(series.dtype) or series.len() == 0:
         return 0.0
@@ -164,6 +174,7 @@ def _datetime_ratio(series: pl.Series) -> float:
 
 
 def profile_dataset(df: pl.DataFrame, config: PipelineConfig | None = None) -> DatasetProfile:
+    df = _normalize_numeric_missing(df)
     config = config or PipelineConfig()
     roles: list[ColumnRole] = []
     findings: list[dict[str, Any]] = []
@@ -395,6 +406,7 @@ class DataDocPipeline:
         return self.plan_
 
     def fit(self, train_df: pl.DataFrame, target: str | None = None) -> "DataDocPipeline":
+        train_df = _normalize_numeric_missing(train_df)
         if target is not None:
             self.config.target = target
         if self.config.target and self.config.target not in train_df.columns:
@@ -532,6 +544,7 @@ class DataDocPipeline:
     def _transform_with_state(
         self, df: pl.DataFrame, state: dict[str, Any], validate_schema: bool = True
     ) -> pl.DataFrame:
+        df = _normalize_numeric_missing(df)
         if validate_schema:
             self._validate_input_schema(df)
         output = df.clone()
@@ -613,6 +626,7 @@ class DataDocPipeline:
     def evaluate(
         self, df: pl.DataFrame, target: str | None = None, test_size: float = 0.2
     ) -> EvaluationReport:
+        df = _normalize_numeric_missing(df)
         target = target or self.config.target
         if not target:
             raise DataDocError("Evaluation requires an explicit target column.")
@@ -692,13 +706,54 @@ class DataDocPipeline:
             **{**asdict(self.config), "clip_outliers": False, "scaling": "none"}
         )
 
+        evaluation_warnings: set[str] = set()
+
         def score(
             fit_df: pl.DataFrame, validation_df: pl.DataFrame, config: PipelineConfig
         ) -> float:
             pipeline = DataDocPipeline(config).fit(fit_df, target=target)
-            x_train = pipeline.transform(fit_df).drop(target).to_numpy()
+            transformed_train = pipeline.transform(fit_df)
+            transformed_validation = pipeline.transform(validation_df)
+            feature_columns = [
+                name
+                for name, dtype in transformed_train.schema.items()
+                if name != target and dtype.is_numeric()
+            ]
+            ignored_columns = [
+                name
+                for name in transformed_train.columns
+                if name != target and name not in feature_columns
+            ]
+            if ignored_columns:
+                evaluation_warnings.add(
+                    "Non-numeric transformed columns excluded from estimator input: "
+                    + ", ".join(ignored_columns)
+                )
+            if not feature_columns:
+                raise DataDocError(
+                    "Evaluation produced no numeric feature columns for the estimator."
+                )
+            train_features = transformed_train.select(feature_columns)
+            validation_features = transformed_validation.select(feature_columns)
+            fill_values: dict[str, float] = {}
+            for name in feature_columns:
+                median = train_features[name].median()
+                fill_values[name] = float(median) if median is not None else 0.0
+            train_features = train_features.with_columns(
+                [
+                    pl.col(name).fill_nan(value).fill_null(value).alias(name)
+                    for name, value in fill_values.items()
+                ]
+            )
+            validation_features = validation_features.with_columns(
+                [
+                    pl.col(name).fill_nan(value).fill_null(value).alias(name)
+                    for name, value in fill_values.items()
+                ]
+            )
+            x_train = train_features.to_numpy()
             y_train = fit_df[target].to_numpy()
-            x_test = pipeline.transform(validation_df).drop(target).to_numpy()
+            x_test = validation_features.to_numpy()
             y_test = validation_df[target].to_numpy()
             if inferred_task == "classification":
                 model = (
@@ -759,7 +814,8 @@ class DataDocPipeline:
             - 1,
             warnings=[
                 "Holdout score is an estimate; use an external final test set for production decisions."
-            ],
+            ]
+            + sorted(evaluation_warnings),
         )
 
     def to_dict(self) -> dict[str, Any]:

@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pipeline Guide | DATADOC</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand"><a href="index.html">[<span>DATADOC</span>]</a></div>
+        <div class="nav-links">
+            <a href="index.html">FEATURES</a>
+            <a href="how-it-works.html">HOW IT WORKS</a>
+            <a href="setup.html">SETUP &amp; USAGE</a>
+            <a href="api-docs.html">API DOCS</a>
+            <a href="sdk.html">PYTHON SDK</a>
+            <a href="pipeline.html" class="active">PIPELINE GUIDE</a>
+            <a href="contribute.html">CONTRIBUTE</a>
+            <a href="license.html">LICENSE</a>
+        </div>
+        <a href="setup.html" class="brutal-btn nav-cta">GET STARTED</a>
+    </nav>
+
+    <div class="ticker-wrap"><div class="ticker">
+        <span>• PROFILE</span><span>• PLAN</span><span>• FIT</span><span>• TRANSFORM</span><span>• EVALUATE</span>
+        <span>• PROFILE</span><span>• PLAN</span><span>• FIT</span><span>• TRANSFORM</span><span>• EVALUATE</span>
+    </div></div>
+
+    <main class="container docs-layout">
+        <aside class="sidebar">
+            <div class="brutal-card">
+                <h3 style="margin-bottom: 1rem; border-bottom: var(--border-thick); padding-bottom: 0.5rem;">PIPELINE MAP</h3>
+                <ul>
+                    <li><a href="#mental-model">The mental model</a></li>
+                    <li><a href="#cli">CLI walkthrough</a></li>
+                    <li><a href="#sdk">Python walkthrough</a></li>
+                    <li><a href="#artifact">Artifact anatomy</a></li>
+                    <li><a href="#safety">Safety rules</a></li>
+                    <li><a href="#evaluation">Evaluation</a></li>
+                </ul>
+            </div>
+        </aside>
+
+        <section class="content">
+            <div class="brutal-card">
+                <h1>THE FITTED PIPELINE, STEP BY STEP</h1>
+                <p>DATADOC has two moments: <strong>fit</strong> learns rules from training data, and <strong>transform</strong> reuses those frozen rules on other data.</p>
+
+                <h2 id="mental-model">1. The mental model</h2>
+                <div class="code-block"><pre><code class="language-none">raw train data
+      |
+      v
+profile -> plan -> fit
+                    |
+                    v
+             pipeline.json
+                    |
+       +------------+------------+
+       |                         |
+       v                         v
+ validation/test data      production inference data
+       |                         |
+       +---------- transform ----+
+                         |
+                         v
+                    model features</code></pre></div>
+                <p>The important rule is that medians, category vocabularies, clipping bounds, and scaling values are learned from the training rows only. Validation and test rows are never used to calculate those values.</p>
+
+                <h2 id="cli">2. CLI walkthrough</h2>
+                <p>Start by inspecting a dataset. Profiling never modifies the file:</p>
+                <div class="code-block"><pre><code class="language-bash">datadoc profile data.csv --target churn --output profile.json</code></pre></div>
+                <p>Review the intended operations:</p>
+                <div class="code-block"><pre><code class="language-bash">datadoc plan data.csv --target churn --output plan.json</code></pre></div>
+                <p>Fit an artifact on the training split:</p>
+                <div class="code-block"><pre><code class="language-bash">datadoc fit train.csv \
+  --target churn \
+  --task classification \
+  --output artifacts/churn-pipeline.json</code></pre></div>
+                <p>Apply the same state to validation or test data:</p>
+                <div class="code-block"><pre><code class="language-bash">datadoc transform validation.csv \
+  --pipeline artifacts/churn-pipeline.json \
+  --output validation-features.parquet</code></pre></div>
+                <p>Use the optional ML dependency when you want a baseline comparison:</p>
+                <div class="code-block"><pre><code class="language-bash">pip install "datadoc-cli[ml]"
+datadoc evaluate train.csv --target churn --task classification</code></pre></div>
+
+                <h2 id="sdk">3. Python walkthrough</h2>
+                <div class="code-block"><pre><code class="language-python">import polars as pl
+from datadoc import DataDocPipeline, PipelineConfig
+
+train = pl.read_csv("train.csv")
+validation = pl.read_csv("validation.csv")
+
+config = PipelineConfig(
+    target="churn",
+    task="classification",
+    scaling="standard",
+)
+
+pipeline = DataDocPipeline(config).fit(train)
+features = pipeline.transform(validation)
+pipeline.save("artifacts/churn-pipeline.json")
+
+# Later, on another machine or process:
+loaded = DataDocPipeline.load("artifacts/churn-pipeline.json")
+same_features = loaded.transform(validation)</code></pre></div>
+
+                <h2 id="artifact">4. What is inside pipeline.json?</h2>
+                <p>The artifact is ordinary JSON so contributors can inspect it in a code review:</p>
+                <ul>
+                    <li><code>config</code>: target, task, scaling, identifier, and safety settings.</li>
+                    <li><code>input_schema</code>: the columns and types expected at transform time.</li>
+                    <li><code>output_schema</code>: the stable feature columns created by fitting.</li>
+                    <li><code>state.numeric</code>: training medians, missingness flags, and optional bounds.</li>
+                    <li><code>state.categorical</code>: one-hot categories or frequency dictionaries learned from training.</li>
+                    <li><code>state.scaling</code>: frozen centers and spreads.</li>
+                    <li><code>profile</code> and <code>plan</code>: findings and explanations behind the artifact.</li>
+                </ul>
+
+                <h2 id="safety">5. Safety rules</h2>
+                <div class="api-block">
+                    <p><strong>Targets are protected.</strong> A declared target is never imputed, encoded, scaled, or dropped as a feature.</p>
+                    <p><strong>Identifiers are suggestions.</strong> Numeric shape alone cannot make a column an ID. Dropping requires an explicit policy.</p>
+                    <p><strong>Unknown categories are stable.</strong> New categories do not change the feature schema at inference.</p>
+                    <p><strong>AI is optional.</strong> The core does not require an API key, and AI-generated Python is never executed.</p>
+                    <p><strong>Schema changes fail clearly.</strong> Missing required columns and incompatible types produce actionable errors.</p>
+                </div>
+
+                <h2 id="evaluation">6. Evaluation and model performance</h2>
+                <p>Cleaning does not guarantee a better score. DATADOC compares a minimal baseline and a candidate pipeline using cross-validation on the development rows, then evaluates the selected choice on a final holdout.</p>
+                <p>Classification reports balanced accuracy. Regression reports negative RMSE internally so candidate selection remains a “higher is better” comparison. Time and group columns can be configured for ordered or group-aware splits.</p>
+                <p>Retained text or identifier columns remain visible in prepared output but are excluded from the estimator matrix with a warning. Any remaining numeric missing values are filled with medians learned from the current training fold.</p>
+                <div class="code-block"><pre><code class="language-python">report = DataDocPipeline(
+    PipelineConfig(target="churn", task="classification")
+).evaluate(train_df, target="churn")
+
+print(report.to_dict())</code></pre></div>
+                <p>Use an untouched external test set for the final production decision. Treat the evaluation report as evidence, not as a universal promise.</p>
+
+                <div class="tip-box" style="background: #1a1a1a; color: #fff; border: 2px solid #00e5ff; padding: 1rem 1.5rem; margin: 1.5rem 0;">
+                    <h4 style="color: #00e5ff; margin-top: 0;">OPEN-SOURCE CONTRIBUTOR NOTE</h4>
+                    <p>New transformations must learn state in <code>fit()</code>, reuse it in <code>transform()</code>, serialize it to JSON, and include leakage and artifact round-trip tests.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="footer-grid">
+            <div class="footer-brand"><h3 style="font-size: 2rem; font-family: var(--font-display);">[DATADOC]</h3><p style="margin-top: 1rem; font-family: monospace; color: #888;">Leakage-safe tabular data preparation.</p></div>
+            <div><h4>RESOURCES</h4><ul><li><a href="api-docs.html">API Docs</a></li><li><a href="sdk.html">Python SDK</a></li><li><a href="pipeline.html">Pipeline Guide</a></li><li><a href="contribute.html">Contributions</a></li></ul></div>
+            <div><h4>PROJECT</h4><ul><li><a href="https://github.com/narain-karti/DATADOC">GitHub Repo</a></li><li><a href="https://pypi.org/project/datadoc-cli/">PyPI Package</a></li></ul></div>
+        </div>
+        <div class="copyright">&copy; 2026 DATADOC Contributors. All rights reserved. Licensed under MIT.</div>
+    </footer>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+</body>
+</html>

@@ -36,17 +36,17 @@
 
 Powered by **Polars**, DATADOC reads CSV and Parquet files, diagnoses missing values, identifiers, schema issues, duplicates, constants, and unsafe feature types. It does not promise model improvement: optional evaluation reports the observed result against a baseline under a reproducible split.
 
-**DATADOC is NOT just another EDA (Exploratory Data Analysis) tool.** It doesn't just show you charts. It **fixes your data** and hands you a portable, deterministic Python script to replicate the pipeline anywhere.
+**DATADOC is NOT just another EDA (Exploratory Data Analysis) tool.** It profiles data quality, lets you review a plan, fits transformations from training data, and hands you a portable artifact and Python wrapper for reuse.
 
 ### ⚡ The Impact: Why Industry Professionals Use DATADOC
 
-Data Scientists and ML Engineers spend **80% of their time cleaning data** and only 20% training models. 
-DATADOC eliminates the 80%.
+Data Scientists and ML Engineers repeatedly rebuild the same preparation steps across projects.
+DATADOC turns those steps into a reviewable, reusable pipeline.
 
-- **Save Hundreds of Hours:** Stop writing boilerplate code to impute nulls, one-hot encode categorical variables, or clip outliers. DATADOC does it in one command.
-- **Zero Black-Box AI:** Every transformation is strictly mathematical (IQR, medians, mode). It is 100% deterministic, explainable, and safe for enterprise production environments.
-- **Lightning Fast:** By utilizing `polars` (written in Rust) instead of `pandas`, DATADOC processes millions of rows with minimal memory overhead.
-- **Agentic AI Integration:** DATADOC features a built-in AI Planner and an interactive Chat Assistant that can autonomously analyze your dataset, generate engineering plans, and execute plugins using tool-calling!
+- **Save boilerplate:** Review recommendations for imputing nulls, encoding categories, and optional scaling or clipping before applying them.
+- **Explainable by default:** The deterministic core records roles, findings, operations, protected columns, and fitted statistics in an inspectable artifact.
+- **Local-first:** The core package works offline. Optional ML, UI, and AI features are separate extras.
+- **Optional AI planning:** AI can help explain or rank a constrained plan; it is never allowed to execute arbitrary generated code.
 - **Leakage-safe workflows:** Fitted statistics for imputation, categorical vocabularies, clipping, and scaling are learned from training data and saved as an artifact.
 
 ---
@@ -94,13 +94,13 @@ datadoc export --pipeline artifacts/churn-pipeline.json --output pipeline.py
 
 ## 🐍 Python SDK (Library Usage)
 
-DATADOC is also a powerful Python library. You can import the engine directly into your Jupyter Notebooks or backend servers:
+DATADOC is also a Python library. The stable workflow is `profile → plan → fit → transform`; the same fitted artifact can be used in notebooks, services, and batch jobs:
 
 ```python
 from datadoc import DataDocPipeline, PipelineConfig
 import polars as pl
 
-# Fit only on the training split.
+# Fit only on the training split. The target is protected from feature transforms.
 train_df = pl.read_csv("train.csv")
 pipeline = DataDocPipeline(PipelineConfig(target="churn")).fit(train_df)
 pipeline.save("artifacts/churn-pipeline.json")
@@ -109,6 +109,8 @@ pipeline.save("artifacts/churn-pipeline.json")
 validation_df = pl.read_csv("validation.csv")
 validation_features = pipeline.transform(validation_df)
 ```
+
+For an observed model comparison, install the optional ML extra and call `pipeline.evaluate(train_df)` or `datadoc evaluate`. Evaluation is evidence for the declared task and split strategy; it is not a promise that cleaning always improves a model.
 
 ---
 
@@ -120,7 +122,7 @@ validation_features = pipeline.transform(validation_df)
 | `datadoc plan <file>` | Outputs an explainable transformation plan without modifying data |
 | `datadoc fit <train>` | Learns a pipeline only from training data and saves JSON state |
 | `datadoc transform <file>` | Applies a saved pipeline to validation, test, or inference data |
-| `datadoc evaluate <file>` | Optionally compares a safe candidate pipeline with a baseline |
+| `datadoc evaluate <file>` | Optionally compares a candidate pipeline with a baseline using leakage-aware splits |
 | `datadoc export` | Creates an executable wrapper for a saved pipeline artifact |
 | `datadoc run <file>` | Writes a profile, plan, artifact, transformed data, and lineage manifest |
 
@@ -135,12 +137,12 @@ DATADOC operates as a fitted pipeline. Every transformation learns state only fr
 | Priority | Plugin | Action Performed |
 |----------|--------|-------------|
 | 10 | **MissingValuePlugin** | Imputes missing numeric values with median, categorical with mode |
-| 20 | **OutlierPlugin** | Detects outliers via IQR and clips them dynamically |
+| 20 | **OutlierPlugin** | Offers optional IQR clipping; clipping is not forced by default |
 | 30 | **DatetimePlugin** | Detects date strings and extracts year, month, day, day_of_week |
-| 40 | **CategoricalEncoderPlugin** | One-Hot Encodes categorical columns (< 10 unique values) |
-| 45 | **ScalingPlugin** | Standard scales numeric columns when scale ratio exceeds 10x |
+| 40 | **CategoricalEncoderPlugin** | Encodes categories using training vocabularies and handles unseen values |
+| 45 | **ScalingPlugin** | Applies configured standard or robust scaling, fit on training data only |
 
-Every plugin implements a strict `BasePlugin` interface ensuring it can `analyze()`, `apply()`, `rollback()`, and `generate_code()`. 
+The fitted pipeline is the production source of truth. Plugin work should follow the lifecycle `analyze → fit → transform → validate → export_code`, with all learned state serializable and testable.
 
 Want to build your own? See [CONTRIBUTING.md](CONTRIBUTING.md) to learn how to create and register custom plugins!
 
@@ -154,8 +156,8 @@ Want to build your own? See [CONTRIBUTING.md](CONTRIBUTING.md) to learn how to c
 - [x] Pipeline export capability
 - [x] Polars backend and local-first pipeline artifacts
 - [x] PyPI Release (`pip install datadoc-cli`)
-- [x] Phase 2: Agentic AI Planner (LLM Orchestration)
-- [x] Interactive AI Chat with Tool-Calling capabilities
+- [x] Constrained optional AI planning path
+- [x] Session-scoped local FastAPI dashboard
 - [ ] Export targets for `dbt` and Apache Airflow
 - [x] Local FastAPI dashboard/API companion
 
@@ -168,3 +170,5 @@ This project is licensed under the MIT License. See [LICENSE](LICENSE) for detai
 ## 🤝 Contributing
 
 We welcome contributions from the community! If you'd like to add a new plugin or improve the core engine, please see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+Maintainers can use the [0.4.0 release checklist](RELEASE_CHECKLIST.md) when preparing a tag and PyPI upload.

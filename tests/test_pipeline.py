@@ -22,6 +22,14 @@ def test_numeric_statistics_are_fitted_only_on_training_data():
     assert transformed["age__missing"][0] == 1
 
 
+def test_nan_values_are_treated_as_missing_values():
+    train = pl.DataFrame({"amount": [1.0, float("nan"), 3.0], "target": [0, 1, 0]})
+    pipeline = DataDocPipeline(PipelineConfig(target="target", scaling="none")).fit(train)
+
+    assert pipeline.profile_.null_counts["amount"] == 1
+    assert pipeline.transform(train)["amount"].to_list() == [1.0, 2.0, 3.0]
+
+
 def test_unseen_one_hot_categories_are_handled_without_schema_drift():
     train = pl.DataFrame({"city": ["A", "B", "A"], "target": [0, 1, 0]})
     pipeline = DataDocPipeline(PipelineConfig(target="target", scaling="none")).fit(train)

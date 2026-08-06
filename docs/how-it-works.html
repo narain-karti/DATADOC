@@ -23,6 +23,7 @@
             <a href="setup.html">SETUP & USAGE</a>
             <a href="api-docs.html">API DOCS</a>
             <a href="sdk.html">PYTHON SDK</a>
+            <a href="pipeline.html">PIPELINE GUIDE</a>
             <a href="contribute.html">CONTRIBUTE</a>
             <a href="license.html">LICENSE</a>
         </div>
@@ -94,7 +95,7 @@ flowchart TD
             <ul class="feature-list" style="margin-top: 1rem; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
                 <li>
                     <h4>🔍 COLUMN ROLE SENSITIVITY</h4>
-                    <p>Detects unique sequence integers, names, and UUIDs to drop them automatically. Prevents invalid scaling on ID variables.</p>
+                    <p>Combines column names and value patterns to flag likely identifiers with confidence and rationale. Numeric uniqueness alone never causes an automatic drop.</p>
                 </li>
                 <li>
                     <h4>⚡ POLARS RUST BACKEND</h4>

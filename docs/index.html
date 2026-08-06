@@ -23,6 +23,7 @@
             <a href="setup.html">SETUP & USAGE</a>
             <a href="api-docs.html">API DOCS</a>
             <a href="sdk.html">PYTHON SDK</a>
+            <a href="pipeline.html">PIPELINE GUIDE</a>
             <a href="contribute.html">CONTRIBUTE</a>
             <a href="license.html">LICENSE</a>
         </div>
@@ -53,7 +54,7 @@
         <!-- Hero Section -->
         <section class="hero">
             <h1>LEAKAGE-SAFE.<br>REPRODUCIBLE PIPELINES.</h1>
-            <p>The next-gen CLI and Python SDK for tabular data preparation. Automate 80% of your wrangling with deterministic, fitted pipelines that prevent data leakage and serialize to simple JSON artifacts.</p>
+            <p>A local-first CLI and Python SDK for tabular data preparation. Turn repeated wrangling into deterministic, fitted pipelines that prevent data leakage and serialize to simple JSON artifacts.</p>
             <div class="hero-btns">
                 <a href="setup.html" class="brutal-btn">QUICK START &rarr;</a>
                 <a href="sdk.html" class="brutal-btn secondary">PYTHON SDK GUIDE &rarr;</a>
@@ -128,7 +129,7 @@ features = pipeline.transform(validation_df)</code></pre>
                     </div>
                     <div class="info">
                         <h4>Outliers (P20)</h4>
-                        <p>IQR boundary capping</p>
+                        <p>Optional IQR clipping</p>
                     </div>
                 </div>
                 <div class="plugin-item">
@@ -150,7 +151,7 @@ features = pipeline.transform(validation_df)</code></pre>
                     </div>
                 </div>
             </div>
-            <a href="api-docs.html#plugins" class="brutal-btn secondary" style="width: 100%; text-align: center; margin-top: 1rem;">VIEW ALL PLUGINS &rarr;</a>
+            <a href="api-docs.html#plugin-system" class="brutal-btn secondary" style="width: 100%; text-align: center; margin-top: 1rem;">VIEW ALL PLUGINS &rarr;</a>
         </section>
 
         <!-- Why DATADOC? -->
@@ -200,7 +201,7 @@ features = pipeline.transform(validation_df)</code></pre>
                         <strong>Problem:</strong> Standard auto-scalers blindly apply Z-Scores to <code>user_id</code> and <code>transaction_id</code> columns, completely ruining predictive integrity.
                     </p>
                     <p style="font-size: 0.9rem; color: #fff;">
-                        <strong>DATADOC Fix:</strong> Native <em>Column Role Detection</em> auto-flags and isolates sequence integers, UUIDs, and names before any plugins even run.
+                        <strong>DATADOC Fix:</strong> Native <em>Column Role Detection</em> flags likely sequence integers, UUIDs, and names with rationale; dropping remains an explicit user choice.
                     </p>
                 </div>
 
@@ -210,7 +211,7 @@ features = pipeline.transform(validation_df)</code></pre>
                         <strong>Problem:</strong> You use an AutoML tool, it works, but you have absolutely no idea what it did to your data under the hood. Impossible to audit.
                     </p>
                     <p style="font-size: 0.9rem; color: #fff;">
-                        <strong>DATADOC Fix:</strong> 100% deterministic math. Run <code>datadoc pipeline</code> and it instantly generates a fully readable, reproducible Python script of the exact transforms.
+                        <strong>DATADOC Fix:</strong> Review a plan, fit a JSON artifact, and export a reproducible wrapper with <code>datadoc export</code>.
                     </p>
                 </div>
 
@@ -227,10 +228,10 @@ features = pipeline.transform(validation_df)</code></pre>
                 <div class="problem-box" style="background: var(--black); padding: 1.5rem; border: var(--border-thick);">
                     <h4 style="color: var(--neon); margin-bottom: 0.5rem; font-family: monospace; font-size: 1.1rem;">[FAIL] THE 80% TIME SINK</h4>
                     <p style="font-size: 0.9rem; color: #ccc; margin-bottom: 1rem;">
-                        <strong>Problem:</strong> Data scientists spend 80% of their time writing the exact same median-imputation and IQR-capping boilerplate code for every project.
+                        <strong>Problem:</strong> Data scientists repeatedly write the same median-imputation and feature-preparation boilerplate for every project.
                     </p>
                     <p style="font-size: 0.9rem; color: #fff;">
-                        <strong>DATADOC Fix:</strong> <code>doc.engineer()</code> runs the industry-standard baseline engineering pipeline instantly. You spend your time on actual model architecture.
+                        <strong>DATADOC Fix:</strong> <code>datadoc fit</code> learns safe transformations from training data and reuses them for validation, test, and inference.
                     </p>
                 </div>
 
@@ -248,13 +249,13 @@ features = pipeline.transform(validation_df)</code></pre>
             </div>
             <ul class="cmd-list">
                 <li>
-                    <span><span class="badge">01</span> datadoc analyze raw_data.csv</span>
+                    <span><span class="badge">01</span> datadoc profile raw_data.csv --target churn</span>
                 </li>
                 <li>
-                    <span><span class="badge">02</span> datadoc recommend raw_data.csv</span>
+                    <span><span class="badge">02</span> datadoc plan raw_data.csv --target churn</span>
                 </li>
                 <li>
-                    <span><span class="badge">03</span> datadoc engineer raw_data.csv</span>
+                    <span><span class="badge">03</span> datadoc fit train.csv --target churn</span>
                 </li>
                 <li>
                     <span><span class="badge">04</span> datadoc compare raw.csv clean.csv</span>
@@ -266,7 +267,7 @@ features = pipeline.transform(validation_df)</code></pre>
         <!-- Installation -->
         <section id="install" class="brutal-card card-install">
             <div>
-                <h2>AUTOMATE 80% OF<br>YOUR DATA WRANGLING.</h2>
+                <h2>MAKE YOUR DATA<br>PREPARATION REPEATABLE.</h2>
                 <p>Install via pip or uv from PyPI. Works out of the box.</p>
                 <div class="code-block">
                     <pre><code class="language-bash">pip install datadoc-cli</code></pre>

@@ -32,12 +32,24 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 console = Console()
-try:
-    from importlib.metadata import version
 
-    VERSION = version("datadoc-cli")
-except Exception:
-    VERSION = "0.3.0"
+
+def _project_version() -> str:
+    """Read the source version when running from a checkout, then use metadata."""
+    project_file = Path(__file__).resolve().parents[2] / "pyproject.toml"
+    if project_file.exists():
+        for line in project_file.read_text(encoding="utf-8").splitlines():
+            if line.startswith("version = "):
+                return line.split('"', 2)[1]
+    try:
+        from importlib.metadata import version
+
+        return version("datadoc-cli")
+    except Exception:
+        return "0.4.0"
+
+
+VERSION = _project_version()
 BANNER = r"""
  ____    _  _____  _    ____   ___   ____
 |  _ \  / \|_   _|/ \  |  _ \ / _ \ / ___|

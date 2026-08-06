@@ -1,6 +1,6 @@
 [project]
 name = "datadoc-cli"
-version = "0.3.0"
+version = "0.4.0"
 description = "Leakage-safe, local-first preparation pipelines for tabular machine learning."
 readme = "README.md"
 license = "MIT"
@@ -70,3 +70,14 @@ testpaths = ["tests"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["datadoc"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "datadoc/**/*",
+    "README.md",
+    "LICENSE",
+    "MIGRATION.md",
+    "FULL_DOCUMENTATION.md",
+    "PROJECT_IMPLEMENTATION_GUIDE.md",
+    "pyproject.toml",
+]

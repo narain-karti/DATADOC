@@ -35,6 +35,7 @@
             <a href="setup.html">SETUP & USAGE</a>
             <a href="api-docs.html">API DOCS</a>
             <a href="sdk.html" class="active">PYTHON SDK</a>
+            <a href="pipeline.html">PIPELINE GUIDE</a>
             <a href="contribute.html">CONTRIBUTE</a>
             <a href="license.html">LICENSE</a>
         </div>
@@ -103,7 +104,7 @@ train_df = pl.read_csv("train.csv")
 test_df = pl.read_csv("test.csv")
 
 # 2. Configure & Fit the pipeline on TRAINING data ONLY
-config = PipelineConfig(target="churn", enable_scaling=True)
+config = PipelineConfig(target="churn", scaling="standard")
 pipeline = DataDocPipeline(config)
 pipeline.fit(train_df)
 
@@ -121,9 +122,8 @@ X_test = pipeline.transform(test_df)</code></pre>
                     <pre><code class="language-python">config = PipelineConfig(
     target="price",
     drop_identifiers=True,
-    enable_scaling=True,
-    enable_imputation=True,
-    enable_datetime_extraction=True
+    scaling="robust",
+    clip_outliers=False
 )</code></pre>
                 </div>
 
@@ -133,12 +133,9 @@ X_test = pipeline.transform(test_df)</code></pre>
                 
                 <!-- 5. Evaluate -->
                 <h2 id="evaluate">5. Evaluating the Pipeline</h2>
-                <p>DATADOC includes built-in model benchmarking to instantly evaluate your pipeline's quality using Scikit-Learn:</p>
+                <p>DATADOC includes optional model benchmarking through <code>DataDocPipeline.evaluate()</code> or the <code>datadoc evaluate</code> command:</p>
                 <div class="code-block">
-                    <pre><code class="language-python">from datadoc.core.evaluation import evaluate_pipeline
-
-# Automatically trains an XGBoost/RandomForest model and prints metrics
-metrics = evaluate_pipeline(pipeline, train_df, task="classification")
+                    <pre><code class="language-python">metrics = pipeline.evaluate(train_df, target="churn")
 print(metrics)</code></pre>
                 </div>
 
