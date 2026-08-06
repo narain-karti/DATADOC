@@ -47,6 +47,69 @@
     $$('.sidebar a').forEach((link) => link.addEventListener('click', close));
   }
 
+  function escapeHtml(value) {
+    return value.replace(/[&<>"']/g, (character) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    }[character]));
+  }
+
+  function highlightSource(source, language) {
+    const keywords = new Set([
+      'as', 'async', 'await', 'break', 'case', 'class', 'const', 'continue', 'def', 'default',
+      'del', 'elif', 'else', 'export', 'extends', 'finally', 'for', 'from', 'function', 'if',
+      'import', 'in', 'interface', 'let', 'new', 'pass', 'return', 'static', 'switch', 'throw',
+      'try', 'typeof', 'var', 'while', 'with', 'yield', 'param', 'process', 'begin', 'end',
+    ]);
+    const constants = new Set(['True', 'False', 'None', 'null', 'undefined', 'true', 'false', 'NaN']);
+    const types = new Set(['DataDocPipeline', 'PipelineConfig', 'DataFrame', 'JSON', 'Polars', 'Promise', 'String', 'Number', 'Boolean']);
+    const shellLanguages = /terminal|powershell|shell|bash|zsh|git|uv/i.test(language);
+    const tokenPattern = /#.*|\/\/[^\n]*|\/\*[\s\S]*?\*\/|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`|\b\d+(?:\.\d+)?\b|--?[A-Za-z][\w-]*|\b[A-Za-z_$][\w$]*\b|[{}[\]();,.:=+\-*/<>!?|&]/gm;
+    let output = '';
+    let cursor = 0;
+    let match;
+    while ((match = tokenPattern.exec(source)) !== null) {
+      output += escapeHtml(source.slice(cursor, match.index));
+      const token = match[0];
+      const end = match.index + token.length;
+      const before = source[match.index - 1] || '';
+      const after = source.slice(end);
+      const lineStart = source.lastIndexOf('\n', match.index - 1) + 1;
+      const atLineStart = source.slice(lineStart, match.index).trim() === '';
+      let tokenClass = '';
+      if (token.startsWith('#') || token.startsWith('//') || token.startsWith('/*')) tokenClass = 'tok-comment';
+      else if (/^["'`]/.test(token)) tokenClass = /^\s*:/.test(after) ? 'tok-property' : 'tok-string';
+      else if (/^\d/.test(token)) tokenClass = 'tok-number';
+      else if (/^--?\w/.test(token)) tokenClass = 'tok-flag';
+      else if (/^[A-Za-z_$]/.test(token)) {
+        if (constants.has(token)) tokenClass = 'tok-constant';
+        else if (types.has(token)) tokenClass = 'tok-type';
+        else if (keywords.has(token)) tokenClass = 'tok-keyword';
+        else if (/^\s*\(/.test(after)) tokenClass = 'tok-function';
+        else if (before === '.') tokenClass = 'tok-property';
+        else if (shellLanguages && atLineStart) tokenClass = 'tok-command';
+      } else if (/^[{}[\]();,.:]$/.test(token)) tokenClass = 'tok-punctuation';
+      else tokenClass = 'tok-operator';
+      const safeToken = escapeHtml(token);
+      output += tokenClass ? `<span class="${tokenClass}">${safeToken}</span>` : safeToken;
+      cursor = end;
+    }
+    return output + escapeHtml(source.slice(cursor));
+  }
+
+  function setupSyntaxHighlighting() {
+    $$('pre[data-copy] code').forEach((code) => {
+      if (code.dataset.highlighted) return;
+      const block = code.closest('pre');
+      const language = $('.code-caption .lang', block)?.textContent || 'Code';
+      code.innerHTML = highlightSource(code.textContent, language);
+      code.dataset.highlighted = 'true';
+    });
+  }
+
   function setupCopyButtons() {
     $$('pre[data-copy]').forEach((block) => {
       if ($('.copy-button', block)) return;
@@ -151,6 +214,7 @@
   document.addEventListener('DOMContentLoaded', () => {
     setActiveNavigation();
     setupMobileMenu();
+    setupSyntaxHighlighting();
     setupCopyButtons();
     setupTabs();
     setupSearch();

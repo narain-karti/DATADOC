@@ -190,12 +190,22 @@ code { padding: 2px 5px; border-radius: 4px; background: var(--surface-raised); 
 
 .code-block { position: relative; margin: 18px 0; overflow: auto; border: 1px solid var(--border-strong); border-radius: 10px; background: #0d0d0d; }
 .code-block code { display: block; min-width: max-content; padding: 22px; background: transparent; color: #e7e7e7; font-size: 13px; line-height: 1.75; }
-.code-block code .comment { color: #777; }
-.code-block code .accent { color: var(--accent); }
-.copy-button { position: absolute; top: 9px; right: 9px; z-index: 2; padding: 5px 8px; border: 1px solid var(--border-strong); border-radius: 6px; background: #1d1d1d; color: #cfcfcf; font-family: var(--font-mono); font-size: 10px; cursor: pointer; }
+.code-block code .comment, .code-block code .tok-comment { color: #77808f; }
+.code-block code .accent, .code-block code .tok-command { color: var(--accent); }
+.code-block code .tok-keyword { color: #ff8f9b; }
+.code-block code .tok-string { color: #b7e6a1; }
+.code-block code .tok-number { color: #c7a7ff; }
+.code-block code .tok-constant { color: #ffd580; }
+.code-block code .tok-function { color: #82c9ff; }
+.code-block code .tok-property { color: #79d4d2; }
+.code-block code .tok-type { color: #d5b0ff; }
+.code-block code .tok-flag { color: #9dc8ff; }
+.code-block code .tok-operator { color: #f0b7d4; }
+.code-block code .tok-punctuation { color: #a7a7b0; }
+.copy-button { position: absolute; top: 6px; right: 8px; z-index: 2; padding: 5px 8px; border: 1px solid var(--border-strong); border-radius: 6px; background: #1d1d1d; color: #cfcfcf; font-family: var(--font-mono); font-size: 10px; cursor: pointer; }
 .copy-button:hover { border-color: #999; color: #fff; }
 .copy-button.copied { border-color: var(--accent); color: var(--accent); }
-.code-caption { display: flex; justify-content: space-between; gap: 12px; padding: 9px 14px; border-bottom: 1px solid var(--border); color: var(--muted); font-family: var(--font-mono); font-size: 11px; }
+.code-caption { display: flex; justify-content: space-between; gap: 12px; min-height: 34px; padding: 9px 90px 9px 14px; border-bottom: 1px solid var(--border); color: var(--muted); font-family: var(--font-mono); font-size: 11px; }
 .code-caption .lang { color: #fff; }
 .tabs { margin: 20px 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--surface-soft); }
 .tab-list { display: flex; gap: 2px; overflow-x: auto; border-bottom: 1px solid var(--border); padding: 5px; }
