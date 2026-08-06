@@ -75,7 +75,7 @@
                 <h3 style="margin-bottom: 1rem; border-bottom: var(--border-thick); padding-bottom: 0.5rem;">API TOC</h3>
                 <ul>
                     <li><a href="#cli">CLI Reference</a></li>
-                    <li><a href="#python-api">DATADOC Class API</a></li>
+                    <li><a href="#python-api">DataDocPipeline API</a></li>
                     <li><a href="#plugin-system">Plugin Specifications</a></li>
                     <li><a href="#role-detection">Column Role Detection</a></li>
                     <li><a href="#chat">AI Chat & Tool Calling</a></li>
@@ -88,75 +88,51 @@
                 <h1>API DOCUMENTATION & TECHNICAL REFERENCE</h1>
                 <p>Complete reference manual for the DATADOC CLI, Python Engine API, core plugins, and column role detection system.</p>
 
-                <!-- CLI Reference -->
-                <h2 id="cli">1. CLI Commands Reference</h2>
+                <h2>1. CLI Commands</h2>
                 <p>DATADOC provides a rich Command Line Interface built with <code>Typer</code> and <code>Rich</code>.</p>
                 
-                <div class="api-card">
-                    <h3>datadoc analyze &lt;file.csv&gt; [--ai]</h3>
-                    <p>Analyzes dataset health, profiling missing values, outliers, data types, and scaling issues.</p>
-                    <div class="code-block">
-                        <pre><code class="language-python"># Basic analysis
-$ datadoc analyze raw_data.csv
-
-# AI-enhanced analysis via LiteLLM
-$ datadoc analyze raw_data.csv --ai</code></pre>
-                    </div>
+                <div class="api-block">
+                    <h3>datadoc profile &lt;file.csv&gt; [--target col]</h3>
+                    <p>Analyzes the dataset and determines column roles (Identifier, Target, Numeric, Categorical) without applying transformations.</p>
                 </div>
 
-                <div class="api-card">
-                    <h3>datadoc recommend &lt;file.csv&gt;</h3>
-                    <p>Returns prioritized engineering recommendations for transforming raw columns into ML features.</p>
-                    <div class="code-block">
-                        <pre><code class="language-bash">$ datadoc recommend raw_data.csv</code></pre>
-                    </div>
+                <div class="api-block">
+                    <h3>datadoc plan &lt;file.csv&gt; [--ai]</h3>
+                    <p>Generates a natural-language explainable plan for how the dataset will be transformed. Use <code>--ai</code> for LLM-assisted explanations.</p>
                 </div>
 
-                <div class="api-card">
-                    <h3>datadoc engineer &lt;file.csv&gt; [--output clean.csv]</h3>
-                    <p>Executes the complete autonomous cleaning pipeline and exports the engineered CSV file.</p>
-                    <div class="code-block">
-                        <pre><code class="language-python"># Default output: clean_raw_data.csv
-$ datadoc engineer raw_data.csv
-
-# Specify custom output path
-$ datadoc engineer raw_data.csv --output processed_features.csv</code></pre>
-                    </div>
+                <div class="api-block">
+                    <h3>datadoc fit &lt;train.csv&gt; [--output pipeline.json]</h3>
+                    <p>Learns statistics (medians, IQR boundaries, vocabularies) from the training data and serializes the state to a JSON artifact.</p>
                 </div>
 
-                <div class="api-card">
-                    <h3>datadoc compare &lt;raw.csv&gt; &lt;clean.csv&gt;</h3>
-                    <p>Displays side-by-side terminal comparison tables comparing row counts, column counts, missing values, and scaling statistics.</p>
-                    <div class="code-block">
-                        <pre><code class="language-bash">$ datadoc compare raw_data.csv clean_raw_data.csv</code></pre>
-                    </div>
+                <div class="api-block">
+                    <h3>datadoc transform &lt;test.csv&gt; --pipeline pipeline.json</h3>
+                    <p>Deterministically applies a previously fitted pipeline artifact to unseen validation or inference data.</p>
                 </div>
 
-                <div class="api-card">
-                    <h3>datadoc pipeline &lt;file.csv&gt;</h3>
-                    <p>Generates a standalone, reproducible Python script (<code>pipeline_&lt;filename&gt;.py</code>) that reproduces the exact cleaning pipeline.</p>
-                    <div class="code-block">
-                        <pre><code class="language-bash">$ datadoc pipeline raw_data.csv</code></pre>
-                    </div>
+                <div class="api-block">
+                    <h3>datadoc evaluate &lt;train.csv&gt; --task classification</h3>
+                    <p>Benchmarks the pipeline's effectiveness by training a baseline Scikit-Learn model (Random Forest / XGBoost).</p>
                 </div>
 
-                <!-- Python API -->
-                <h2 id="python-api">2. Python DATADOC Engine API</h2>
+                <div class="api-block">
+                    <h3>datadoc run &lt;file.csv&gt;</h3>
+                    <p>A convenience command that automatically runs profile, plan, and fit in sequence for rapid prototyping.</p>
+                </div>
+
+                <h2 id="python-api">2. Python DataDocPipeline API</h2>
                 <p>The primary SDK class for interacting with DATADOC inside Python code:</p>
-
-                <div class="code-block">
-                    <pre><code class="language-python">class DATADOC(filepath: str)</code></pre>
+                <div class="api-block">
+                    <pre><code class="language-python">class DataDocPipeline(config: PipelineConfig)</code></pre>
+                    <p><strong>Methods:</strong></p>
+                    <ul>
+                        <li><strong><code>fit(df: pl.DataFrame) -> self</code></strong>: Calculates all statistics and learns transformation rules from the provided training DataFrame.</li>
+                        <li><strong><code>transform(df: pl.DataFrame) -> pl.DataFrame</code></strong>: Applies the learned rules to the provided DataFrame, ensuring zero data leakage.</li>
+                        <li><strong><code>save(filepath: str)</code></strong>: Serializes the fitted pipeline to a JSON artifact.</li>
+                        <li><strong><code>load(filepath: str) -> DataDocPipeline</code></strong>: Deserializes a pipeline from a JSON artifact.</li>
+                    </ul>
                 </div>
-                
-                <ul class="feature-list" style="grid-template-columns: 1fr;">
-                    <li><strong><code>__init__(filepath: str)</code></strong>: Loads the target dataset into an internal Polars DataFrame.</li>
-                    <li><strong><code>analyze() -> str</code></strong>: Runs all registered plugins' <code>analyze()</code> methods and returns a structured diagnostic report string.</li>
-                    <li><strong><code>recommend() -> list[str]</code></strong>: Collects actionable transformation recommendations from all plugins.</li>
-                    <li><strong><code>engineer(progress_callback=None) -> pl.DataFrame</code></strong>: Auto-detects column roles, prunes IDs/names, executes plugins by priority, drops constant columns, and returns a clean Polars DataFrame.</li>
-                    <li><strong><code>compare(clean_df: pl.DataFrame) -> str</code></strong>: Generates comparative metrics between original and clean DataFrames.</li>
-                    <li><strong><code>pipeline() -> str</code></strong>: Generates equivalent Python source code for replicating transformations.</li>
-                    <li><strong><code>agentic_engineer(: str, model="groq/llama-3.3-70b-versatile", api_key=None) -> pl.DataFrame</code></strong>: Uses LiteLLM to plan and execute a customized plugin pipeline based on a user goal.</li>
-                </ul>
 
                 <!-- Plugin Specifications -->
                 <h2 id="plugin-system">3. Core Plugins Specifications</h2>
@@ -216,7 +192,7 @@ $ datadoc engineer raw_data.csv --output processed_features.csv</code></pre>
         <div class="footer-grid">
             <div class="footer-brand">
                 <h3 style="font-size: 2rem; font-family: var(--font-display);">[DATADOC]</h3>
-                <p style="margin-top: 1rem; font-family: monospace; color: #888;">The OS for Dataset Engineering.</p>
+                <p style="margin-top: 1rem; font-family: monospace; color: #888;">Leakage-safe tabular data preparation.</p>
             </div>
             
             <div>

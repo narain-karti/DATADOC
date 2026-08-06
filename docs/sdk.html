@@ -46,16 +46,16 @@
         <div class="ticker">
             <span>• LIGHTNING FAST</span>
             <span>• POLARS BACKEND</span>
-            <span>• ZERO BLACK-BOX AI</span>
             <span>• DETERMINISTIC</span>
-            <span>• NO DATA LEAKAGE</span>
-            <span>• AGENTIC ORCHESTRATOR</span>
+            <span>• LEAKAGE-SAFE</span>
+            <span>• ARTIFACT-DRIVEN</span>
+            <span>• MACHINE LEARNING PIPELINE</span>
             <span>• LIGHTNING FAST</span>
             <span>• POLARS BACKEND</span>
-            <span>• ZERO BLACK-BOX AI</span>
             <span>• DETERMINISTIC</span>
-            <span>• NO DATA LEAKAGE</span>
-            <span>• AGENTIC ORCHESTRATOR</span>
+            <span>• LEAKAGE-SAFE</span>
+            <span>• ARTIFACT-DRIVEN</span>
+            <span>• MACHINE LEARNING PIPELINE</span>
         </div>
     </div>
 
@@ -66,13 +66,10 @@
                 <h3 style="margin-bottom: 1rem; border-bottom: var(--border-thick); padding-bottom: 0.5rem;">SDK NAVIGATION</h3>
                 <ul>
                     <li><a href="#install">1. Installation</a></li>
-                    <li><a href="#quickstart">2. Two-Line Quickstart</a></li>
-                    <li><a href="#pandas-integration">3. Pandas vs Polars Integration</a></li>
-                    <li><a href="#analysis">4. Data Inspection & Analysis</a></li>
-                    <li><a href="#progress">5. Real-Time Execution Tracking</a></li>
-                    <li><a href="#ai-engineer">6. AI-Driven Auto-Engineering</a></li>
-                    <li><a href="#custom-plugins">7. Writing Custom Plugins</a></li>
-                    <li><a href="#kaggle-demo">8. Kaggle / Colab ML End-to-End</a></li>
+                    <li><a href="#quickstart">2. Quickstart (Fit & Transform)</a></li>
+                    <li><a href="#config">3. Configuring the Pipeline</a></li>
+                    <li><a href="#leakage">4. Why Split Fit/Transform?</a></li>
+                    <li><a href="#evaluate">5. Evaluating the Pipeline</a></li>
                 </ul>
             </div>
         </aside>
@@ -80,156 +77,69 @@
         <section class="content">
             <div class="brutal-card">
                 <h1>DATADOC PYTHON SDK GUIDE</h1>
-                <p>Integrate DATADOC's high-performance dataset engineering engine directly into your Jupyter Notebooks, Google Colab, Kaggle competitions, or production backend ML pipelines.</p>
+                <p>Integrate DATADOC's high-performance, leakage-safe dataset engineering engine directly into your backend ML pipelines.</p>
+
+                <div class="tip-box">
+                    <h4>⚠️ LEGACY API DEPRECATED</h4>
+                    <p>The old <code>doc.engineer()</code> API has been fully deprecated due to data leakage concerns. Use the new <code>DataDocPipeline</code> architecture below.</p>
+                </div>
 
                 <!-- 1. Installation -->
                 <h2 id="install">1. Installation</h2>
                 <p>DATADOC is available directly from PyPI. Install it in your environment or notebook cell:</p>
                 <div class="code-block">
-                    <pre><code class="language-python"># Install in Jupyter / Colab / Kaggle
-!pip install datadoc-cli
-
-# Or using uv for ultra-fast installation
-!uv pip install datadoc-cli</code></pre>
+                    <pre><code class="language-bash">pip install "datadoc-cli[ml]"</code></pre>
                 </div>
 
                 <!-- 2. Quickstart -->
-                <h2 id="quickstart">2. Two-Line Quickstart</h2>
-                <p>Automate 80% of data wrangling without writing custom imputers, manual scalers, or one-hot encoders:</p>
+                <h2 id="quickstart">2. Quickstart (Fit & Transform)</h2>
+                <p>DATADOC is a stateful pipeline. You must fit it on your training data, save the artifact, and then transform unseen validation data:</p>
                 <div class="code-block">
-                    <pre><code class="language-python">from datadoc.core.engine import DATADOC
+                    <pre><code class="language-python">import polars as pl
+from datadoc import DataDocPipeline, PipelineConfig
 
-# 1. Initialize engine with your raw CSV file path
-doc = DATADOC("messy_raw_data.csv")
+# 1. Load data
+train_df = pl.read_csv("train.csv")
+test_df = pl.read_csv("test.csv")
 
-# 2. Execute full autonomous data engineering pipeline
-clean_df = doc.engineer()
+# 2. Configure & Fit the pipeline on TRAINING data ONLY
+config = PipelineConfig(target="churn", enable_scaling=True)
+pipeline = DataDocPipeline(config)
+pipeline.fit(train_df)
 
-print("Cleaned DataFrame Shape:", clean_df.shape)</code></pre>
+# 3. Save the learned artifact (medians, IQR bounds, vocabularies)
+pipeline.save("pipeline_artifact.json")
+
+# 4. Transform unseen data deterministically
+X_test = pipeline.transform(test_df)</code></pre>
                 </div>
 
-                <!-- 3. Pandas vs Polars -->
-                <h2 id="pandas-integration">3. Pandas vs Polars Integration</h2>
-                <p>DATADOC processes datasets using a Rust-backed Polars engine for maximum speed and sub-second memory efficiency. However, ML frameworks like Scikit-Learn, XGBoost, and LightGBM often expect Pandas DataFrames.</p>
-                <p>You can instantly bridge both worlds using Polars' zero-copy conversion:</p>
+                <!-- 3. Configuring -->
+                <h2 id="config">3. Configuring the Pipeline</h2>
+                <p>You can fine-tune how the pipeline behaves via <code>PipelineConfig</code>:</p>
                 <div class="code-block">
-                    <pre><code class="language-python"># Get cleaned data as a Pandas DataFrame for Scikit-Learn
-df_pandas = doc.engineer().to_pandas()
-
-# Split into X and y directly
-X = df_pandas.drop(columns=["target"])
-y = df_pandas["target"]</code></pre>
-                </div>
-
-                <div class="tip-box">
-                    <h4>💡 Why Polars Backend + Pandas Export?</h4>
-                    <p>Polars executes data operations (imputation, IQR capping, datetime parsing, one-hot encoding) in parallel across all CPU cores. <code>to_pandas()</code> converts the final result in RAM in milliseconds right before model training.</p>
-                </div>
-
-                <!-- 4. Analysis -->
-                <h2 id="analysis">4. Data Inspection & Analysis</h2>
-                <p>Before applying transformations, inspect what issues DATADOC discovered in your raw dataset:</p>
-                <div class="code-block">
-                    <pre><code class="language-python"># Generate a human-readable diagnostic report
-report = doc.analyze()
-print(report)
-
-# Get specific recommendations
-recs = doc.recommend()
-for r in recs:
-    print("Suggest:", r)</code></pre>
-                </div>
-
-                <!-- 5. Real-Time Tracking -->
-                <h2 id="progress">5. Real-Time Execution Tracking</h2>
-                <p>Track plugin progress step-by-step using custom callbacks during pipeline execution:</p>
-                <div class="code-block">
-                    <pre><code class="language-python">def track_pipeline(plugin_name, status, details):
-    if status == "applied":
-        print(f"✅ {plugin_name}: {details[0]}")
-    elif status == "skipped":
-        print(f"⏭️ {plugin_name}: Not required.")
-
-clean_df = doc.engineer(progress_callback=track_pipeline)</code></pre>
-                </div>
-
-                <!-- 6. AI Engineer -->
-                <h2 id="ai-engineer">6. AI-Driven Auto-Engineering (<code>agentic_engineer</code>)</h2>
-                <p>Leverage Generative AI (via LiteLLM) to analyze your dataset and generate an optimized plugin plan based on your plain-English objective:</p>
-                <div class="code-block">
-                    <pre><code class="language-python"># Run AI-guided engineering with your custom goal
-clean_df = doc.agentic_engineer(
-    goal="Optimize features for a churn classification model",
-    model="groq/llama-3.3-70b-versatile",
-    api_key="your_api_key_here"
+                    <pre><code class="language-python">config = PipelineConfig(
+    target="price",
+    drop_identifiers=True,
+    enable_scaling=True,
+    enable_imputation=True,
+    enable_datetime_extraction=True
 )</code></pre>
                 </div>
 
-                <!-- 7. Custom Plugins -->
-                <h2 id="custom-plugins">7. Writing Custom Plugins</h2>
-                <p>Extend DATADOC by subclassing <code>BasePlugin</code> to introduce custom domain-specific transformations:</p>
+                <!-- 4. Leakage -->
+                <h2 id="leakage">4. Why Split Fit/Transform? (Leakage-Safety)</h2>
+                <p>If you impute missing values with the median of your <em>entire dataset</em>, your model is cheating because it learned statistics from the test set. DATADOC prevents this by strictly learning statistics during <code>.fit()</code> and applying those exact frozen statistics during <code>.transform()</code>.</p>
+                
+                <!-- 5. Evaluate -->
+                <h2 id="evaluate">5. Evaluating the Pipeline</h2>
+                <p>DATADOC includes built-in model benchmarking to instantly evaluate your pipeline's quality using Scikit-Learn:</p>
                 <div class="code-block">
-                    <pre><code class="language-python">import polars as pl
-from datadoc.plugins.base import BasePlugin
+                    <pre><code class="language-python">from datadoc.core.evaluation import evaluate_pipeline
 
-class CustomLogTransformPlugin(BasePlugin):
-    @property
-    def name(self) -> str:
-        return "CustomLogTransformPlugin"
-    
-    @property
-    def description(self) -> str:
-        return "Applies log1p transformation to skewed numerical features."
-    
-    @property
-    def priority(self) -> int:
-        return 25  # Runs after Outliers (20) and before Scaling (40)
-    
-    def analyze(self, df: pl.DataFrame) -> dict:
-        skewed_cols = [c for c in df.columns if df[c].dtype.is_numeric() and df[c].skew() > 2.0]
-        return {"has_skew": len(skewed_cols) > 0, "skewed_cols": skewed_cols}
-    
-    def apply(self, df: pl.DataFrame) -> pl.DataFrame:
-        res = self.analyze(df)
-        if not res["has_skew"]:
-            return df
-        return df.with_columns([pl.col(c).log1p().alias(c) for c in res["skewed_cols"]])
-
-# Register plugin into DATADOC
-doc = DATADOC("raw_data.csv")
-doc.register_plugin(CustomLogTransformPlugin())
-clean_df = doc.engineer()</code></pre>
-                </div>
-
-                <!-- 8. End-to-End Kaggle Demo -->
-                <h2 id="kaggle-demo">8. Kaggle / Google Colab End-to-End ML Pipeline</h2>
-                <p>Here is a complete production-grade snippet showing how DATADOC turns messy data into a trained Random Forest classifier in under 15 lines of code:</p>
-                <div class="code-block">
-                    <pre><code class="language-python">import pandas as pd
-from datadoc.core.engine import DATADOC
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report
-
-# 1. Load and Auto-Clean Dataset via DATADOC
-# Automatically drops IDs/Names, imputes missing values, caps outliers, extracts dates, & one-hot encodes
-doc = DATADOC("customer_churn_raw.csv")
-df_clean = doc.engineer().to_pandas()
-
-# 2. Separate Features & Target
-X = df_clean.drop(columns=["Churn"])
-y = df_clean["Churn"]
-
-# 3. Train-Test Split
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-# 4. Train Scikit-Learn Model
-model = RandomForestClassifier(n_estimators=100, random_state=42)
-model.fit(X_train, y_train)
-
-# 5. Evaluate Performance
-preds = model.predict(X_test)
-print(classification_report(y_test, preds))</code></pre>
+# Automatically trains an XGBoost/RandomForest model and prints metrics
+metrics = evaluate_pipeline(pipeline, train_df, task="classification")
+print(metrics)</code></pre>
                 </div>
 
             </div>
@@ -241,7 +151,7 @@ print(classification_report(y_test, preds))</code></pre>
         <div class="footer-grid">
             <div class="footer-brand">
                 <h3 style="font-size: 2rem; font-family: var(--font-display);">[DATADOC]</h3>
-                <p style="margin-top: 1rem; font-family: monospace; color: #888;">The OS for Dataset Engineering.</p>
+                <p style="margin-top: 1rem; font-family: monospace; color: #888;">Leakage-safe tabular data preparation.</p>
             </div>
             
             <div>

@@ -38,11 +38,11 @@
                 <span style="font-family: monospace;">&#x21F1;</span>
             </div>
             
-            <h2 style="margin-top: 1rem;">The Plugin Orchestrator</h2>
+            <h2 style="margin-top: 1rem;">The Leakage-Safe Pipeline</h2>
             <p style="margin-top: 1rem;">
-                DATADOC operates as a deterministic, high-speed dataset engineering orchestrator. 
-                Instead of modifying data arbitrarily, it runs raw datasets through a strict sequence:
-                first, **Column Role Detection** filters out non-predictive columns; next, an isolated chain of priority-ordered plugins transforms the remaining features.
+                DATADOC operates as a deterministic, stateful machine learning pipeline. 
+                Instead of modifying data arbitrarily, it separates learning (<code>fit</code>) from applying (<code>transform</code>).
+                During the <strong>Fit Phase</strong>, it detects column roles and learns statistics (like median values or IQR boundaries) strictly from the training dataset. These learned rules are serialized into a JSON artifact. During the <strong>Transform Phase</strong>, it strictly applies those exact frozen rules to unseen data to guarantee zero test-set leakage.
             </p>
 
             <!-- Mermaid Architecture Diagram -->
@@ -55,40 +55,37 @@ flowchart TD
     classDef accent fill:#5a32fa,stroke:#000,stroke-width:3px,color:#fff,font-weight:bold,font-size:14px,rx:0,ry:0;
     classDef subtle fill:#111,stroke:#444,stroke-width:2px,color:#ddd,rx:0,ry:0;
 
-    A["📄 RAW DATASET CSV"]:::accent --> B["⚙️ DATADOC CORE ENGINE"]:::darkNode
+    A["📄 TRAINING DATASET CSV"]:::accent --> B["⚙️ DATADOC PIPELINE (FIT)"]:::darkNode
     
-    subgraph RoleDetection ["1. COLUMN ROLE DETECTION SYSTEM"]
+    subgraph RoleDetection ["1. COLUMN ROLE DETECTION"]
         direction TB
-        R1["_detect_column_roles()"]:::default
-        R2["Filter out ID / Name / UUID"]:::subtle
+        R1["Profile Columns"]:::default
+        R2["Identify Target, Features, IDs"]:::subtle
         R1 --> R2
     end
     
     B --> RoleDetection
     
-    subgraph PluginPipeline ["2. PRIORITY-ORDERED PLUGIN EXECUTION"]
+    subgraph PluginPipeline ["2. LEARN STATISTICS (FIT)"]
         direction TB
-        P1["10: MissingValuePlugin<br/>(Imputes nulls: Median/Mode)"]:::default
-        P2["20: OutlierPlugin<br/>(Caps values at 1.5x IQR)"]:::default
-        P3["30: DatetimePlugin<br/>(Extracts year/month/day/hour)"]:::default
-        P4["40: CategoricalEncoderPlugin<br/>(One-hot encodes strings)"]:::default
-        P5["45: ScalingPlugin<br/>(Z-Score Normalization)"]:::default
+        P1["MissingValue (Calculate Median)"]:::default
+        P2["Outliers (Calculate IQR Bounds)"]:::default
+        P3["Categorical (Build Vocab)"]:::default
+        P4["Scaling (Calculate Mean/Std)"]:::default
         
-        P1 --> P2 --> P3 --> P4 --> P5
+        P1 --> P2 --> P3 --> P4
     end
     
     RoleDetection --> PluginPipeline
     
-    subgraph Cleanup ["3. POST-PROCESSING"]
-        C1["Drop zero-variance constant features"]:::subtle
+    subgraph Artifact ["3. SERIALIZATION"]
+        C1["Export pipeline.json"]:::subtle
     end
     
-    PluginPipeline --> Cleanup
+    PluginPipeline --> Artifact
     
-    Cleanup --> Output{"OUTPUT HANDLERS"}:::accent
-    Output -->|"doc.engineer()"| D["📊 Polars / Pandas DataFrame"]:::darkNode
-    Output -->|"datadoc engineer"| E["💾 Engineered CSV File"]:::darkNode
-    Output -->|"datadoc pipeline"| F["🐍 Reproducible Python Script"]:::darkNode
+    Artifact --> Output{"TRANSFORM PHASE"}:::accent
+    Output -->|"pipeline.transform(test_df)"| D["📊 Leakage-Free Features"]:::darkNode
                 </pre>
             </div>
 
@@ -105,11 +102,11 @@ flowchart TD
                 </li>
                 <li>
                     <h4>🛡️ ZERO DATA LEAKAGE</h4>
-                    <p>Imputation and scaling statistics are strictly evaluated to prevent test-set leakage or artificial distribution warping.</p>
+                    <p>Imputation and scaling statistics are strictly learned only on training data and locked, guaranteeing zero test-set leakage.</p>
                 </li>
                 <li>
                     <h4>⚙️ 100% REPRODUCIBILITY</h4>
-                    <p>Generates equivalent Python source code (<code>doc.pipeline()</code>) so your data engineering is fully audit-ready.</p>
+                    <p>Generates equivalent JSON artifacts (<code>pipeline.json</code>) so your data engineering is fully portable and audit-ready.</p>
                 </li>
             </ul>
 
@@ -122,7 +119,7 @@ flowchart TD
         <div class="footer-grid">
             <div class="footer-brand">
                 <h3 style="font-size: 2rem; font-family: var(--font-display);">[DATADOC]</h3>
-                <p style="margin-top: 1rem; font-family: monospace; color: #888;">The OS for Dataset Engineering.</p>
+                <p style="margin-top: 1rem; font-family: monospace; color: #888;">Leakage-safe tabular data preparation.</p>
             </div>
             
             <div>

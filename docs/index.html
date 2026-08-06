@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DATADOC | The Open Source OS for Dataset Engineering</title>
+    <title>DATADOC | Leakage-Safe Tabular Data Preparation</title>
     <link rel="stylesheet" href="css/style.css">
     
     <!-- Prism CSS -->
@@ -34,16 +34,16 @@
         <div class="ticker">
             <span>• LIGHTNING FAST</span>
             <span>• POLARS BACKEND</span>
-            <span>• ZERO BLACK-BOX AI</span>
             <span>• DETERMINISTIC</span>
-            <span>• NO DATA LEAKAGE</span>
-            <span>• AGENTIC ORCHESTRATOR</span>
+            <span>• LEAKAGE-SAFE</span>
+            <span>• ARTIFACT-DRIVEN</span>
+            <span>• MACHINE LEARNING PIPELINE</span>
             <span>• LIGHTNING FAST</span>
             <span>• POLARS BACKEND</span>
-            <span>• ZERO BLACK-BOX AI</span>
             <span>• DETERMINISTIC</span>
-            <span>• NO DATA LEAKAGE</span>
-            <span>• AGENTIC ORCHESTRATOR</span>
+            <span>• LEAKAGE-SAFE</span>
+            <span>• ARTIFACT-DRIVEN</span>
+            <span>• MACHINE LEARNING PIPELINE</span>
         </div>
     </div>
 
@@ -52,8 +52,8 @@
         
         <!-- Hero Section -->
         <section class="hero">
-            <h1>BUILT FOR DATA SCIENTISTS.<br>MADE FOR THE FUTURE.</h1>
-            <p>The next-gen CLI and Python SDK for dataset engineering. Automate 80% of your data wrangling with a deterministic, blazing-fast Polars backend and column-role awareness.</p>
+            <h1>LEAKAGE-SAFE.<br>REPRODUCIBLE PIPELINES.</h1>
+            <p>The next-gen CLI and Python SDK for tabular data preparation. Automate 80% of your wrangling with deterministic, fitted pipelines that prevent data leakage and serialize to simple JSON artifacts.</p>
             <div class="hero-btns">
                 <a href="setup.html" class="brutal-btn">QUICK START &rarr;</a>
                 <a href="sdk.html" class="brutal-btn secondary">PYTHON SDK GUIDE &rarr;</a>
@@ -71,17 +71,17 @@
             </div>
             
             <div class="code-block">
-                <pre><code class="language-python">from datadoc.core.engine import DATADOC
+                <pre><code class="language-python">from datadoc import DataDocPipeline, PipelineConfig
+import polars as pl
 
-# 1. Initialize with your raw CSV
-doc = DATADOC("messy_raw_data.csv")
+# 1. Fit the pipeline on training data ONLY
+train_df = pl.read_csv("train.csv")
+pipeline = DataDocPipeline(PipelineConfig(target="churn")).fit(train_df)
+pipeline.save("pipeline.json")
 
-# 2. Automate cleaning & convert to Pandas for Scikit-Learn / XGBoost
-df_clean = doc.engineer().to_pandas()
-
-# Ready for model training!
-X = df_clean.drop(columns=["target"])
-y = df_clean["target"]</code></pre>
+# 2. Transform unseen validation/test data deterministically
+validation_df = pl.read_csv("validation.csv")
+features = pipeline.transform(validation_df)</code></pre>
             </div>
 
             <div class="stats-grid">
@@ -166,15 +166,15 @@ y = df_clean["target"]</code></pre>
                 </li>
                 <li>
                     <h4>🔍 ROLE AWARE</h4>
-                    <p>Auto-detects IDs, names, UUIDs, and constants to prevent invalid transformations.</p>
+                    <p>Auto-detects IDs, constants, targets, and dates, with configurable policies.</p>
                 </li>
                 <li>
-                    <h4>🔒 ZERO BLACK-BOX</h4>
-                    <p>100% deterministic mathematical transformations (IQR, Medians).</p>
+                    <h4>🔒 LEAKAGE-SAFE</h4>
+                    <p>Calculates statistics (like medians and scaling bounds) on training data only.</p>
                 </li>
                 <li>
-                    <h4>🤖 AI ORCHESTRATOR</h4>
-                    <p>Use LLMs via LiteLLM to dynamically plan customized pipelines.</p>
+                    <h4>📦 PORTABLE ARTIFACTS</h4>
+                    <p>Pipelines compile to simple JSON state files, meaning 100% reproducibility in production.</p>
                 </li>
             </ul>
         </section>

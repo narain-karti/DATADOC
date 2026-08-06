@@ -144,7 +144,7 @@ function App() {
         <header className="h-[80px] border-b-2 border-black flex items-center justify-between px-8 bg-bg-workspace shrink-0 z-10">
           <div>
             <h1 className="text-3xl font-bold uppercase tracking-tighter">DATADOC Dashboard</h1>
-            <p className="text-sm">Retro Editorial Operating System</p>
+            <p className="text-sm text-red-600 font-bold bg-yellow-200 px-2 inline-block border-2 border-black mt-1">⚠️ UI DEPRECATED: PENDING REWRITE FOR LEAKAGE-SAFE PIPELINES ⚠️</p>
           </div>
           <div className="flex items-center gap-4">
             <button onClick={downloadCSV} className="flex items-center gap-2 border-2 border-black px-4 py-2 bg-bg-accent-yellow hover:bg-yellow-300 font-bold uppercase text-sm">
