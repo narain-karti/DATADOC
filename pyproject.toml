@@ -1,10 +1,10 @@
 [project]
 name = "datadoc-cli"
 version = "0.3.0"
-description = "The Open Source Operating System for Dataset Engineering."
+description = "Leakage-safe, local-first preparation pipelines for tabular machine learning."
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 authors = [
     { name = "narain-karti" },
 ]
@@ -14,7 +14,6 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -26,18 +25,28 @@ dependencies = [
     "polars>=0.20.0",
     "numpy>=1.24.0",
     "plotext>=5.2.8",
-    "litellm>=1.40.0",
     "pydantic>=2.0.0",
     "python-dotenv>=1.0.0",
-    "fastapi>=0.128.8",
-    "uvicorn>=0.39.0",
-    "python-multipart>=0.0.20",
 ]
 
 [project.optional-dependencies]
+ai = [
+    "litellm>=1.40.0",
+]
+ml = [
+    "scikit-learn>=1.4.0",
+]
+ui = [
+    "fastapi>=0.115.0",
+    "uvicorn>=0.30.0",
+    "python-multipart>=0.0.20",
+]
 dev = [
+    "build>=1.2.0",
+    "hatchling>=1.25.0",
     "pytest>=8.0.0",
     "ruff>=0.4.0",
+    "scikit-learn>=1.4.0",
 ]
 
 [project.urls]
@@ -53,7 +62,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.ruff]
-target-version = "py39"
+target-version = "py310"
 line-length = 100
 
 [tool.pytest.ini_options]
@@ -61,4 +70,3 @@ testpaths = ["tests"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["datadoc"]
-

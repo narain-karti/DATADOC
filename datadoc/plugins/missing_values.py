@@ -1,6 +1,7 @@
 import polars as pl
 from datadoc.plugins.base import BasePlugin
 
+
 class MissingValuePlugin(BasePlugin):
     @property
     def name(self) -> str:
@@ -17,8 +18,6 @@ class MissingValuePlugin(BasePlugin):
     @property
     def priority(self) -> int:
         return 10  # Should run first
-
-
 
     def analyze(self, df: pl.DataFrame) -> dict:
         cols_with_missing = {c: df[c].null_count() for c in df.columns if df[c].null_count() > 0}
@@ -59,10 +58,10 @@ for col in df.columns:
                 if df_clean[col].dtype.is_numeric():
                     df_clean = df_clean.with_columns(pl.col(col).fill_null(pl.col(col).median()))
                 else:
-                    df_clean = df_clean.with_columns(pl.col(col).fill_null(pl.col(col).drop_nulls().mode().first()))
+                    df_clean = df_clean.with_columns(
+                        pl.col(col).fill_null(pl.col(col).drop_nulls().mode().first())
+                    )
         return df_clean
-
-
 
     def explain(self) -> str:
         return (

@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 import polars as pl
 
+
 class BasePlugin(ABC):
     @property
     @abstractmethod
@@ -65,4 +66,3 @@ class BasePlugin(ABC):
     def estimate_runtime(self, df: pl.DataFrame) -> float:
         """Estimate runtime in seconds based on dataframe size."""
         return df.height * df.width * 1e-6
-

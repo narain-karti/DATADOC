@@ -1,6 +1,7 @@
 import polars as pl
 from datadoc.plugins.base import BasePlugin
 
+
 class CategoricalEncoderPlugin(BasePlugin):
     def __init__(self, max_categories: int = 10):
         self._max_categories = max_categories
@@ -30,7 +31,8 @@ class CategoricalEncoderPlugin(BasePlugin):
 
         # Encodable categorical: low cardinality (2-max_categories unique), not an identifier
         valid_cats = [
-            col for col in str_cols
+            col
+            for col in str_cols
             if col not in id_cols and 1 < df[col].n_unique() < self._max_categories
         ]
         cardinality = {col: df[col].n_unique() for col in valid_cats}
@@ -54,8 +56,7 @@ class CategoricalEncoderPlugin(BasePlugin):
             info = analysis_result.get("cardinality", {})
             detail = ", ".join([f"{c} ({v} unique)" for c, v in info.items()])
             recs.append(
-                f"Categorical columns found: {detail}. "
-                f"Recommendation: Apply One-Hot Encoding."
+                f"Categorical columns found: {detail}. Recommendation: Apply One-Hot Encoding."
             )
         return recs
 
@@ -63,15 +64,15 @@ class CategoricalEncoderPlugin(BasePlugin):
         lines = []
         id_cols = analysis_result.get("identifier_columns", [])
         if id_cols:
-            lines.append(f"# Drop identifier columns")
+            lines.append("# Drop identifier columns")
             lines.append(f"df = df.drop({id_cols})")
 
         cat_cols = analysis_result.get("categorical_columns", [])
         if cat_cols:
             cols_str = str(cat_cols)
-            lines.append(f"# Categorical Encoding (One-Hot)")
+            lines.append("# Categorical Encoding (One-Hot)")
             lines.append(f"cat_cols = {cols_str}")
-            lines.append(f"df = df.to_dummies(columns=cat_cols, drop_first=True)")
+            lines.append("df = df.to_dummies(columns=cat_cols, drop_first=True)")
 
         return "\n".join(lines)
 
@@ -96,4 +97,3 @@ class CategoricalEncoderPlugin(BasePlugin):
             f"High-cardinality identifier columns (every value unique) are dropped. "
             f"Low-cardinality columns (< {self._max_categories} unique values) are One-Hot Encoded with drop_first=True."
         )
-

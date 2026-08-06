@@ -1,6 +1,7 @@
 import polars as pl
 from datadoc.plugins.base import BasePlugin
 
+
 class DatetimePlugin(BasePlugin):
     @property
     def name(self) -> str:
@@ -42,7 +43,12 @@ class DatetimePlugin(BasePlugin):
                         not_null_ratio = 1 - (parsed[col].null_count() / parsed.height)
                         if not_null_ratio > 0.5:
                             datetime_cols.append(col)
-                except (ValueError, TypeError, pl.exceptions.ComputeError, pl.exceptions.InvalidOperationError):
+                except (
+                    ValueError,
+                    TypeError,
+                    pl.exceptions.ComputeError,
+                    pl.exceptions.InvalidOperationError,
+                ):
                     # Column is not a valid datetime string; skipping
                     pass
 
@@ -96,23 +102,25 @@ for col in datetime_cols:
 
         for col in dt_cols:
             if df_clean[col].dtype == pl.String:
-                df_clean = df_clean.with_columns(pl.col(col).str.to_datetime(strict=False).alias(col))
+                df_clean = df_clean.with_columns(
+                    pl.col(col).str.to_datetime(strict=False).alias(col)
+                )
 
             new_cols = [
-                pl.col(col).dt.year().alias(col + '_year'),
-                pl.col(col).dt.month().alias(col + '_month'),
-                pl.col(col).dt.day().alias(col + '_day'),
-                pl.col(col).dt.weekday().alias(col + '_dayofweek'),
+                pl.col(col).dt.year().alias(col + "_year"),
+                pl.col(col).dt.month().alias(col + "_month"),
+                pl.col(col).dt.day().alias(col + "_day"),
+                pl.col(col).dt.weekday().alias(col + "_dayofweek"),
             ]
 
             # Add hour if time component exists
             if self._has_time_component(df_clean[col]):
-                new_cols.append(pl.col(col).dt.hour().alias(col + '_hour'))
+                new_cols.append(pl.col(col).dt.hour().alias(col + "_hour"))
 
             df_clean = df_clean.with_columns(new_cols).drop(col)
 
             # Drop constant datetime features (e.g. year=2023 for all rows)
-            for c in [c for c in df_clean.columns if c.startswith(col + '_')]:
+            for c in [c for c in df_clean.columns if c.startswith(col + "_")]:
                 if df_clean[c].drop_nulls().n_unique() <= 1:
                     df_clean = df_clean.drop(c)
 
@@ -125,4 +133,3 @@ for col in datetime_cols:
             "The original datetime column is dropped, along with any constant features "
             "(e.g., year when all dates are in the same year)."
         )
-

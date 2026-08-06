@@ -13,13 +13,15 @@ from datadoc.plugins.scaling import ScalingPlugin
 def sample_csv(tmp_path):
     """Create a sample CSV with known issues for testing."""
     csv_path = tmp_path / "test_data.csv"
-    df = pl.DataFrame({
-        "id": [1, 2, 3, 4, 5],
-        "name": ["Alice", "Bob", None, "Dave", "Eve"],
-        "age": [30.0, None, 25.0, 40.0, 35.0],
-        "salary": [50000.0, 60000.0, None, 80000.0, 70000.0],
-        "department": ["Engineering", "Sales", "Engineering", "HR", None],
-    })
+    df = pl.DataFrame(
+        {
+            "id": [1, 2, 3, 4, 5],
+            "name": ["Alice", "Bob", None, "Dave", "Eve"],
+            "age": [30.0, None, 25.0, 40.0, 35.0],
+            "salary": [50000.0, 60000.0, None, 80000.0, 70000.0],
+            "department": ["Engineering", "Sales", "Engineering", "HR", None],
+        }
+    )
     df.write_csv(csv_path)
     return str(csv_path)
 
@@ -28,10 +30,12 @@ def sample_csv(tmp_path):
 def clean_csv(tmp_path):
     """Create a clean CSV with no issues."""
     csv_path = tmp_path / "clean_data.csv"
-    df = pl.DataFrame({
-        "x": [1.0, 2.0, 3.0, 4.0, 5.0],
-        "y": [10.0, 20.0, 30.0, 40.0, 50.0],
-    })
+    df = pl.DataFrame(
+        {
+            "x": [1.0, 2.0, 3.0, 4.0, 5.0],
+            "y": [10.0, 20.0, 30.0, 40.0, 50.0],
+        }
+    )
     df.write_csv(csv_path)
     return str(csv_path)
 
@@ -40,10 +44,12 @@ def clean_csv(tmp_path):
 def datetime_csv(tmp_path):
     """Create a CSV with datetime columns."""
     csv_path = tmp_path / "datetime_data.csv"
-    df = pl.DataFrame({
-        "date": ["2024-01-01", "2024-02-15", "2024-03-20", "2024-04-10", "2024-05-05"],
-        "value": [100, 200, 300, 400, 500],
-    })
+    df = pl.DataFrame(
+        {
+            "date": ["2024-01-01", "2024-02-15", "2024-03-20", "2024-04-10", "2024-05-05"],
+            "value": [100, 200, 300, 400, 500],
+        }
+    )
     df.write_csv(csv_path)
     return str(csv_path)
 
@@ -51,6 +57,7 @@ def datetime_csv(tmp_path):
 # ────────────────────────────────────────────
 # Core Engine Tests
 # ────────────────────────────────────────────
+
 
 class TestDATADOCEngine:
     def test_load_csv(self, sample_csv):
@@ -121,6 +128,7 @@ class TestDATADOCEngine:
 # Plugin Tests
 # ────────────────────────────────────────────
 
+
 class TestMissingValuePlugin:
     def test_analyze_detects_missing(self):
         plugin = MissingValuePlugin()
@@ -145,7 +153,11 @@ class TestMissingValuePlugin:
 
     def test_recommend(self):
         plugin = MissingValuePlugin()
-        result = {"has_missing_values": True, "total_missing": 3, "columns_affected": {"a": 2, "b": 1}}
+        result = {
+            "has_missing_values": True,
+            "total_missing": 3,
+            "columns_affected": {"a": 2, "b": 1},
+        }
         recs = plugin.recommend(result)
         assert len(recs) == 1
         assert "3 missing values" in recs[0]
@@ -263,7 +275,12 @@ class TestDatetimePlugin:
 class TestScalingPlugin:
     def test_analyze_detects_scale_mismatch(self):
         plugin = ScalingPlugin()
-        df = pl.DataFrame({"small": [1.0, 2.0, 3.0, 4.0, 5.0], "big": [10000.0, 20000.0, 30000.0, 40000.0, 50000.0]})
+        df = pl.DataFrame(
+            {
+                "small": [1.0, 2.0, 3.0, 4.0, 5.0],
+                "big": [10000.0, 20000.0, 30000.0, 40000.0, 50000.0],
+            }
+        )
         result = plugin.analyze(df)
         assert result["has_scale_issues"] is True
 
@@ -275,7 +292,12 @@ class TestScalingPlugin:
 
     def test_apply_scales(self):
         plugin = ScalingPlugin()
-        df = pl.DataFrame({"small": [1.0, 2.0, 3.0, 4.0, 5.0], "big": [10000.0, 20000.0, 30000.0, 40000.0, 50000.0]})
+        df = pl.DataFrame(
+            {
+                "small": [1.0, 2.0, 3.0, 4.0, 5.0],
+                "big": [10000.0, 20000.0, 30000.0, 40000.0, 50000.0],
+            }
+        )
         clean = plugin.apply(df)
         # After scaling, mean should be near 0
         assert abs(clean["big"].mean()) < 0.01
@@ -290,16 +312,19 @@ class TestScalingPlugin:
 # Base Plugin Interface Tests
 # ────────────────────────────────────────────
 
+
 class TestBasePluginInterface:
     """Verify all plugins implement the full BasePlugin interface."""
 
-    @pytest.fixture(params=[
-        MissingValuePlugin,
-        OutlierPlugin,
-        CategoricalEncoderPlugin,
-        DatetimePlugin,
-        ScalingPlugin,
-    ])
+    @pytest.fixture(
+        params=[
+            MissingValuePlugin,
+            OutlierPlugin,
+            CategoricalEncoderPlugin,
+            DatetimePlugin,
+            ScalingPlugin,
+        ]
+    )
     def plugin(self, request):
         return request.param()
 
@@ -346,10 +371,14 @@ class TestBasePluginInterface:
 
 def test_ai_engineer_mock(sample_csv, monkeypatch):
     doc = DATADOC(sample_csv)
-    
+
     # Mock litellm.completion
     class MockChoice:
-        message = type("Message", (), {"content": '{"plan": [{"plugin_name": "MissingValuePlugin", "reason": "Fix nulls"}]}'})()
+        message = type(
+            "Message",
+            (),
+            {"content": '{"plan": [{"plugin_name": "MissingValuePlugin", "reason": "Fix nulls"}]}'},
+        )()
 
     class MockResponse:
         choices = [MockChoice()]
@@ -367,11 +396,13 @@ def test_ai_engineer_mock(sample_csv, monkeypatch):
 
 
 def test_column_role_detection():
-    df = pl.DataFrame({
-        "ID": [1, 2, 3, 4, 5],
-        "Name": ["Alice", "Bob", "Charlie", "Dave", "Eve"],
-        "Age": [30, 25, 40, 35, 28],
-    })
+    df = pl.DataFrame(
+        {
+            "ID": [1, 2, 3, 4, 5],
+            "Name": ["Alice", "Bob", "Charlie", "Dave", "Eve"],
+            "Age": [30, 25, 40, 35, 28],
+        }
+    )
     roles = DATADOC._detect_column_roles(df)
     assert roles["ID"] == "id"
     assert roles["Name"] == "name"
@@ -380,11 +411,13 @@ def test_column_role_detection():
 
 def test_scaling_preserves_binary_columns():
     plugin = ScalingPlugin()
-    df = pl.DataFrame({
-        "amount": [100.0, 200.0, 300.0, 400.0, 500.0],
-        "big": [10000.0, 20000.0, 30000.0, 40000.0, 50000.0],
-        "is_active": [0, 1, 0, 1, 0],  # Binary column
-    })
+    df = pl.DataFrame(
+        {
+            "amount": [100.0, 200.0, 300.0, 400.0, 500.0],
+            "big": [10000.0, 20000.0, 30000.0, 40000.0, 50000.0],
+            "is_active": [0, 1, 0, 1, 0],  # Binary column
+        }
+    )
     clean = plugin.apply(df)
     # Binary column should not be scaled
     assert set(clean["is_active"].to_list()).issubset({0, 1})

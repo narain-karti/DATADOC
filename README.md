@@ -32,9 +32,9 @@
 
 ## 🚀 What is DATADOC?
 
-**DATADOC** is an intelligent, blazing-fast Command Line Interface (CLI) and Python Library designed to completely automate the most tedious part of Machine Learning: **Dataset Engineering and Data Cleaning**. 
+**DATADOC** is a local-first CLI and Python library for preparing tabular data for machine learning. It profiles dataset risks, creates explainable transformation plans, and saves fitted pipelines that apply the same training-derived rules to validation, test, and inference data.
 
-Powered by a high-performance **Polars** backend, DATADOC analyzes your raw CSV files, diagnoses missing values, outliers, and schema issues, and **automatically engineers a machine-learning-ready dataset in milliseconds**.
+Powered by **Polars**, DATADOC reads CSV and Parquet files, diagnoses missing values, identifiers, schema issues, duplicates, constants, and unsafe feature types. It does not promise model improvement: optional evaluation reports the observed result against a baseline under a reproducible split.
 
 **DATADOC is NOT just another EDA (Exploratory Data Analysis) tool.** It doesn't just show you charts. It **fixes your data** and hands you a portable, deterministic Python script to replicate the pipeline anywhere.
 
@@ -47,7 +47,7 @@ DATADOC eliminates the 80%.
 - **Zero Black-Box AI:** Every transformation is strictly mathematical (IQR, medians, mode). It is 100% deterministic, explainable, and safe for enterprise production environments.
 - **Lightning Fast:** By utilizing `polars` (written in Rust) instead of `pandas`, DATADOC processes millions of rows with minimal memory overhead.
 - **Agentic AI Integration:** DATADOC features a built-in AI Planner and an interactive Chat Assistant that can autonomously analyze your dataset, generate engineering plans, and execute plugins using tool-calling!
-- **Avoid Data Leakage:** Built-in safeguards ensure that data scaling and imputation are handled correctly.
+- **Leakage-safe workflows:** Fitted statistics for imputation, categorical vocabularies, clipping, and scaling are learned from training data and saved as an artifact.
 
 ---
 
@@ -59,7 +59,7 @@ DATADOC is published on PyPI. You can install it globally via `pip` or `uv`:
 pip install datadoc-cli
 ```
 
-*(Requires Python 3.9+)*
+*(Requires Python 3.10+)*
 
 ---
 
@@ -68,22 +68,24 @@ pip install datadoc-cli
 You don't need to write a single line of Python to clean your data. Just use the CLI.
 
 ```bash
-# 1. Analyze your dataset's health (shows a beautiful terminal report)
-datadoc analyze raw_data.csv
+# 1. Inspect data-quality findings and column roles
+datadoc profile raw_data.csv --target churn --output profile.json
 
-# 2. Get recommendations (DATADOC tells you exactly what is wrong)
-datadoc recommend raw_data.csv
+# 2. Review the proposed transformations before applying them
+datadoc plan raw_data.csv --target churn --output plan.json
 
-# 3. AUTO-ENGINEER! (Fixes everything and saves clean_raw_data.csv)
-datadoc engineer raw_data.csv
+# 3. Fit only on a training dataset, then save a reusable artifact
+datadoc fit train.csv --target churn --output artifacts/churn-pipeline.json
 
-# 4. Compare the before vs. after visually in your terminal
-datadoc compare raw_data.csv clean_raw_data.csv
+# 4. Apply the fitted artifact to validation, test, or new data
+datadoc transform validation.csv --pipeline artifacts/churn-pipeline.json --output validation-features.parquet
 
-# 5. Export a standalone Python script to automate this in the future
-datadoc pipeline raw_data.csv
+# 5. Optionally benchmark a safe candidate pipeline against a baseline
+pip install "datadoc-cli[ml]"
+datadoc evaluate train.csv --target churn --task classification
 
-# 6. Have an interactive AI session where the LLM engineers your data via chat!
+# 6. Export a small executable wrapper around the fitted artifact
+datadoc export --pipeline artifacts/churn-pipeline.json --output pipeline.py
 
 
 ```
@@ -95,22 +97,17 @@ datadoc pipeline raw_data.csv
 DATADOC is also a powerful Python library. You can import the engine directly into your Jupyter Notebooks or backend servers:
 
 ```python
-from datadoc.core.engine import DATADOC
+from datadoc import DataDocPipeline, PipelineConfig
+import polars as pl
 
-# Initialize the blazing-fast Polars engine
-doc = DATADOC("raw_data.csv")
+# Fit only on the training split.
+train_df = pl.read_csv("train.csv")
+pipeline = DataDocPipeline(PipelineConfig(target="churn")).fit(train_df)
+pipeline.save("artifacts/churn-pipeline.json")
 
-# Generate a diagnostic report
-report = doc.analyze()
-print(report)
-
-# Automatically engineer the dataset
-clean_df = doc.engineer()
-clean_df.write_csv("clean_data.csv")
-
-# Export the generated pipeline script
-with open("my_pipeline.py", "w") as f:
-    f.write(doc.pipeline())
+# Transform data that was never used to fit statistics.
+validation_df = pl.read_csv("validation.csv")
+validation_features = pipeline.transform(validation_df)
 ```
 
 ---
@@ -119,14 +116,13 @@ with open("my_pipeline.py", "w") as f:
 
 | Command | Description |
 |---------|-------------|
-| `datadoc analyze <file>` | Scans dataset and shows a health report with status indicators |
-| `datadoc recommend <file>` | Lists suggested engineering steps without modifying data |
-| `datadoc engineer <file>` | Automatically applies all recommended transformations |
-| `datadoc compare <file>` | Shows a before/after diff of the raw vs engineered dataset |
-| `datadoc pipeline <file>` | Exports a standalone `.py` script with the exact Polars code |
-| `datadoc visualize <file>` | Renders stunning terminal-based charts for numeric distributions |
-| `datadoc plugin` | Lists all registered plugins with priority and descriptions |
-| `datadoc version` | Displays the DATADOC version |
+| `datadoc profile <file>` | Produces a data-quality report and confidence-scored column roles |
+| `datadoc plan <file>` | Outputs an explainable transformation plan without modifying data |
+| `datadoc fit <train>` | Learns a pipeline only from training data and saves JSON state |
+| `datadoc transform <file>` | Applies a saved pipeline to validation, test, or inference data |
+| `datadoc evaluate <file>` | Optionally compares a safe candidate pipeline with a baseline |
+| `datadoc export` | Creates an executable wrapper for a saved pipeline artifact |
+| `datadoc run <file>` | Writes a profile, plan, artifact, transformed data, and lineage manifest |
 
 
 
@@ -134,7 +130,7 @@ with open("my_pipeline.py", "w") as f:
 
 ## 🧩 Architecture & Plugins
 
-DATADOC operates as an orchestrator. It passes your dataset through an isolated chain of plugins in a strict priority order.
+DATADOC operates as a fitted pipeline. Every transformation learns state only from training data, saves that state to JSON, and reuses it unchanged for later datasets.
 
 | Priority | Plugin | Action Performed |
 |----------|--------|-------------|
@@ -156,12 +152,12 @@ Want to build your own? See [CONTRIBUTING.md](CONTRIBUTING.md) to learn how to c
 - [x] 5 Built-in deterministic plugins
 - [x] Stunning Rich Terminal UI
 - [x] Pipeline export capability
-- [x] **Polars Backend Migration (100x Performance Boost)**
+- [x] Polars backend and local-first pipeline artifacts
 - [x] PyPI Release (`pip install datadoc-cli`)
 - [x] Phase 2: Agentic AI Planner (LLM Orchestration)
 - [x] Interactive AI Chat with Tool-Calling capabilities
 - [ ] Export targets for `dbt` and Apache Airflow
-- [ ] REST API (FastAPI) wrapper
+- [x] Local FastAPI dashboard/API companion
 
 ---
 

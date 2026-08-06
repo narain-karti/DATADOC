@@ -1,6 +1,7 @@
 import polars as pl
 from datadoc.plugins.base import BasePlugin
 
+
 class ScalingPlugin(BasePlugin):
     def __init__(self, scaling_ratio: float = 10.0):
         self._scaling_ratio = scaling_ratio
@@ -63,13 +64,13 @@ class ScalingPlugin(BasePlugin):
 
         min_std = min(stds.values())
         max_std = max(stds.values())
-        ratio = max_std / min_std if min_std > 0 else float('inf')
+        ratio = max_std / min_std if min_std > 0 else float("inf")
         cols_to_scale = list(stds.keys()) if ratio > self._scaling_ratio else []
 
         return {
             "has_scale_issues": len(cols_to_scale) > 0,
             "columns_to_scale": cols_to_scale,
-            "scale_ratio": round(ratio, 2) if ratio != float('inf') else ratio,
+            "scale_ratio": round(ratio, 2) if ratio != float("inf") else ratio,
         }
 
     def recommend(self, analysis_result: dict) -> list[str]:
@@ -96,16 +97,14 @@ if exprs:
     def apply(self, df: pl.DataFrame) -> pl.DataFrame:
         df_clean = df.clone()
         cols_to_scale = self.analyze(df_clean).get("columns_to_scale", [])
-        
+
         exprs = []
         for col in cols_to_scale:
-            exprs.append(
-                ((pl.col(col) - pl.col(col).mean()) / pl.col(col).std()).alias(col)
-            )
-            
+            exprs.append(((pl.col(col) - pl.col(col).mean()) / pl.col(col).std()).alias(col))
+
         if exprs:
             df_clean = df_clean.with_columns(exprs)
-            
+
         return df_clean
 
     def explain(self) -> str:
@@ -115,4 +114,3 @@ if exprs:
             f"resulting in zero-mean, unit-variance features. "
             f"Binary columns (e.g. one-hot encoded) and constant columns are excluded."
         )
-

@@ -6,6 +6,9 @@ from rich.text import Text
 from rich import box
 import os
 import time
+import json
+from pathlib import Path
+from typing import Optional
 from dotenv import load_dotenv
 
 # Load environment variables (including .env) at startup
@@ -15,6 +18,13 @@ load_dotenv()
 DEFAULT_MODEL = os.getenv("DATADOC_MODEL", "groq/llama-3.3-70b-versatile")
 
 from datadoc.core.engine import DATADOC  # noqa: E402
+from datadoc.core.pipeline import (  # noqa: E402
+    DataDocError,
+    DataDocPipeline,
+    PipelineConfig,
+    read_dataset,
+    write_dataset,
+)
 
 app = typer.Typer(
     help="DATADOC: The Open Source Operating System for Dataset Engineering.",
@@ -22,7 +32,12 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 console = Console()
-VERSION = "0.2.0"
+try:
+    from importlib.metadata import version
+
+    VERSION = version("datadoc-cli")
+except Exception:
+    VERSION = "0.3.0"
 BANNER = r"""
  ____    _  _____  _    ____   ___   ____
 |  _ \  / \|_   _|/ \  |  _ \ / _ \ / ___|
@@ -60,24 +75,31 @@ def load_dataset(file_path: str) -> DATADOC:
         raise typer.Exit(code=1)
 
     rows, cols = doc.df.height, doc.df.width
-    print_step("[OK]", f"Loaded [green]{rows:,}[/green] rows x [green]{cols}[/green] columns", "bold green")
+    print_step(
+        "[OK]", f"Loaded [green]{rows:,}[/green] rows x [green]{cols}[/green] columns", "bold green"
+    )
     return doc
 
 
 def _get_api_key(model: str) -> str:
     key_map = {
         "gemini": "GEMINI_API_KEY",
-        "gpt": "OPENAI_API_KEY", "openai": "OPENAI_API_KEY",
-        "claude": "ANTHROPIC_API_KEY", "anthropic": "ANTHROPIC_API_KEY",
-        "groq": "GROQ_API_KEY"
+        "gpt": "OPENAI_API_KEY",
+        "openai": "OPENAI_API_KEY",
+        "claude": "ANTHROPIC_API_KEY",
+        "anthropic": "ANTHROPIC_API_KEY",
+        "groq": "GROQ_API_KEY",
     }
     key_name = next((v for k, v in key_map.items() if model.startswith(k)), "API_KEY")
     api_key = os.getenv("OPENAI_API_KEY") if key_name == "API_KEY" else os.getenv(key_name)
 
     if not api_key:
-        console.print(f"\n  [bold yellow][!][/bold yellow] {key_name} not found in environment or .env file.")
+        console.print(
+            f"\n  [bold yellow][!][/bold yellow] {key_name} not found in environment or .env file."
+        )
         api_key = typer.prompt(f"Please enter your {key_name}", hide_input=True)
     return api_key
+
 
 # ──────────────────────────────────────────────────────────────
 # COMMAND: analyze
@@ -85,8 +107,10 @@ def _get_api_key(model: str) -> str:
 @app.command()
 def analyze(
     file_path: str,
-    ai: bool = typer.Option(False, "--ai", help="Use AI to generate an Executive Summary of the dataset health."),
-    model: str = typer.Option(DEFAULT_MODEL, "--model", help="The LiteLLM model string to use.")
+    ai: bool = typer.Option(
+        False, "--ai", help="Use AI to generate an Executive Summary of the dataset health."
+    ),
+    model: str = typer.Option(DEFAULT_MODEL, "--model", help="The LiteLLM model string to use."),
 ):
     """
     Scans the dataset and returns a rich health report.
@@ -121,7 +145,9 @@ def analyze(
             table.add_row("Missing Values", str(total), status)
         elif p_name == "OutlierPlugin":
             count = len(p_stats.get("outlier_columns", []))
-            status = "[green][OK] Clean[/green]" if count == 0 else f"[yellow][!!] {count} cols[/yellow]"
+            status = (
+                "[green][OK] Clean[/green]" if count == 0 else f"[yellow][!!] {count} cols[/yellow]"
+            )
             table.add_row("Outlier Columns", str(count), status)
         elif p_name == "DatetimePlugin":
             count = len(p_stats.get("datetime_columns", []))
@@ -150,15 +176,20 @@ def analyze(
 
     if ai:
         api_key = _get_api_key(model)
-        with console.status(f"[bold cyan]Generating AI Executive Summary ({model})...", spinner="dots"):
+        with console.status(
+            f"[bold cyan]Generating AI Executive Summary ({model})...", spinner="dots"
+        ):
             summary = doc.ai_analyze(model=model, api_key=api_key)
-        
+
         from rich.markdown import Markdown
-        console.print(Panel(
-            Markdown(summary),
-            title="[bold blue]AI Executive Summary[/bold blue]",
-            border_style="blue"
-        ))
+
+        console.print(
+            Panel(
+                Markdown(summary),
+                title="[bold blue]AI Executive Summary[/bold blue]",
+                border_style="blue",
+            )
+        )
         console.print()
 
 
@@ -168,9 +199,15 @@ def analyze(
 @app.command()
 def recommend(
     file_path: str,
-    ai: bool = typer.Option(False, "--ai", help="Use AI to generate a custom execution plan without applying it."),
-    goal: str = typer.Option("Clean the dataset for machine learning", "--goal", help="The semantic goal for the AI Planner."),
-    model: str = typer.Option(DEFAULT_MODEL, "--model", help="The LiteLLM model string to use.")
+    ai: bool = typer.Option(
+        False, "--ai", help="Use AI to generate a custom execution plan without applying it."
+    ),
+    goal: str = typer.Option(
+        "Clean the dataset for machine learning",
+        "--goal",
+        help="The semantic goal for the AI Planner.",
+    ),
+    model: str = typer.Option(DEFAULT_MODEL, "--model", help="The LiteLLM model string to use."),
 ):
     """
     Outputs a list of suggested engineering steps without applying them.
@@ -180,17 +217,21 @@ def recommend(
 
     if ai:
         api_key = _get_api_key(model)
-        with console.status(f"[bold cyan]Generating AI Recommendations ({model})...", spinner="dots"):
+        with console.status(
+            f"[bold cyan]Generating AI Recommendations ({model})...", spinner="dots"
+        ):
             recs = doc.ai_recommend(model=model, goal=goal, api_key=api_key)
-        
+
         print_step("[OK]", "AI Recommendations ready.", "bold green")
         console.print()
-        
+
         if not recs:
-            console.print(Panel(
-                "[bold green][OK] AI determined no steps are necessary for this goal.[/bold green]",
-                border_style="green",
-            ))
+            console.print(
+                Panel(
+                    "[bold green][OK] AI determined no steps are necessary for this goal.[/bold green]",
+                    border_style="green",
+                )
+            )
             return
 
         rec_table = Table(
@@ -206,12 +247,15 @@ def recommend(
         rec_table.add_column("AI Reason", style="white")
 
         from rich.markdown import Markdown
+
         for i, rec in enumerate(recs, 1):
             rec_table.add_row(str(i), rec["plugin"], Markdown(rec["reason"]))
 
         console.print(rec_table)
         console.print()
-        console.print(f"  [dim]Run [bold cyan]datadoc engineer \"{file_path}\" --ai --goal \"{goal}\"[/bold cyan] to apply this plan.[/dim]\n")
+        console.print(
+            f'  [dim]Run [bold cyan]datadoc engineer "{file_path}" --ai --goal "{goal}"[/bold cyan] to apply this plan.[/dim]\n'
+        )
         return
 
     with console.status("[bold cyan]Generating recommendations...", spinner="dots"):
@@ -220,10 +264,12 @@ def recommend(
 
     console.print()
     if not recommendations:
-        console.print(Panel(
-            "[bold green][OK] Dataset looks perfectly healthy! No recommendations.[/bold green]",
-            border_style="green",
-        ))
+        console.print(
+            Panel(
+                "[bold green][OK] Dataset looks perfectly healthy! No recommendations.[/bold green]",
+                border_style="green",
+            )
+        )
         return
 
     rec_table = Table(
@@ -242,7 +288,9 @@ def recommend(
 
     console.print(rec_table)
     console.print()
-    console.print("  [dim]Run [bold cyan]datadoc engineer <file>[/bold cyan] to apply these automatically.[/dim]\n")
+    console.print(
+        "  [dim]Run [bold cyan]datadoc engineer <file>[/bold cyan] to apply these automatically.[/dim]\n"
+    )
 
 
 # ──────────────────────────────────────────────────────────────
@@ -251,9 +299,19 @@ def recommend(
 @app.command()
 def engineer(
     file_path: str,
-    categorical_threshold: int = typer.Option(10, "--categorical-threshold", help="Maximum unique values for categorical encoding (default: 10)"),
-    scaling_ratio: float = typer.Option(10.0, "--scaling-ratio", help="Scale ratio threshold for applying standardization (default: 10.0)"),
-    outlier_multiplier: float = typer.Option(1.5, "--outlier-multiplier", help="IQR multiplier for outlier detection (default: 1.5)")
+    categorical_threshold: int = typer.Option(
+        10,
+        "--categorical-threshold",
+        help="Maximum unique values for categorical encoding (default: 10)",
+    ),
+    scaling_ratio: float = typer.Option(
+        10.0,
+        "--scaling-ratio",
+        help="Scale ratio threshold for applying standardization (default: 10.0)",
+    ),
+    outlier_multiplier: float = typer.Option(
+        1.5, "--outlier-multiplier", help="IQR multiplier for outlier detection (default: 1.5)"
+    ),
 ):
     """
     Automatically applies best-practice pipelines using the Rule Engine.
@@ -263,6 +321,7 @@ def engineer(
 
     console.print()
     with console.status("[bold cyan]Running Rule Engine...", spinner="dots") as status:
+
         def on_progress(plugin_name, p_status, details):
             if p_status == "running":
                 status.update(f"[bold cyan]Running [yellow]{plugin_name}[/yellow]...[/bold cyan]")
@@ -278,22 +337,24 @@ def engineer(
             progress_callback=on_progress,
             categorical_threshold=categorical_threshold,
             scaling_ratio=scaling_ratio,
-            outlier_multiplier=outlier_multiplier
+            outlier_multiplier=outlier_multiplier,
         )
 
     output_path = f"clean_{os.path.basename(file_path)}"
-    clean_df.write_csv(output_path)
+    write_dataset(clean_df, output_path)
 
     console.print()
-    console.print(Panel(
-        f"[bold green][OK] Success![/bold green]\n\n"
-        f"  Input:  [cyan]{file_path}[/cyan] ({doc.df.height} rows x {doc.df.width} cols)\n"
-        f"  Output: [cyan]{output_path}[/cyan] ({clean_df.height} rows x {clean_df.width} cols)\n\n"
-        f"  Applied:  {', '.join(doc._applied_plugins) or 'None'}\n"
-        f"  Skipped:  {', '.join(doc._skipped_plugins) or 'None'}",
-        title="[bold]Engineering Complete[/bold]",
-        border_style="green",
-    ))
+    console.print(
+        Panel(
+            f"[bold green][OK] Success![/bold green]\n\n"
+            f"  Input:  [cyan]{file_path}[/cyan] ({doc.df.height} rows x {doc.df.width} cols)\n"
+            f"  Output: [cyan]{output_path}[/cyan] ({clean_df.height} rows x {clean_df.width} cols)\n\n"
+            f"  Applied:  {', '.join(doc._applied_plugins) or 'None'}\n"
+            f"  Skipped:  {', '.join(doc._skipped_plugins) or 'None'}",
+            title="[bold]Engineering Complete[/bold]",
+            border_style="green",
+        )
+    )
     console.print()
 
 
@@ -331,9 +392,7 @@ def compare(file_path: str):
     table.add_row("Columns", str(orig_c), str(clean_c))
     table.add_row("Missing Values", str(diff["original_missing"]), str(diff["clean_missing"]))
     table.add_row(
-        "Columns Added",
-        "--",
-        f"+{diff['cols_added']}" if diff["cols_added"] > 0 else "0"
+        "Columns Added", "--", f"+{diff['cols_added']}" if diff["cols_added"] > 0 else "0"
     )
 
     # Data type breakdown
@@ -351,7 +410,7 @@ def compare(file_path: str):
 
     # Show applied/skipped plugins
     console.print()
-    if hasattr(doc, '_applied_plugins'):
+    if hasattr(doc, "_applied_plugins"):
         print_step("[OK]", f"Applied: {', '.join(doc._applied_plugins)}", "bold green")
         print_step("[--]", f"Skipped: {', '.join(doc._skipped_plugins)}", "dim")
     console.print()
@@ -368,51 +427,51 @@ def visualize(file_path: str):
     import plotext as plt
     import sys
     import polars as pl
-    
+
     if sys.platform == "win32":
         sys.stdout.reconfigure(encoding="utf-8")
-        
+
     print_banner()
     doc = load_dataset(file_path)
 
     with console.status("[bold cyan]Generating terminal dashboard...", spinner="dots"):
         clean_df = doc.engineer()
-        
+
         orig_missing = {c: doc.df[c].null_count() for c in doc.df.columns}
         clean_missing = {c: clean_df[c].null_count() for c in clean_df.columns}
         cols_with_missing = [c for c, count in orig_missing.items() if count > 0]
-        
+
         # Missing values bar chart
         if cols_with_missing:
             plt.clf()
             plt.theme("dark")
             orig_vals = [orig_missing[c] for c in cols_with_missing]
             clean_vals = [clean_missing.get(c, 0) for c in cols_with_missing]
-            
+
             plt.multiple_bar(cols_with_missing, [orig_vals, clean_vals], labels=["Before", "After"])
             plt.title("Missing Values Resolution")
             plt.plotsize(100, 20)
             missing_plot = plt.build()
         else:
             missing_plot = "  [dim]No missing values found in the original dataset.[/dim]"
-            
+
         # Numerical distributions
         num_cols = [c for c in doc.df.columns if doc.df[c].dtype in pl.NUMERIC_DTYPES]
         dist_plots = []
-        
+
         for col in num_cols:
             if col not in clean_df.columns:
                 continue
-                
+
             orig_data = doc.df[col].drop_nulls()
             clean_data = clean_df[col].drop_nulls()
-            
+
             if len(orig_data) == 0 or len(clean_data) == 0:
                 continue
-                
+
             plt.clf()
             plt.theme("dark")
-            
+
             plt.hist(orig_data.to_list(), bins=20, label="Before", color="red")
             plt.hist(clean_data.to_list(), bins=20, label="After", color="green")
             plt.title(f"Distribution: {col}")
@@ -421,25 +480,31 @@ def visualize(file_path: str):
 
     # Render directly to terminal
     console.print()
-    console.print(Panel(
-        Text.from_ansi(missing_plot) if "No missing" not in missing_plot else missing_plot,
-        title="[bold yellow]Missing Values Breakdown[/bold yellow]",
-        border_style="yellow"
-    ))
-    
-    for i, d_plot in enumerate(dist_plots):
-        console.print(Panel(
-            Text.from_ansi(d_plot),
-            title=f"[bold cyan]Numerical Distribution: {num_cols[i]}[/bold cyan]",
-            border_style="cyan"
-        ))
+    console.print(
+        Panel(
+            Text.from_ansi(missing_plot) if "No missing" not in missing_plot else missing_plot,
+            title="[bold yellow]Missing Values Breakdown[/bold yellow]",
+            border_style="yellow",
+        )
+    )
 
-    console.print(Panel(
-        f"[bold green]Terminal dashboard generated successfully![/bold green]\n\n"
-        f"  Applied Plugins: {', '.join(doc._applied_plugins) or 'None'}",
-        title="[bold]Summary[/bold]",
-        border_style="green",
-    ))
+    for i, d_plot in enumerate(dist_plots):
+        console.print(
+            Panel(
+                Text.from_ansi(d_plot),
+                title=f"[bold cyan]Numerical Distribution: {num_cols[i]}[/bold cyan]",
+                border_style="cyan",
+            )
+        )
+
+    console.print(
+        Panel(
+            f"[bold green]Terminal dashboard generated successfully![/bold green]\n\n"
+            f"  Applied Plugins: {', '.join(doc._applied_plugins) or 'None'}",
+            title="[bold]Summary[/bold]",
+            border_style="green",
+        )
+    )
 
 
 # ──────────────────────────────────────────────────────────────
@@ -463,13 +528,15 @@ def pipeline(file_path: str):
         f.write(script)
 
     console.print()
-    console.print(Panel(
-        f"[bold green][OK] Pipeline generated![/bold green]\n\n"
-        f"  Saved to: [bold cyan]{output_path}[/bold cyan]\n\n"
-        f"  [dim]Run it with:[/dim] [bold white]python {output_path}[/bold white]",
-        title="[bold]Pipeline Export[/bold]",
-        border_style="cyan",
-    ))
+    console.print(
+        Panel(
+            f"[bold green][OK] Pipeline generated![/bold green]\n\n"
+            f"  Saved to: [bold cyan]{output_path}[/bold cyan]\n\n"
+            f"  [dim]Run it with:[/dim] [bold white]python {output_path}[/bold white]",
+            title="[bold]Pipeline Export[/bold]",
+            border_style="cyan",
+        )
+    )
     console.print()
 
 
@@ -542,12 +609,14 @@ def report(file_path: str):
         f.write("\n".join(md_lines))
 
     console.print()
-    console.print(Panel(
-        f"[bold green][OK] Report generated![/bold green]\n\n"
-        f"  Saved to: [bold cyan]{output_path}[/bold cyan]",
-        title="[bold]Report Export[/bold]",
-        border_style="cyan",
-    ))
+    console.print(
+        Panel(
+            f"[bold green][OK] Report generated![/bold green]\n\n"
+            f"  Saved to: [bold cyan]{output_path}[/bold cyan]",
+            title="[bold]Report Export[/bold]",
+            border_style="cyan",
+        )
+    )
     console.print()
 
 
@@ -561,21 +630,22 @@ def plugin_list():
     """
     print_banner()
 
-
-
     from datadoc.plugins.missing_values import MissingValuePlugin
     from datadoc.plugins.outliers import OutlierPlugin
     from datadoc.plugins.datetime_feat import DatetimePlugin
     from datadoc.plugins.encoders import CategoricalEncoderPlugin
     from datadoc.plugins.scaling import ScalingPlugin
 
-    plugins = sorted([
-        MissingValuePlugin(),
-        OutlierPlugin(),
-        DatetimePlugin(),
-        CategoricalEncoderPlugin(),
-        ScalingPlugin(),
-    ], key=lambda p: p.priority)
+    plugins = sorted(
+        [
+            MissingValuePlugin(),
+            OutlierPlugin(),
+            DatetimePlugin(),
+            CategoricalEncoderPlugin(),
+            ScalingPlugin(),
+        ],
+        key=lambda p: p.priority,
+    )
 
     console.print()
     table = Table(
@@ -598,11 +668,13 @@ def plugin_list():
 
     # Plugin explanations
     console.print()
-    console.print(Panel(
-        "\n".join([f"  [bold cyan]{p.name}[/bold cyan]: {p.explain()}" for p in plugins]),
-        title="[bold]Plugin Explanations[/bold]",
-        border_style="dim",
-    ))
+    console.print(
+        Panel(
+            "\n".join([f"  [bold cyan]{p.name}[/bold cyan]: {p.explain()}" for p in plugins]),
+            title="[bold]Plugin Explanations[/bold]",
+            border_style="dim",
+        )
+    )
     console.print()
 
 
@@ -616,13 +688,13 @@ def version():
     """
     print_banner()
 
+
 # ──────────────────────────────────────────────────────────────
 # COMMAND: ui
 # ──────────────────────────────────────────────────────────────
 @app.command()
 def ui(
-    file_path: str,
-    port: int = typer.Option(8000, "--port", help="Port to run the UI server on.")
+    file_path: str, port: int = typer.Option(8000, "--port", help="Port to run the UI server on.")
 ):
     """
     Launch the interactive Web Dashboard (Retro-Brutalist UI).
@@ -630,19 +702,19 @@ def ui(
     import uvicorn
     from datadoc.cli.ui_server import init_server
     import webbrowser
-    
+
     print_banner()
     console.print(f"[bold cyan]Initializing Retro Dashboard on port {port}...[/bold cyan]")
-    
+
     # Initialize the global dataset instance before starting server
     init_server(file_path)
-    
+
     url = f"http://127.0.0.1:{port}"
     console.print(f"\n[bold green]Dashboard is live! Opening browser to: {url}[/bold green]\n")
-    
+
     # Try to open the browser
     webbrowser.open(url)
-    
+
     # Run the server
     uvicorn.run("datadoc.cli.ui_server:app", host="127.0.0.1", port=port, log_level="info")
 
@@ -653,7 +725,7 @@ def ui(
 @app.command()
 def agent(
     file_path: str,
-    model: str = typer.Option(DEFAULT_MODEL, "--model", help="The LiteLLM model string to use.")
+    model: str = typer.Option(DEFAULT_MODEL, "--model", help="The LiteLLM model string to use."),
 ):
     """
     Launch the Autonomous Agentic Data Engineer.
@@ -661,16 +733,201 @@ def agent(
     print_banner()
     doc = load_dataset(file_path)
     api_key = _get_api_key(model)
-    
+
     clean_df = doc.agentic_engineer(model=model, goal="", api_key=api_key, interactive=True)
-    
-    if hasattr(doc, 'last_agent_code') and doc.last_agent_code:
-        output_filename = f"agent_pipeline_{os.path.basename(file_path).split('.')[0]}.py"
-        doc.export_agent_pipeline(output_filename)
-        
-        # Save output csv
-        clean_path = f"clean_{os.path.basename(file_path)}"
-        clean_df.write_csv(clean_path)
-        print(f"\n✅ Clean dataset saved to {clean_path}")
+
+    clean_path = f"clean_{os.path.basename(file_path)}"
+    write_dataset(clean_df, clean_path)
+    print(f"\n✅ Safe plugin-selected dataset saved to {clean_path}")
+
 
 # ──────────────────────────────────────────────────────────────
+
+
+def _pipeline_config(
+    target: Optional[str] = None,
+    task: str = "auto",
+    drop_identifiers: bool = False,
+    scaling: str = "auto",
+    clip_outliers: bool = False,
+    estimator_family: str = "linear",
+    time_column: Optional[str] = None,
+    group_column: Optional[str] = None,
+) -> PipelineConfig:
+    return PipelineConfig(
+        target=target,
+        task=task,
+        drop_identifiers=drop_identifiers,
+        scaling=scaling,
+        clip_outliers=clip_outliers,
+        estimator_family=estimator_family,
+        time_column=time_column,
+        group_column=group_column,
+    )
+
+
+def _write_json(path: str | Path, value: dict) -> None:
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(value, indent=2), encoding="utf-8")
+
+
+@app.command()
+def profile(
+    file_path: str,
+    target: Optional[str] = typer.Option(
+        None, "--target", help="Target column; it is never transformed."
+    ),
+    output: Optional[str] = typer.Option(None, "--output", help="Optional JSON report path."),
+):
+    """Profile a CSV or Parquet dataset without modifying it."""
+    try:
+        result = (
+            DataDocPipeline(_pipeline_config(target=target))
+            .profile(read_dataset(file_path))
+            .to_dict()
+        )
+    except DataDocError as error:
+        raise typer.BadParameter(str(error)) from error
+    console.print_json(json.dumps(result))
+    if output:
+        _write_json(output, result)
+        console.print(f"[green]Saved profile to {output}[/green]")
+
+
+@app.command(name="plan")
+def pipeline_plan(
+    file_path: str,
+    target: Optional[str] = typer.Option(None, "--target"),
+    task: str = typer.Option("auto", "--task", case_sensitive=False),
+    drop_identifiers: bool = typer.Option(False, "--drop-identifiers"),
+    output: Optional[str] = typer.Option(None, "--output"),
+):
+    """Create an explainable transformation plan without applying it."""
+    config = _pipeline_config(target=target, task=task, drop_identifiers=drop_identifiers)
+    try:
+        result = DataDocPipeline(config).plan(read_dataset(file_path)).to_dict()
+    except DataDocError as error:
+        raise typer.BadParameter(str(error)) from error
+    console.print_json(json.dumps(result))
+    if output:
+        _write_json(output, result)
+
+
+@app.command()
+def fit(
+    file_path: str,
+    output: str = typer.Option("pipeline.json", "--output", help="Output JSON artifact."),
+    target: Optional[str] = typer.Option(None, "--target"),
+    task: str = typer.Option("auto", "--task", case_sensitive=False),
+    drop_identifiers: bool = typer.Option(False, "--drop-identifiers"),
+    scaling: str = typer.Option("auto", "--scaling", case_sensitive=False),
+    clip_outliers: bool = typer.Option(False, "--clip-outliers"),
+):
+    """Fit a pipeline only on a training dataset and save its artifact."""
+    config = _pipeline_config(target, task, drop_identifiers, scaling, clip_outliers)
+    try:
+        pipeline = DataDocPipeline(config).fit(read_dataset(file_path))
+        pipeline.save(output)
+    except DataDocError as error:
+        raise typer.BadParameter(str(error)) from error
+    console.print(f"[green]Fitted leakage-safe pipeline saved to {output}[/green]")
+
+
+@app.command()
+def transform(
+    file_path: str,
+    pipeline: str = typer.Option(..., "--pipeline", help="Fitted pipeline JSON artifact."),
+    output: str = typer.Option(..., "--output", help="CSV or Parquet output path."),
+):
+    """Apply a fitted pipeline to validation, test, or inference data."""
+    try:
+        transformed = DataDocPipeline.load(pipeline).transform(read_dataset(file_path))
+        write_dataset(transformed, output)
+    except DataDocError as error:
+        raise typer.BadParameter(str(error)) from error
+    console.print(f"[green]Wrote {transformed.height:,} transformed rows to {output}[/green]")
+
+
+@app.command()
+def evaluate(
+    file_path: str,
+    target: str = typer.Option(..., "--target"),
+    task: str = typer.Option("auto", "--task", case_sensitive=False),
+    estimator: str = typer.Option("linear", "--estimator", case_sensitive=False),
+    time_column: Optional[str] = typer.Option(
+        None, "--time-column", help="Use ordered validation based on this column."
+    ),
+    group_column: Optional[str] = typer.Option(
+        None, "--group-column", help="Keep groups separated across splits."
+    ),
+    output: Optional[str] = typer.Option(None, "--output", help="Optional evaluation JSON report."),
+):
+    """Benchmark a safe candidate pipeline against a minimal baseline."""
+    config = _pipeline_config(
+        target=target,
+        task=task,
+        estimator_family=estimator,
+        time_column=time_column,
+        group_column=group_column,
+    )
+    try:
+        report = DataDocPipeline(config).evaluate(read_dataset(file_path)).to_dict()
+    except DataDocError as error:
+        raise typer.BadParameter(str(error)) from error
+    console.print_json(json.dumps(report))
+    if output:
+        _write_json(output, report)
+
+
+@app.command(name="export")
+def export_pipeline(
+    pipeline: str = typer.Option(..., "--pipeline", help="Fitted pipeline JSON artifact."),
+    output: str = typer.Option("pipeline.py", "--output", help="Python export path."),
+):
+    """Export a small executable wrapper around a fitted pipeline artifact."""
+    try:
+        exported = DataDocPipeline.load(pipeline).export_python(pipeline)
+    except DataDocError as error:
+        raise typer.BadParameter(str(error)) from error
+    Path(output).write_text(exported, encoding="utf-8")
+    console.print(f"[green]Saved executable pipeline wrapper to {output}[/green]")
+
+
+@app.command(name="run")
+def run_pipeline(
+    file_path: str,
+    target: Optional[str] = typer.Option(None, "--target"),
+    task: str = typer.Option("auto", "--task", case_sensitive=False),
+    output_dir: str = typer.Option("datadoc-run", "--output-dir"),
+    evaluate_model: bool = typer.Option(
+        False, "--evaluate", help="Run optional scikit-learn benchmark when a target is supplied."
+    ),
+):
+    """Profile, plan, fit, transform, and persist one reproducible local run."""
+    directory = Path(output_dir)
+    df = read_dataset(file_path)
+    config = _pipeline_config(target=target, task=task)
+    pipeline = DataDocPipeline(config)
+    profile_result = pipeline.profile(df).to_dict()
+    plan_result = pipeline.plan(df).to_dict()
+    pipeline.fit(df)
+    transformed = pipeline.transform(df)
+    _write_json(directory / "profile.json", profile_result)
+    _write_json(directory / "plan.json", plan_result)
+    pipeline.save(directory / "pipeline.json")
+    write_dataset(transformed, directory / "transformed.parquet")
+    manifest = {
+        "input_path": str(Path(file_path).resolve()),
+        "schema_fingerprint": profile_result["schema_fingerprint"],
+        "target": target,
+        "rows": df.height,
+        "output_schema": pipeline.output_schema_,
+        "artifact": "pipeline.json",
+    }
+    _write_json(directory / "manifest.json", manifest)
+    if evaluate_model:
+        if not target:
+            raise typer.BadParameter("--evaluate requires --target.")
+        _write_json(directory / "evaluation.json", DataDocPipeline(config).evaluate(df).to_dict())
+    console.print(f"[green]Created reproducible DATADOC run in {directory}[/green]")

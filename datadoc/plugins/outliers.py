@@ -1,6 +1,7 @@
 import polars as pl
 from datadoc.plugins.base import BasePlugin
 
+
 class OutlierPlugin(BasePlugin):
     def __init__(self, outlier_multiplier: float = 1.5):
         self._outlier_multiplier = outlier_multiplier
@@ -96,4 +97,3 @@ for col in outlier_cols:
             f"OutlierPlugin detects statistical outliers using the IQR (Interquartile Range) "
             f"method and caps extreme values at IQR boundaries (Q1 - {self._outlier_multiplier}*IQR, Q3 + {self._outlier_multiplier}*IQR)."
         )
-

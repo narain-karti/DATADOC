@@ -1,4 +1,6 @@
-# DATADOC: The Open Source OS for Dataset Engineering
+# DATADOC: Leakage-Safe Tabular Data Preparation
+
+> **Migration notice:** The current production API is `DataDocPipeline` and `PipelineConfig`. It fits transformations on training data, saves a JSON artifact, and transforms validation/test/inference data consistently. See [MIGRATION.md](MIGRATION.md). The legacy `DATADOC.engineer()` facade remains for exploratory compatibility only.
 
 ## Overview
 **DATADOC** is a blazingly fast, deterministic, and highly extensible framework designed to automate the most tedious part of Machine Learning: Data Preparation. Built on top of **Polars**, it eliminates the 80% of time Data Scientists spend manually writing Pandas scripts to clean missing values, handle outliers, encode variables, and scale features.
@@ -24,7 +26,7 @@ DATADOC operates in two modes:
 ```bash
 pip install datadoc-cli
 ```
-*(Requires Python 3.9+)*
+*(Requires Python 3.10+)*
 
 ---
 
@@ -96,10 +98,10 @@ DATADOC is built heavily on the **Strategy Pattern**. The core engine does almos
 
 ### Current Built-in Plugins
 1. **MissingValuePlugin:** Fills numeric nulls with the median and categorical nulls with the mode.
-2. **OutlierPlugin:** Uses the Interquartile Range (IQR) method to cap extreme values at the 5th and 95th percentiles.
+2. **OutlierPlugin:** Uses the Interquartile Range (IQR) method to cap values beyond configurable IQR boundaries when explicitly enabled.
 3. **DatetimePlugin:** Automatically detects string dates, converts them to Polars Datetime objects, and extracts features like `year`, `month`, and `day`.
 4. **CategoricalEncoderPlugin:** Automatically detects low-cardinality string columns and performs one-hot encoding (dummy variables).
-5. **ScalingPlugin:** Uses Min-Max scaling on numeric columns if their maximum values vary by more than 100x, ensuring algorithms like SVMs and Neural Networks converge quickly.
+5. **ScalingPlugin:** Uses train-fitted standard or robust scaling only when configured for an estimator family that benefits from it.
 
 ### Writing a Custom Plugin
 Creating a new rule is as simple as inheriting from `BasePlugin`.
