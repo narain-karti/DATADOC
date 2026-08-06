@@ -17,18 +17,21 @@ from datadoc.plugins.encoders import CategoricalEncoderPlugin
 from datadoc.plugins.scaling import ScalingPlugin
 
 class DATADOC:
-    def __init__(self, file_path: str):
+    def __init__(self, file_path: str, categorical_threshold: int = 10, scaling_ratio: float = 10.0, outlier_multiplier: float = 1.5):
         self.file_path = file_path
         self.df = pl.read_csv(file_path, infer_schema_length=10000)
         self._original_df = self.df.clone()
+        self.categorical_threshold = categorical_threshold
+        self.scaling_ratio = scaling_ratio
+        self.outlier_multiplier = outlier_multiplier
 
         # Plugins sorted by priority (lower = runs first)
         self.plugins: List[BasePlugin] = sorted([
             MissingValuePlugin(),
-            OutlierPlugin(),
+            OutlierPlugin(outlier_multiplier),
             DatetimePlugin(),
-            CategoricalEncoderPlugin(),
-            ScalingPlugin(),
+            CategoricalEncoderPlugin(categorical_threshold),
+            ScalingPlugin(scaling_ratio),
         ], key=lambda p: p.priority)
 
     @staticmethod

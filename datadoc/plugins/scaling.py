@@ -2,6 +2,10 @@ import polars as pl
 from datadoc.plugins.base import BasePlugin
 
 class ScalingPlugin(BasePlugin):
+    def __init__(self, scaling_ratio: float = 10.0):
+        self._scaling_ratio = scaling_ratio
+        super().__init__()
+
     @property
     def name(self) -> str:
         return "ScalingPlugin"
@@ -60,7 +64,7 @@ class ScalingPlugin(BasePlugin):
         min_std = min(stds.values())
         max_std = max(stds.values())
         ratio = max_std / min_std if min_std > 0 else float('inf')
-        cols_to_scale = list(stds.keys()) if ratio > 10 else []
+        cols_to_scale = list(stds.keys()) if ratio > self._scaling_ratio else []
 
         return {
             "has_scale_issues": len(cols_to_scale) > 0,
@@ -106,9 +110,9 @@ if exprs:
 
     def explain(self) -> str:
         return (
-            "ScalingPlugin detects when continuous numeric columns have vastly different scales "
-            "(std ratio > 10x) and applies Standard Scaling: (value - mean) / std, "
-            "resulting in zero-mean, unit-variance features. "
-            "Binary columns (e.g. one-hot encoded) and constant columns are excluded."
+            f"ScalingPlugin detects when continuous numeric columns have vastly different scales "
+            f"(std ratio > {self._scaling_ratio}x) and applies Standard Scaling: (value - mean) / std, "
+            f"resulting in zero-mean, unit-variance features. "
+            f"Binary columns (e.g. one-hot encoded) and constant columns are excluded."
         )
 

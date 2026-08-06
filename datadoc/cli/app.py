@@ -250,7 +250,10 @@ def recommend(
 # ──────────────────────────────────────────────────────────────
 @app.command()
 def engineer(
-    file_path: str
+    file_path: str,
+    categorical_threshold: int = typer.Option(10, "--categorical-threshold", help="Maximum unique values for categorical encoding (default: 10)"),
+    scaling_ratio: float = typer.Option(10.0, "--scaling-ratio", help="Scale ratio threshold for applying standardization (default: 10.0)"),
+    outlier_multiplier: float = typer.Option(1.5, "--outlier-multiplier", help="IQR multiplier for outlier detection (default: 1.5)")
 ):
     """
     Automatically applies best-practice pipelines using the Rule Engine.
@@ -271,7 +274,12 @@ def engineer(
             elif p_status == "skipped":
                 print_step("[--]", f"Skipped [dim]{plugin_name}[/dim] (not needed)", "dim white")
 
-        clean_df = doc.engineer(progress_callback=on_progress)
+        clean_df = doc.engineer(
+            progress_callback=on_progress,
+            categorical_threshold=categorical_threshold,
+            scaling_ratio=scaling_ratio,
+            outlier_multiplier=outlier_multiplier
+        )
 
     output_path = f"clean_{os.path.basename(file_path)}"
     clean_df.write_csv(output_path)

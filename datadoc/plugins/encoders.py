@@ -2,6 +2,10 @@ import polars as pl
 from datadoc.plugins.base import BasePlugin
 
 class CategoricalEncoderPlugin(BasePlugin):
+    def __init__(self, max_categories: int = 10):
+        self._max_categories = max_categories
+        super().__init__()
+
     @property
     def name(self) -> str:
         return "CategoricalEncoderPlugin"
@@ -24,10 +28,10 @@ class CategoricalEncoderPlugin(BasePlugin):
         # Identifier columns: every value is unique (e.g. Name, Email)
         id_cols = [col for col in str_cols if df[col].drop_nulls().n_unique() >= df.height]
 
-        # Encodable categorical: low cardinality (2-9 unique), not an identifier
+        # Encodable categorical: low cardinality (2-max_categories unique), not an identifier
         valid_cats = [
             col for col in str_cols
-            if col not in id_cols and 1 < df[col].n_unique() < 10
+            if col not in id_cols and 1 < df[col].n_unique() < self._max_categories
         ]
         cardinality = {col: df[col].n_unique() for col in valid_cats}
 
@@ -88,8 +92,8 @@ class CategoricalEncoderPlugin(BasePlugin):
 
     def explain(self) -> str:
         return (
-            "CategoricalEncoderPlugin detects text/string columns. "
-            "High-cardinality identifier columns (every value unique) are dropped. "
-            "Low-cardinality columns (< 10 unique values) are One-Hot Encoded with drop_first=True."
+            f"CategoricalEncoderPlugin detects text/string columns. "
+            f"High-cardinality identifier columns (every value unique) are dropped. "
+            f"Low-cardinality columns (< {self._max_categories} unique values) are One-Hot Encoded with drop_first=True."
         )
 

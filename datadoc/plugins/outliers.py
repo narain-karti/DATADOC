@@ -2,6 +2,10 @@ import polars as pl
 from datadoc.plugins.base import BasePlugin
 
 class OutlierPlugin(BasePlugin):
+    def __init__(self, outlier_multiplier: float = 1.5):
+        self._outlier_multiplier = outlier_multiplier
+        super().__init__()
+
     @property
     def name(self) -> str:
         return "OutlierPlugin"
@@ -33,8 +37,8 @@ class OutlierPlugin(BasePlugin):
             if Q1 is None or Q3 is None:
                 continue
             IQR = Q3 - Q1
-            lower = Q1 - 1.5 * IQR
-            upper = Q3 + 1.5 * IQR
+            lower = Q1 - self._outlier_multiplier * IQR
+            upper = Q3 + self._outlier_multiplier * IQR
 
             count = df.select(((pl.col(col) < lower) | (pl.col(col) > upper)).sum())[col][0]
             if count and count > 0:
@@ -74,8 +78,8 @@ for col in outlier_cols:
     Q3 = df[col].quantile(0.75)
     if Q1 is not None and Q3 is not None:
         IQR = Q3 - Q1
-        lower = Q1 - 1.5 * IQR
-        upper = Q3 + 1.5 * IQR
+        lower = Q1 - {self._outlier_multiplier} * IQR
+        upper = Q3 + {self._outlier_multiplier} * IQR
         df = df.with_columns(pl.col(col).clip(lower, upper))"""
 
     def apply(self, df: pl.DataFrame) -> pl.DataFrame:
@@ -89,7 +93,7 @@ for col in outlier_cols:
 
     def explain(self) -> str:
         return (
-            "OutlierPlugin detects statistical outliers using the IQR (Interquartile Range) "
-            "method and caps extreme values at IQR boundaries (Q1 - 1.5*IQR, Q3 + 1.5*IQR)."
+            f"OutlierPlugin detects statistical outliers using the IQR (Interquartile Range) "
+            f"method and caps extreme values at IQR boundaries (Q1 - {self._outlier_multiplier}*IQR, Q3 + {self._outlier_multiplier}*IQR)."
         )
 
