@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Low-level deep dive into the DATADOC architecture and codebase.">
+<title>DATADOC Docs | Architecture Deep Dive</title>
+<link rel="stylesheet" href="css/docs.css">
+<!-- Mermaid.js for Diagrams -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+</script>
+<style>
+    .mermaid {
+        margin: 2rem 0;
+        padding: 1rem;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        overflow-x: auto;
+    }
+    .math-formula {
+        background: #1e1e1e;
+        padding: 1rem;
+        border-radius: 6px;
+        font-family: var(--font-mono);
+        color: #e2e8f0;
+        border-left: 4px solid var(--accent);
+        margin: 1rem 0;
+        font-size: 1.1rem;
+    }
+    .dependency-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+    }
+    .dep-card {
+        padding: 1.5rem;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+    }
+    .dep-card h3 { margin-top: 0; color: var(--accent); font-family: var(--font-mono); font-size: 1.1rem; }
+    .step-list { list-style: none; padding-left: 0; counter-reset: step-counter; }
+    .step-list li { margin-bottom: 1rem; padding-left: 2.5rem; position: relative; }
+    .step-list li::before {
+        content: counter(step-counter);
+        counter-increment: step-counter;
+        position: absolute; left: 0; top: 0;
+        width: 1.8rem; height: 1.8rem;
+        background: var(--accent); color: #fff;
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-weight: bold; font-size: 0.9rem;
+    }
+</style>
+</head>
+<body>
+<header class="site-header">
+    <a class="brand" href="index.html">
+        <span class="brand-mark">DD</span>
+        <span>DATADOC <span class="muted">/ docs</span></span>
+    </a>
+    <nav class="header-nav" aria-label="Primary navigation">
+        <a data-page-link href="index.html">Docs</a>
+        <a data-page-link href="pipeline.html">Pipeline</a>
+        <a data-page-link href="architecture.html">Architecture</a>
+        <a data-page-link href="api-docs.html">API</a>
+        <a data-page-link href="sdk.html">SDK</a>
+        <a data-page-link href="ui.html">UI</a>
+        <a href="https://github.com/narain-karti/DATADOC">GitHub ↗</a>
+    </nav>
+    <div class="header-tools">
+        <label class="search-box" aria-label="Search documentation">
+            <span>⌕</span>
+            <input data-search-input type="search" placeholder="Search docs">
+        </label>
+        <span class="version-badge">v0.4.0</span>
+        <button class="menu-button" type="button" data-menu-toggle aria-label="Open navigation" aria-expanded="false">☰</button>
+    </div>
+</header>
+<nav class="topic-bar" aria-label="Documentation topics">
+    <a href="index.html">Overview</a>
+    <a href="setup.html">Getting started</a>
+    <a href="pipeline.html">Pipeline</a>
+    <a class="active" href="architecture.html">Architecture</a>
+    <a href="cli.html">CLI</a>
+    <a href="sdk.html">Python SDK</a>
+    <a href="api-docs.html">API reference</a>
+    <a href="ui.html">Web UI</a>
+    <a href="production.html">Production</a>
+</nav>
+<div class="mobile-overlay"></div>
+<div class="docs-frame">
+<aside class="sidebar">
+    <div class="side-group">
+        <div class="side-label">Architecture</div>
+        <a class="side-link active" data-page-link href="architecture.html">Codebase deep dive</a>
+        <a class="side-link" data-section-link href="#plugins">Plugins Subsystem</a>
+        <a class="side-link" data-section-link href="#cli-commands">CLI Background Logic</a>
+        <a class="side-link" data-section-link href="#core-pipeline">Core: pipeline.py</a>
+        <a class="side-link" data-section-link href="#core-agent">Core: agent.py</a>
+        <a class="side-link" data-section-link href="#core-engine">Core: engine.py</a>
+        <a class="side-link" data-section-link href="#dependencies">Dependencies</a>
+    </div>
+</aside>
+<main class="main-content">
+    <div class="eyebrow">LOW-LEVEL DEEP DIVE</div>
+    <h1>Architecture & Codebase</h1>
+    <p class="lead">This is a comprehensive, file-by-file deep dive into the DATADOC repository. It explains the exact logic powering the backend, the mathematical formulas used by plugins, and how terminal commands execute in the background.</p>
+
+    <hr>
+    
+    <section id="plugins">
+        <h2>1. Plugins Subsystem: The Math & Logic</h2>
+        <p>The <code>datadoc/plugins/</code> directory contains isolated, stateless modules that perform specific mathematical and logical transformations using Polars expressions. They inherit from <code>BasePlugin</code>.</p>
+
+        <h3><code>outliers.py</code> (IQR Outlier Clipping)</h3>
+        <p>This plugin detects and clips extreme values to prevent them from skewing machine learning models (like Linear Regression) that are sensitive to extreme variances.</p>
+        <div class="mermaid">
+graph LR
+    A["Column Data"] --> B["Calculate Q1 25th %"]
+    A --> C["Calculate Q3 75th %"]
+    B --> D["Calculate IQR = Q3 - Q1"]
+    C --> D
+    D --> E["Lower Bound = Q1 - 1.5 * IQR"]
+    D --> F["Upper Bound = Q3 + 1.5 * IQR"]
+    E --> G["Polars clip_min, clip_max"]
+    F --> G
+        </div>
+        <div class="math-formula">
+            IQR = Q3 - Q1<br>
+            Lower Bound = Q1 - (Multiplier * IQR)<br>
+            Upper Bound = Q3 + (Multiplier * IQR)
+        </div>
+        <p><strong>Logic:</strong> If a numeric column has a high standard deviation relative to its mean, the plugin uses the <code>polars.Series.quantile()</code> function to find Q1 and Q3. It applies a <code>with_columns(pl.col(c).clip(lower, upper))</code> operation.</p>
+
+        <h3><code>scaling.py</code> (Standardization)</h3>
+        <p>Machine learning models that use distance metrics (KNN, SVM) or gradient descent (Neural Networks) require features to be on the same numerical scale. This plugin applies Z-score normalization.</p>
+        <div class="mermaid">
+graph LR
+    A["Numeric Column"] --> B["Calculate Mean μ"]
+    A --> C["Calculate Std Dev σ"]
+    B --> D["Value - μ"]
+    C --> E["Divide by σ"]
+    D --> E
+    E --> F["Zero-Mean, Unit-Variance Column"]
+        </div>
+        <div class="math-formula">
+            Z = (X - μ) / σ
+        </div>
+        <p><strong>Logic:</strong> The plugin checks the ratio of max standard deviation to min standard deviation across columns. If the ratio > 10x, it applies scaling. The Polars execution is <code>(pl.col(c) - pl.col(c).mean()) / pl.col(c).std()</code>.</p>
+
+        <h3><code>missing_values.py</code> (Imputation)</h3>
+        <p>Models crash when they encounter <code>null</code> or <code>NaN</code>. This plugin safely fills holes.</p>
+        <div class="mermaid">
+graph TD
+    A["Null Value Detected"] --> B{"Is Numeric?"}
+    B -->|Yes| C["Calculate Median"]
+    C --> D["fill_null(median)"]
+    B -->|No| E["Calculate Mode"]
+    E --> F["fill_null(mode)"]
+        </div>
+        <p><strong>Logic:</strong> Median is used for numerics instead of Mean because Mean is highly sensitive to outliers. Mode (most frequent value) is used for strings/categoricals. Polars code: <code>pl.col(c).fill_null(pl.col(c).median())</code>.</p>
+
+        <h3><code>encoders.py</code> (Categorical One-Hot)</h3>
+        <p>Algorithms only understand numbers, not text like "Red" or "Blue".</p>
+        <div class="mermaid">
+graph LR
+    A["Color Column"] --> B{"Cardinality > Threshold?"}
+    B -->|Yes| C["Drop Column ID"]
+    B -->|No| D["Extract Unique: Red, Blue, Green"]
+    D --> E["Create Color_Red = 1/0"]
+    D --> F["Create Color_Blue = 1/0"]
+        </div>
+        <p><strong>Logic:</strong> If a column has too many unique values (e.g., UUIDs), it's dropped to avoid the "curse of dimensionality". Otherwise, it iterates through unique strings and does <code>(pl.col(c) == val).cast(pl.Int8).alias(f"{c}_{val}")</code>.</p>
+
+        <h3><code>datetime_feat.py</code> (Time Series Extraction)</h3>
+        <p><strong>Logic:</strong> Takes a string column like "2024-05-12 14:00" and uses <code>str.to_datetime()</code>. It then extracts individual features: <code>dt.year()</code>, <code>dt.month()</code>, <code>dt.day()</code>, <code>dt.weekday()</code>, and <code>dt.hour()</code>. The original string column is then safely dropped.</p>
+    </section>
+
+    <hr>
+
+    <section id="cli-commands">
+        <h2>2. CLI Commands: Background Execution Trace</h2>
+        <p>When you type commands into the terminal, <code>cli/app.py</code> acts as the orchestrator. Here is exactly what happens step-by-step in the background.</p>
+
+        <h3><code>datadoc profile <file></code></h3>
+        <ul class="step-list">
+            <li><strong>Load:</strong> The CSV/Parquet file is loaded lazily into a Polars DataFrame.</li>
+            <li><strong>Pipeline Init:</strong> A <code>DataDocPipeline</code> is instantiated with default <code>PipelineConfig</code>.</li>
+            <li><strong>Analyze:</strong> <code>pipeline.profile()</code> is called. This triggers a massive parallel Polars scan measuring null percentages, uniqueness (cardinality), and regex matching to guess column types (Target vs Identifier vs Numeric).</li>
+            <li><strong>Render:</strong> The resulting <code>DatasetProfile</code> dataclass is passed to the <code>Rich</code> library, which draws the beautiful terminal table you see on screen.</li>
+        </ul>
+
+        <h3><code>datadoc plan <file></code></h3>
+        <ul class="step-list">
+            <li><strong>Profile:</strong> Runs the profile step (above) internally to understand the data.</li>
+            <li><strong>Formulate:</strong> <code>pipeline.plan()</code> is called. It looks at the profile. If it sees numeric nulls, it appends a "missing_values" step to the <code>TransformPlan</code>. If it sees a categorical column with 5 unique values, it appends an "encoder" step.</li>
+            <li><strong>Serialize:</strong> The plan is printed to the screen as a sequence of deterministic steps.</li>
+        </ul>
+
+        <h3><code>datadoc engineer <file></code> (Agentic AI)</h3>
+        <ul class="step-list">
+            <li><strong>Context Gathering:</strong> Loads the dataset and converts the schema and first 5 rows into a Markdown string to serve as context.</li>
+            <li><strong>LLM Invocation:</strong> Passes the context to <code>litellm</code> (using Gemini/Claude/GPT). The system prompt restricts it to ONLY write Python code orchestrating the DATADOC plugins (e.g., <code>df = MissingValuePlugin().apply(df)</code>).</li>
+            <li><strong>Sandbox Execution:</strong> The CLI extracts the Python code block using regex, compiles it, and executes it in memory against the dataframe.</li>
+            <li><strong>Self-Healing:</strong> If Polars throws an error (e.g., "Column not found"), the CLI catches the stacktrace and automatically sends it back to the LLM to write a fix.</li>
+        </ul>
+
+        <h3><code>datadoc evaluate <file></code></h3>
+        <ul class="step-list">
+            <li><strong>Split:</strong> Reads the raw data and splits it strictly into 80% Train and 20% Test.</li>
+            <li><strong>Baseline Model:</strong> Trains a naive <code>sklearn.ensemble.RandomForestClassifier</code> on the raw training data (filling nulls with 0 just to make it run) and scores it on the test set.</li>
+            <li><strong>Fit Pipeline:</strong> Calls <code>pipeline.fit(train_df)</code>. This learns medians, vocabularies, and IQR boundaries ONLY from the 80% train set.</li>
+            <li><strong>Transform:</strong> Calls <code>pipeline.transform(train_df)</code> and <code>pipeline.transform(test_df)</code> using the frozen state to prevent data leakage.</li>
+            <li><strong>Candidate Model:</strong> Trains a second Random Forest on the beautifully cleaned train data, scores it against the cleaned test data.</li>
+            <li><strong>Render:</strong> Uses <code>plotext</code> to draw terminal bar charts comparing Baseline R² vs Cleaned R².</li>
+        </ul>
+    </section>
+
+    <hr>
+
+    <section id="core-pipeline">
+        <h2>3. Core Logic: <code>core/pipeline.py</code></h2>
+        <p>This is the heart of DATADOC. It defines the <code>DataDocPipeline</code> class and the state models (<code>DatasetProfile</code>, <code>TransformPlan</code>). The pipeline enforces a strict 4-phase lifecycle.</p>
+        
+        <div class="mermaid">
+flowchart TD
+    Raw[("Raw DataFrame")] --> Profile
+    
+    subgraph "pipeline.py Logic"
+        Profile["1. profile<br/>Reads schema, detects column roles, calculates nulls"]
+        Plan["2. plan<br/>Formulates strategy based on config thresholds"]
+        Fit["3. fit<br/>Executes plugins to learn state medians, bounds"]
+        Transform["4. transform<br/>Applies learned state to data via Polars expressions"]
+    end
+    
+    Profile --> |"Returns DatasetProfile"| Plan
+    Plan --> |"Returns TransformPlan"| Fit
+    Fit --> Transform
+    Transform --> Clean[("ML-Ready DataFrame")]
+    Fit -.-> |"Save/Load"| JSON[("pipeline.json state")]
+        </div>
+        <p>The code is strictly designed to avoid <strong>Data Leakage</strong>. For example, if you fit a pipeline to training data, the medians calculated during <code>fit()</code> are hardcoded. When <code>transform()</code> is called on validation data, it injects those previously calculated medians rather than recalculating them on the validation data.</p>
+    </section>
+
+    <section id="core-agent">
+        <h2>4. Core Logic: <code>core/agent.py</code></h2>
+        <p>This file defines <code>AgenticEngineer</code>, the LLM orchestration layer that acts as a pair-programmer for data preparation.</p>
+
+        <div class="mermaid">
+sequenceDiagram
+    participant User
+    participant AgenticEngineer (Python)
+    participant LiteLLM (API)
+    participant Sandbox (exec)
+
+    User->>AgenticEngineer: "I want to predict Churn"
+    AgenticEngineer->>LiteLLM: System Prompt + Dataset Metadata + "I want to predict Churn"
+    LiteLLM-->>AgenticEngineer: Generates plan & Python code
+    AgenticEngineer->>Sandbox: Extracts code block and runs clean_data(df)
+    
+    alt Code Fails
+        Sandbox-->>AgenticEngineer: Stacktrace (e.g., ColumnNotFound)
+        AgenticEngineer->>LiteLLM: "Code failed: [Stacktrace]. Fix it."
+        LiteLLM-->>AgenticEngineer: Corrected code block
+        AgenticEngineer->>Sandbox: Re-run code
+    end
+    
+    Sandbox-->>User: Returns cleaned Polars DataFrame
+        </div>
+        <p>The Agent is completely restricted from hallucinating fake rows or importing external libraries. It is only allowed to output `import polars` and the DATADOC plugins.</p>
+    </section>
+
+    <section id="core-engine">
+        <h2>5. Core Logic: <code>core/engine.py</code></h2>
+        <p>This file defines the <code>DATADOC</code> object, which serves as a legacy facade. Earlier versions of the library used this object directly to chain commands like <code>doc.analyze()</code> and <code>doc.recommend()</code>. </p>
+        <p>While still present in the codebase to support legacy scripts, all new development utilizes the <code>DataDocPipeline</code> directly. During the major architecture refactor, dead methods like <code>export_agent_pipeline</code> were entirely pruned from <code>engine.py</code> to reduce bloat.</p>
+    </section>
+
+    <section id="dependencies">
+        <h2>6. Dependencies Explained</h2>
+        <p>Every dependency in <code>pyproject.toml</code> has a distinct, justified purpose.</p>
+        
+        <div class="dependency-grid">
+            <div class="dep-card">
+                <h3>Polars</h3>
+                <p><strong>Why:</strong> Written in Rust, uses the Apache Arrow memory format, and features a lazy evaluation engine. 10-50x faster than Pandas.</p>
+            </div>
+            <div class="dep-card">
+                <h3>Typer & Rich</h3>
+                <p><strong>Why:</strong> Typer builds CLI tools using Python type hints, while Rich provides beautiful terminal formatting (tables, progress bars, colored text).</p>
+            </div>
+            <div class="dep-card">
+                <h3>LiteLLM</h3>
+                <p><strong>Why:</strong> An abstraction layer over LLM APIs. Unifies OpenAI, Anthropic, and Gemini into one interface.</p>
+            </div>
+            <div class="dep-card">
+                <h3>FastAPI & Uvicorn</h3>
+                <p><strong>Why:</strong> FastAPI provides a blazing fast ASGI web framework to serve API endpoints for the web dashboard.</p>
+            </div>
+            <div class="dep-card">
+                <h3>Plotext</h3>
+                <p><strong>Why:</strong> Renders graphs (like Feature Importance bar charts) directly inside the user's terminal without external GUI windows.</p>
+            </div>
+        </div>
+    </section>
+
+</main>
+<aside class="right-rail">
+    <div class="right-label">On this page</div>
+    <a class="right-link" data-section-link href="#plugins">Plugins Subsystem</a>
+    <a class="right-link" data-section-link href="#cli-commands">CLI Background Execution</a>
+    <a class="right-link" data-section-link href="#core-pipeline">Core: Pipeline</a>
+    <a class="right-link" data-section-link href="#core-agent">Core: Agent</a>
+    <a class="right-link" data-section-link href="#core-engine">Core: Engine</a>
+    <a class="right-link" data-section-link href="#dependencies">Dependencies</a>
+</aside>
+</div>
+<footer class="footer">DATADOC v0.4.0 · <a href="index.html">Documentation home</a> · <a href="https://github.com/narain-karti/DATADOC">GitHub</a></footer>
+<script src="js/docs.js"></script>
+</body>
+</html>
