@@ -68,20 +68,7 @@ class OutlierPlugin(BasePlugin):
             )
         return recs
 
-    def generate_code(self, analysis_result: dict) -> str:
-        if not analysis_result.get("has_outliers"):
-            return ""
-        cols_str = str(analysis_result.get("outlier_columns", []))
-        return f"""# Outlier Capping (IQR method)
-outlier_cols = {cols_str}
-for col in outlier_cols:
-    Q1 = df[col].quantile(0.25)
-    Q3 = df[col].quantile(0.75)
-    if Q1 is not None and Q3 is not None:
-        IQR = Q3 - Q1
-        lower = Q1 - {self._outlier_multiplier} * IQR
-        upper = Q3 + {self._outlier_multiplier} * IQR
-        df = df.with_columns(pl.col(col).clip(lower, upper))"""
+
 
     def apply(self, df: pl.DataFrame) -> pl.DataFrame:
         df_clean = df.clone()

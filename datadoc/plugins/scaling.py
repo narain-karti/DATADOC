@@ -84,15 +84,8 @@ class ScalingPlugin(BasePlugin):
             )
         return recs
 
-    def generate_code(self, analysis_result: dict) -> str:
-        if not analysis_result.get("has_scale_issues"):
-            return ""
-        cols_str = str(analysis_result.get("columns_to_scale", []))
-        return f"""# Standard Scaling (continuous features only)
-scale_cols = {cols_str}
-exprs = [((pl.col(c) - pl.col(c).mean()) / pl.col(c).std()).alias(c) for c in scale_cols]
-if exprs:
-    df = df.with_columns(exprs)"""
+
+
 
     def apply(self, df: pl.DataFrame) -> pl.DataFrame:
         df_clean = df.clone()

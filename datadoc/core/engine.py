@@ -303,12 +303,6 @@ class DATADOC:
                 self._skipped_plugins.append(plugin.name)
         return self.df
 
-    def agentic_engineer(
-        self, model: str, goal: str, api_key: str | None = None, interactive: bool = True
-    ) -> pl.DataFrame:
-        """Safe compatibility alias; arbitrary LLM-generated code is never executed."""
-        del interactive
-        return self.ai_engineer(model, goal, api_key)
 
     def pipeline(self) -> str:
         if self.fitted_pipeline is None:
@@ -330,7 +324,3 @@ def load_and_clean_data(file_path: str) -> pl.DataFrame:
     return pipeline.transform(read_dataset(file_path))
 """
 
-    def export_agent_pipeline(self, filename: str) -> None:
-        raise DataDocError(
-            "LLM-generated executable pipelines were removed for safety. Export a fitted pipeline instead."
-        )

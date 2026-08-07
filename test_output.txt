@@ -1,7 +1,0 @@
-﻿.venv\Scripts\python.exe : C:\Users\pnara\OneDrive\Desktop\DATADOC\.venv\Scripts\python.exe: No module named pytest
-At line:1 char:1
-+ .venv\Scripts\python.exe -m pytest tests/ -v 2>&1 | Out-File -Encodin ...
-+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : NotSpecified: (C:\Users\pnara\...le named pytest:String) [], RemoteException
-    + FullyQualifiedErrorId : NativeCommandError
- 

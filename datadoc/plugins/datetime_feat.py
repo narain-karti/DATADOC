@@ -68,33 +68,8 @@ class DatetimePlugin(BasePlugin):
             )
         return recs
 
-    def generate_code(self, analysis_result: dict) -> str:
-        if not analysis_result.get("has_datetime"):
-            return ""
-        cols_str = str(analysis_result.get("datetime_columns", []))
-        return f"""# Datetime Feature Extraction
-datetime_cols = {cols_str}
-for col in datetime_cols:
-    if df[col].dtype == pl.String:
-        df = df.with_columns(pl.col(col).str.to_datetime(strict=False).alias(col))
-    
-    new_cols = [
-        pl.col(col).dt.year().alias(col + '_year'),
-        pl.col(col).dt.month().alias(col + '_month'),
-        pl.col(col).dt.day().alias(col + '_day'),
-        pl.col(col).dt.weekday().alias(col + '_dayofweek'),
-    ]
-    # Add hour if time component exists
-    hours = df[col].dt.hour()
-    if not ((hours == 0).all()):
-        new_cols.append(pl.col(col).dt.hour().alias(col + '_hour'))
-    
-    df = df.with_columns(new_cols).drop(col)
-    
-    # Drop any constant features (e.g. year when all dates are same year)
-    for c in [c for c in df.columns if c.startswith(col + '_')]:
-        if df[c].drop_nulls().n_unique() <= 1:
-            df = df.drop(c)"""
+
+
 
     def apply(self, df: pl.DataFrame) -> pl.DataFrame:
         df_clean = df.clone()

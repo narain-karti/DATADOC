@@ -26,11 +26,6 @@ class BasePlugin(ABC):
         """List of plugin names this plugin depends on."""
         return []
 
-    @property
-    def supported_datatypes(self) -> list[str]:
-        """List of datatypes this plugin can handle."""
-        return []
-
     @abstractmethod
     def analyze(self, df: pl.DataFrame) -> dict:
         """Analyze the dataframe and return metadata/flags if the plugin should run."""
@@ -42,11 +37,6 @@ class BasePlugin(ABC):
         pass
 
     @abstractmethod
-    def generate_code(self, analysis_result: dict) -> str:
-        """Return the Python code string to replicate this plugin's transformation."""
-        pass
-
-    @abstractmethod
     def apply(self, df: pl.DataFrame) -> pl.DataFrame:
         """Apply the engineering transformation and return the new dataframe."""
         pass
@@ -55,14 +45,3 @@ class BasePlugin(ABC):
         """Return a human-readable explanation of what this plugin does."""
         return f"{self.name} (v{self.version}): {self.description}"
 
-    def validate(self, df: pl.DataFrame) -> bool:
-        """Validate that the plugin's transformation was applied correctly."""
-        return True
-
-    def rollback(self, df: pl.DataFrame) -> pl.DataFrame:
-        """Rollback the transformation (default: return df unchanged)."""
-        return df
-
-    def estimate_runtime(self, df: pl.DataFrame) -> float:
-        """Estimate runtime in seconds based on dataframe size."""
-        return df.height * df.width * 1e-6

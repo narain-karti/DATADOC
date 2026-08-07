@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+import polars as pl
 import pytest
 
 pytest.importorskip("fastapi")
@@ -11,8 +12,14 @@ from fastapi.testclient import TestClient
 from datadoc.cli.ui_server import app, init_server
 
 
+@pytest.fixture(autouse=True)
+def _init_test_server(tmp_path):
+    csv_path = tmp_path / "test.csv"
+    pl.DataFrame({"a": [1.0, 2.0, 3.0], "b": ["x", "y", "x"]}).write_csv(csv_path)
+    init_server(str(csv_path))
+
+
 def test_pipeline_api_round_trip() -> None:
-    init_server(str(Path(__file__).parents[1] / "test.csv"))
     client = TestClient(app)
     headers = {"X-DATADOC-SESSION": "local"}
     request = {"target": None, "task": "auto", "scaling": "none"}

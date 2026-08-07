@@ -52,17 +52,7 @@ class DatasetProfile:
     schema_fingerprint: str
 
     def to_dict(self) -> dict[str, Any]:
-        return {
-            "rows": self.rows,
-            "columns": self.columns,
-            "schema": self.schema,
-            "null_counts": self.null_counts,
-            "cardinality": self.cardinality,
-            "roles": [asdict(role) for role in self.roles],
-            "findings": self.findings,
-            "duplicate_rows": self.duplicate_rows,
-            "schema_fingerprint": self.schema_fingerprint,
-        }
+        return asdict(self)
 
 
 @dataclass
@@ -149,8 +139,7 @@ def _schema_fingerprint(df: pl.DataFrame) -> str:
     return hashlib.sha256(json.dumps(schema).encode("utf-8")).hexdigest()[:16]
 
 
-def _is_string(dtype: pl.DataType) -> bool:
-    return dtype == pl.String
+
 
 
 def _normalize_numeric_missing(df: pl.DataFrame) -> pl.DataFrame:
@@ -164,7 +153,7 @@ def _normalize_numeric_missing(df: pl.DataFrame) -> pl.DataFrame:
 
 
 def _datetime_ratio(series: pl.Series) -> float:
-    if not _is_string(series.dtype) or series.len() == 0:
+    if series.dtype != pl.String or series.len() == 0:
         return 0.0
     try:
         parsed = series.cast(pl.String).str.to_datetime(strict=False)
@@ -252,7 +241,7 @@ def profile_dataset(df: pl.DataFrame, config: PipelineConfig | None = None) -> D
                 ColumnRole(name, "feature_datetime", 1.0, "Native Polars date/time column.")
             )
             continue
-        if _is_string(series.dtype):
+        if series.dtype == pl.String:
             parse_ratio = _datetime_ratio(series)
             if parse_ratio >= config.datetime_parse_threshold and DATETIME_NAME_PATTERN.search(
                 name

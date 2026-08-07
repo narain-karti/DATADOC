@@ -40,16 +40,7 @@ class MissingValuePlugin(BasePlugin):
             )
         return recs
 
-    def generate_code(self, analysis_result: dict) -> str:
-        if not analysis_result.get("has_missing_values"):
-            return ""
-        return """# Missing Value Imputation
-for col in df.columns:
-    if df[col].null_count() > 0:
-        if df[col].dtype.is_numeric():
-            df = df.with_columns(pl.col(col).fill_null(pl.col(col).median()))
-        else:
-            df = df.with_columns(pl.col(col).fill_null(pl.col(col).drop_nulls().mode().first()))"""
+
 
     def apply(self, df: pl.DataFrame) -> pl.DataFrame:
         df_clean = df.clone()

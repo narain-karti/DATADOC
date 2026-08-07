@@ -28,8 +28,17 @@ pipeline_*.py
 report_*.md
 .release-verify/
 
+# Scratch / debug (dev-only, never ship)
+scratch_*
+diagnose*
+changes.diff
+*_test.csv
+*_output*.txt
+heavy_test.csv
+
 # Testing
 .pytest_cache/
+.playwright-cli/
 htmlcov/
 .coverage
 

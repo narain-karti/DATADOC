@@ -162,10 +162,7 @@ class TestMissingValuePlugin:
         assert len(recs) == 1
         assert "3 missing values" in recs[0]
 
-    def test_validate(self):
-        plugin = MissingValuePlugin()
-        clean_df = pl.DataFrame({"a": [1, 2, 3]})
-        assert plugin.validate(clean_df) is True
+
 
     def test_explain(self):
         plugin = MissingValuePlugin()
@@ -342,8 +339,6 @@ class TestBasePluginInterface:
     def test_has_priority(self, plugin):
         assert isinstance(plugin.priority, int)
 
-    def test_has_supported_datatypes(self, plugin):
-        assert isinstance(plugin.supported_datatypes, list)
 
     def test_has_dependencies(self, plugin):
         assert isinstance(plugin.dependencies, list)
@@ -353,20 +348,6 @@ class TestBasePluginInterface:
         assert isinstance(explanation, str)
         assert len(explanation) > 0
 
-    def test_has_rollback(self, plugin):
-        df = pl.DataFrame({"a": [1, 2, 3]})
-        rolled_back = plugin.rollback(df)
-        assert rolled_back.equals(df)
-
-    def test_has_estimate_runtime(self, plugin):
-        df = pl.DataFrame({"a": range(1000)})
-        estimate = plugin.estimate_runtime(df)
-        assert isinstance(estimate, float)
-
-    def test_has_validate(self, plugin):
-        df = pl.DataFrame({"a": [1, 2, 3]})
-        result = plugin.validate(df)
-        assert isinstance(result, bool)
 
 
 def test_ai_engineer_mock(sample_csv, monkeypatch):

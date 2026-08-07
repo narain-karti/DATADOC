@@ -746,7 +746,7 @@ def agent(
     doc = load_dataset(file_path)
     api_key = _get_api_key(model)
 
-    clean_df = doc.agentic_engineer(model=model, goal="", api_key=api_key, interactive=True)
+    clean_df = doc.ai_engineer(model=model, goal="", api_key=api_key)
 
     clean_path = f"clean_{os.path.basename(file_path)}"
     write_dataset(clean_df, clean_path)

@@ -60,21 +60,8 @@ class CategoricalEncoderPlugin(BasePlugin):
             )
         return recs
 
-    def generate_code(self, analysis_result: dict) -> str:
-        lines = []
-        id_cols = analysis_result.get("identifier_columns", [])
-        if id_cols:
-            lines.append("# Drop identifier columns")
-            lines.append(f"df = df.drop({id_cols})")
 
-        cat_cols = analysis_result.get("categorical_columns", [])
-        if cat_cols:
-            cols_str = str(cat_cols)
-            lines.append("# Categorical Encoding (One-Hot)")
-            lines.append(f"cat_cols = {cols_str}")
-            lines.append("df = df.to_dummies(columns=cat_cols, drop_first=True)")
 
-        return "\n".join(lines)
 
     def apply(self, df: pl.DataFrame) -> pl.DataFrame:
         df_clean = df.clone()
