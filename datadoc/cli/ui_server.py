@@ -1,17 +1,23 @@
 import os
 import json
 from pathlib import Path
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import Optional
 
-from datadoc.core.engine import DATADOC
-from datadoc.core.pipeline import DataDocError, DataDocPipeline, PipelineConfig
-from datadoc.core.agent import AgenticEngineer
+import polars as pl
+
+from datadoc.core.pipeline import (
+    DataDocError,
+    DataDocPipeline,
+    PipelineConfig,
+    profile_dataset,
+    read_dataset,
+)
 
 app = FastAPI(title="DATADOC UI Server")
 
@@ -29,18 +35,14 @@ app.add_middleware(
 
 @dataclass
 class SessionState:
-    doc: DATADOC
-    agent: Optional[AgenticEngineer]
+    df: pl.DataFrame
+    file_path: str
     pipeline: Optional[DataDocPipeline] = None
     profile: Optional[dict] = None
     plan: Optional[dict] = None
 
 
 _sessions: dict[str, SessionState] = {}
-
-
-class PluginRequest(BaseModel):
-    plugins: List[str]
 
 
 class ChatRequest(BaseModel):
@@ -57,15 +59,8 @@ class PipelineRequest(BaseModel):
 
 def init_server(file_path: str):
     """Initializes the local dashboard session before server startup."""
-    from datadoc.cli.app import load_dataset
-
-    doc = load_dataset(file_path)
-    model = os.getenv("DATADOC_MODEL", "groq/llama-3.3-70b-versatile")
-    api_key = os.getenv("GROQ_API_KEY", "")
-    _sessions["local"] = SessionState(
-        doc=doc,
-        agent=AgenticEngineer(metadata=doc._extract_metadata(), api_key=api_key, model=model),
-    )
+    df = read_dataset(file_path)
+    _sessions["local"] = SessionState(df=df, file_path=file_path)
 
 
 def _state(session_id: str) -> SessionState:
@@ -95,20 +90,15 @@ def _pipeline_config(req: PipelineRequest) -> PipelineConfig:
 
 @app.get("/api/dataset/metadata")
 def get_metadata(session_id: str = Header("local", alias="X-DATADOC-SESSION")):
-    doc = _state(session_id).doc
+    state = _state(session_id)
+    df = state.df
+    profile = profile_dataset(df, PipelineConfig())
     return {
-        "file": doc.file_path,
-        "rows": doc.df.height,
-        "columns": doc.df.width,
-        "metadata": doc._extract_metadata(),
+        "file": state.file_path,
+        "rows": df.height,
+        "columns": df.width,
+        "metadata": profile.to_dict(),
     }
-
-
-@app.get("/api/dataset/recommend")
-def recommend_pipeline(session_id: str = Header("local", alias="X-DATADOC-SESSION")):
-    doc = _state(session_id).doc
-    doc.revert()
-    return {"plugins": doc.list_plugins()}
 
 
 @app.get("/api/pipeline/profile")
@@ -119,7 +109,7 @@ def pipeline_profile(
     state = _state(session_id)
     try:
         state.profile = (
-            DataDocPipeline(PipelineConfig(target=target)).profile(state.doc._original_df).to_dict()
+            DataDocPipeline(PipelineConfig(target=target)).profile(state.df).to_dict()
         )
         return state.profile
     except DataDocError as error:
@@ -133,7 +123,7 @@ def pipeline_plan(
 ):
     state = _state(session_id)
     try:
-        state.plan = DataDocPipeline(_pipeline_config(req)).plan(state.doc._original_df).to_dict()
+        state.plan = DataDocPipeline(_pipeline_config(req)).plan(state.df).to_dict()
         return state.plan
     except DataDocError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
@@ -146,10 +136,10 @@ def pipeline_fit(
 ):
     state = _state(session_id)
     try:
-        state.pipeline = DataDocPipeline(_pipeline_config(req)).fit(state.doc._original_df)
+        state.pipeline = DataDocPipeline(_pipeline_config(req)).fit(state.df)
         state.profile = state.pipeline.profile_.to_dict() if state.pipeline.profile_ else None
         state.plan = state.pipeline.plan_.to_dict() if state.pipeline.plan_ else None
-        transformed = state.pipeline.transform(state.doc._original_df)
+        transformed = state.pipeline.transform(state.df)
         return {
             "profile": state.profile,
             "plan": state.plan,
@@ -169,7 +159,7 @@ def pipeline_preview(session_id: str = Header("local", alias="X-DATADOC-SESSION"
     if not state.pipeline:
         raise HTTPException(status_code=400, detail="Fit a pipeline before requesting a preview.")
     try:
-        transformed = state.pipeline.transform(state.doc._original_df)
+        transformed = state.pipeline.transform(state.df)
         return {"schema": state.pipeline.output_schema_, "rows": transformed.head(8).to_dicts()}
     except DataDocError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
@@ -199,8 +189,6 @@ def transform_file(input_path: str, output_path: str) -> None:
     else:
         transformed.write_csv(output_path)
 """
-    from fastapi.responses import Response
-
     return Response(
         content=code,
         media_type="text/plain",
@@ -210,78 +198,14 @@ def transform_file(input_path: str, output_path: str) -> None:
 
 @app.get("/api/dataset/export/csv")
 def export_csv(session_id: str = Header("local", alias="X-DATADOC-SESSION")):
-    doc = _state(session_id).doc
-
-    from fastapi.responses import Response
-
     state = _state(session_id)
-    output = state.pipeline.transform(doc._original_df) if state.pipeline else doc.df
+    output = state.pipeline.transform(state.df) if state.pipeline else state.df
     csv_bytes = output.write_csv()
     return Response(
         content=csv_bytes,
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=cleaned_data.csv"},
     )
-
-
-@app.get("/api/dataset/export/code")
-def export_code(session_id: str = Header("local", alias="X-DATADOC-SESSION")):
-    doc = _state(session_id).doc
-
-    from fastapi.responses import Response
-
-    code = doc.pipeline()
-    return Response(
-        content=code,
-        media_type="text/plain",
-        headers={"Content-Disposition": "attachment; filename=pipeline.py"},
-    )
-
-
-@app.post("/api/dataset/plugins")
-def apply_plugins(req: PluginRequest, session_id: str = Header("local", alias="X-DATADOC-SESSION")):
-    state = _state(session_id)
-    doc = state.doc
-    available = {plugin.name: plugin for plugin in doc.plugins}
-    if len(req.plugins) != len(set(req.plugins)) or any(
-        name not in available for name in req.plugins
-    ):
-        raise HTTPException(
-            status_code=422, detail="Plugin list contains unknown or duplicate plugins."
-        )
-    positions = {name: index for index, name in enumerate(req.plugins)}
-    for name in req.plugins:
-        for dependency in available[name].dependencies:
-            if dependency in positions and positions[dependency] > positions[name]:
-                raise HTTPException(status_code=422, detail=f"{name} must run after {dependency}.")
-    doc.revert()
-
-    results = []
-    for plugin_name in req.plugins:
-        try:
-            res = doc.apply_plugin_by_name(plugin_name)
-            results.append({"plugin": plugin_name, "status": "success", "detail": res})
-        except Exception as e:
-            results.append({"plugin": plugin_name, "status": "error", "detail": str(e)})
-            break  # Stop applying subsequent plugins if one fails
-
-    # Send back missing values breakdown, distributions, etc.
-    clean_df = doc.df
-    diff = doc.compare(clean_df)
-
-    return {"results": results, "shape": (clean_df.height, clean_df.width), "diff": diff}
-
-
-@app.post("/api/agent/chat")
-def agent_chat(req: ChatRequest, session_id: str = Header("local", alias="X-DATADOC-SESSION")):
-    agent = _state(session_id).agent
-    if not agent:
-        raise HTTPException(status_code=400, detail="Agent not initialized.")
-    try:
-        reply = agent.chat_step(req.message)
-        return {"response": reply}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 # Mount React App (if exists)

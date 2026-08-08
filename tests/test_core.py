@@ -1,12 +1,12 @@
 import pytest
 import polars as pl
 
-from datadoc.core.engine import DATADOC
 from datadoc.plugins.missing_values import MissingValuePlugin
 from datadoc.plugins.outliers import OutlierPlugin
 from datadoc.plugins.encoders import CategoricalEncoderPlugin
 from datadoc.plugins.datetime_feat import DatetimePlugin
 from datadoc.plugins.scaling import ScalingPlugin
+from datadoc.core.pipeline import DataDocPipeline, PipelineConfig, read_dataset
 
 
 @pytest.fixture
@@ -55,73 +55,30 @@ def datetime_csv(tmp_path):
 
 
 # ────────────────────────────────────────────
-# Core Engine Tests
+# Pipeline Tests
 # ────────────────────────────────────────────
 
 
-class TestDATADOCEngine:
-    def test_load_csv(self, sample_csv):
-        doc = DATADOC(sample_csv)
-        assert (doc.df.height, doc.df.width) == (5, 5)
+class TestPipeline:
+    def test_profile(self, sample_csv):
+        df = read_dataset(sample_csv)
+        pipeline = DataDocPipeline(PipelineConfig())
+        profile = pipeline.profile(df)
+        assert profile.rows == 5
+        assert profile.columns == 5
 
-    def test_analyze_returns_report(self, sample_csv):
-        doc = DATADOC(sample_csv)
-        report = doc.analyze()
-        assert report["rows"] == 5
-        assert report["cols"] == 5
-        assert "plugins" in report
+    def test_plan(self, sample_csv):
+        df = read_dataset(sample_csv)
+        pipeline = DataDocPipeline(PipelineConfig())
+        plan = pipeline.plan(df)
+        assert len(plan.operations) > 0
 
-    def test_recommend_returns_list(self, sample_csv):
-        doc = DATADOC(sample_csv)
-        recs = doc.recommend()
-        assert isinstance(recs, list)
-        assert len(recs) > 0  # Should have recommendations for missing data
-
-    def test_engineer_returns_dataframe(self, sample_csv):
-        doc = DATADOC(sample_csv)
-        clean_df = doc.engineer()
-        assert isinstance(clean_df, pl.DataFrame)
-        assert sum(clean_df[c].null_count() for c in clean_df.columns) == 0  # No missing values
-
-    def test_engineer_tracks_plugins(self, sample_csv):
-        doc = DATADOC(sample_csv)
-        doc.engineer()
-        assert isinstance(doc._applied_plugins, list)
-        assert isinstance(doc._skipped_plugins, list)
-        assert "MissingValuePlugin" in doc._applied_plugins
-
-    def test_compare(self, sample_csv):
-        doc = DATADOC(sample_csv)
-        clean_df = doc.engineer()
-        diff = doc.compare(clean_df)
-        assert diff["original_missing"] == 4
-        assert diff["clean_missing"] == 0
-
-    def test_list_plugins(self, sample_csv):
-        doc = DATADOC(sample_csv)
-        info = doc.list_plugins()
-        assert len(info) == 5
-        names = [p["name"] for p in info]
-        assert "MissingValuePlugin" in names
-        assert "OutlierPlugin" in names
-        assert "DatetimePlugin" in names
-        assert "CategoricalEncoderPlugin" in names
-        assert "ScalingPlugin" in names
-
-    def test_pipeline_returns_string(self, sample_csv):
-        doc = DATADOC(sample_csv)
-        script = doc.pipeline()
-        assert isinstance(script, str)
-        assert "import polars" in script
-        assert "def load_and_clean_data" in script
-
-    def test_clean_csv_no_recommendations(self, clean_csv):
-        doc = DATADOC(clean_csv)
-        recs = doc.recommend()
-        # Clean data should have very few or no recommendations
-        # (scaling might trigger depending on scale ratio)
-        missing_recs = [r for r in recs if "missing" in r.lower()]
-        assert len(missing_recs) == 0
+    def test_fit_transform(self, sample_csv):
+        df = read_dataset(sample_csv)
+        pipeline = DataDocPipeline(PipelineConfig(drop_identifiers=True)).fit(df)
+        result = pipeline.transform(df)
+        assert isinstance(result, pl.DataFrame)
+        assert sum(result[c].null_count() for c in result.columns) == 0
 
 
 # ────────────────────────────────────────────
@@ -161,8 +118,6 @@ class TestMissingValuePlugin:
         recs = plugin.recommend(result)
         assert len(recs) == 1
         assert "3 missing values" in recs[0]
-
-
 
     def test_explain(self):
         plugin = MissingValuePlugin()
@@ -339,7 +294,6 @@ class TestBasePluginInterface:
     def test_has_priority(self, plugin):
         assert isinstance(plugin.priority, int)
 
-
     def test_has_dependencies(self, plugin):
         assert isinstance(plugin.dependencies, list)
 
@@ -347,47 +301,6 @@ class TestBasePluginInterface:
         explanation = plugin.explain()
         assert isinstance(explanation, str)
         assert len(explanation) > 0
-
-
-
-def test_ai_engineer_mock(sample_csv, monkeypatch):
-    doc = DATADOC(sample_csv)
-
-    # Mock litellm.completion
-    class MockChoice:
-        message = type(
-            "Message",
-            (),
-            {"content": '{"plan": [{"plugin_name": "MissingValuePlugin", "reason": "Fix nulls"}]}'},
-        )()
-
-    class MockResponse:
-        choices = [MockChoice()]
-
-    def mock_completion(*args, **kwargs):
-        return MockResponse()
-
-    monkeypatch.setattr("litellm.completion", mock_completion)
-
-    clean_df = doc.ai_engineer(model="mock/model", goal="Clean data", api_key="dummy_key")
-    # name and id columns are auto-dropped by the engine (identifiers)
-    assert "name" not in clean_df.columns
-    assert "id" not in clean_df.columns
-    assert "MissingValuePlugin" in doc._applied_plugins
-
-
-def test_column_role_detection():
-    df = pl.DataFrame(
-        {
-            "ID": [1, 2, 3, 4, 5],
-            "Name": ["Alice", "Bob", "Charlie", "Dave", "Eve"],
-            "Age": [30, 25, 40, 35, 28],
-        }
-    )
-    roles = DATADOC._detect_column_roles(df)
-    assert roles["ID"] == "id"
-    assert roles["Name"] == "name"
-    assert roles["Age"] == "feature"
 
 
 def test_scaling_preserves_binary_columns():
