@@ -209,9 +209,7 @@ def profile_dataset(df: pl.DataFrame, config: PipelineConfig | None = None) -> D
                 }
             )
             continue
-        if name in config.identifier_columns or (
-            series.dtype.is_integer() and ID_NAME_PATTERN.search(name)
-        ):
+        if name in config.identifier_columns or ID_NAME_PATTERN.search(name):
             roles.append(
                 ColumnRole(name, "identifier", 0.95, "Name and type indicate identifier semantics.")
             )
