@@ -74,12 +74,13 @@
   <aside class="sidebar">
     <div class="side-group">
       <div class="side-label">CLI Guide & Ref</div>
-      <a class="side-link active" data-section-link href="#concepts">Core Concepts</a>
+      <a class="side-link active" data-section-link href="#demo-sandbox">Download &amp; Demo Sandbox</a>
+      <a class="side-link" data-section-link href="#concepts">Core Concepts</a>
       <a class="side-link" data-section-link href="#workflow">Pipeline Workflow</a>
       <a class="side-link" data-section-link href="#read">Read-only Commands</a>
       <a class="side-link" data-section-link href="#build">Build Commands</a>
-      <a class="side-link" data-section-link href="#measure">Measure & Run</a>
-      <a class="side-link" data-section-link href="#utilities">UI & Utilities</a>
+      <a class="side-link" data-section-link href="#measure">Measure &amp; Run</a>
+      <a class="side-link" data-section-link href="#utilities">UI &amp; Utilities</a>
       <a class="side-link" data-section-link href="#tutorial">Step-by-Step Demo</a>
       <a class="side-link" data-section-link href="#flags">Options Reference</a>
       <a class="side-link" data-section-link href="#errors">Error Recovery</a>
@@ -96,7 +97,7 @@
   <main class="main-content">
     <div class="eyebrow">INTERFACES / CLI DEEP DIVE &amp; REFERENCE</div>
     <h1>The Command Line Interface, Completely.</h1>
-    <p class="lead">DATADOC provides a local-first, zero-leakage CLI for tabular dataset preparation. Explore parameters, execution mechanics, command breakdowns, and hands-on examples.</p>
+    <p class="lead">DATADOC provides a local-first, zero-leakage CLI for tabular dataset preparation. Explore parameters, execution mechanics, command breakdowns, and interactive demo testing.</p>
     
     <div class="page-meta">
       <span class="meta-chip accent">datadoc --help</span>
@@ -106,9 +107,280 @@
     </div>
 
     <div class="page-actions">
-      <a class="button primary" href="#concepts">Start with Concepts →</a>
-      <a class="button ghost" href="#tutorial">Run Demo Commands</a>
+      <a class="button primary" href="demo.csv" download="demo.csv">📥 Download demo.csv</a>
+      <a class="button ghost" href="#demo-sandbox">Explore Transformation Sandbox ↓</a>
     </div>
+
+    <!-- SECTION 0: DEMO SANDBOX & DOWNLOAD -->
+    <section id="demo-sandbox">
+      <h2>0. Interactive Demo Sandbox &amp; Test Drive</h2>
+      <p>Download our official 500-row <code>demo.csv</code> test dataset and watch how DATADOC profiles, plans, fits, transforms, and evaluates the dataset step-by-step.</p>
+
+      <div class="surface surface-pad" style="margin: 22px 0; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; border-left: 4px solid var(--accent);">
+        <div>
+          <h3 style="margin: 0; color: #fff; font-size: 20px;">Download Test Dataset (demo.csv)</h3>
+          <p style="margin: 6px 0 0; color: var(--muted); font-size: 14px;">Includes missing values, scale mismatches, UUID identifiers, string dates, and extreme outliers (age=999).</p>
+        </div>
+        <div>
+          <a class="button primary" href="demo.csv" download="demo.csv">📥 Download demo.csv (46 KB)</a>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <div class="tab-list">
+          <button class="tab-button active" data-tab="raw">00. Raw Data</button>
+          <button class="tab-button" data-tab="step1">01. Profile</button>
+          <button class="tab-button" data-tab="step2">02. Plan</button>
+          <button class="tab-button" data-tab="step3">03. Fit (Artifact)</button>
+          <button class="tab-button" data-tab="step4">04. Transformed</button>
+          <button class="tab-button" data-tab="step5">05. Evaluate</button>
+        </div>
+
+        <!-- TAB 00: RAW DATA -->
+        <div class="tab-panel active" data-panel="raw">
+          <h4>Raw Input Dataset: <code>demo.csv</code> (First 5 Rows)</h4>
+          <p>Notice the dirty features requiring engineering before machine learning model training:</p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>customer_id (ID)</th>
+                  <th>name (Text)</th>
+                  <th>age</th>
+                  <th>salary</th>
+                  <th>department</th>
+                  <th>city</th>
+                  <th>signup_date</th>
+                  <th>churn (Target)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>dba51b99...</code></td>
+                  <td>Person_0</td>
+                  <td>23</td>
+                  <td>57,098</td>
+                  <td>Engineering</td>
+                  <td>Hyderabad</td>
+                  <td>2020-07-10</td>
+                  <td><span style="color:var(--accent)">0</span></td>
+                </tr>
+                <tr>
+                  <td><code>4f57a639...</code></td>
+                  <td>Person_1</td>
+                  <td>56</td>
+                  <td>83,878</td>
+                  <td>Engineering</td>
+                  <td>Bangalore</td>
+                  <td>2021-11-20</td>
+                  <td><span style="color:var(--accent)">0</span></td>
+                </tr>
+                <tr>
+                  <td><code>10eb978b...</code></td>
+                  <td>Person_2</td>
+                  <td>60</td>
+                  <td>30,695</td>
+                  <td>Support</td>
+                  <td>Chennai</td>
+                  <td>2023-07-11</td>
+                  <td><span style="color:var(--accent)">1</span></td>
+                </tr>
+                <tr>
+                  <td><code>e22b64ba...</code></td>
+                  <td>Person_3</td>
+                  <td><span style="color:var(--danger)">null</span></td>
+                  <td>62,930</td>
+                  <td>Sales</td>
+                  <td>Chennai</td>
+                  <td>2022-01-28</td>
+                  <td><span style="color:var(--accent)">1</span></td>
+                </tr>
+                <tr>
+                  <td><code>b88ae03d...</code></td>
+                  <td>Person_4</td>
+                  <td><span style="color:var(--warning)">999 (Outlier)</span></td>
+                  <td>47,431</td>
+                  <td>Sales</td>
+                  <td>Bangalore</td>
+                  <td>2023-02-14</td>
+                  <td><span style="color:var(--accent)">0</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TAB 01: PROFILE -->
+        <div class="tab-panel" data-panel="step1">
+          <h4>Step 1: <code>datadoc profile demo.csv --target churn</code></h4>
+          <p>Profiles dataset health, missing value counts, cardinality, column roles, and generates a unique schema fingerprint.</p>
+          <pre class="code-block" data-copy><div class="code-caption"><span class="lang">JSON</span><span>datadoc profile output</span></div><code>{
+  "rows": 500,
+  "columns": 10,
+  "schema": {
+    "customer_id": "String",
+    "name": "String",
+    "age": "Int64",
+    "salary": "Int64",
+    "department": "String",
+    "city": "String",
+    "signup_date": "String",
+    "churn": "Int64"
+  },
+  "null_counts": { "age": 25, "salary": 20, "department": 15 },
+  "roles": [
+    { "name": "customer_id", "role": "identifier" },
+    { "name": "name", "role": "identifier" },
+    { "name": "age", "role": "feature_numeric" },
+    { "name": "salary", "role": "feature_numeric" },
+    { "name": "department", "role": "feature_categorical" },
+    { "name": "churn", "role": "target" }
+  ],
+  "schema_fingerprint": "a3f890e12d..."
+}</code></pre>
+        </div>
+
+        <!-- TAB 02: PLAN -->
+        <div class="tab-panel" data-panel="step2">
+          <h4>Step 2: <code>datadoc plan demo.csv --target churn --drop-identifiers</code></h4>
+          <p>Formulates an explicit, explainable sequence of transformation operations with analytical rationales before modifying data.</p>
+          <pre class="code-block" data-copy><div class="code-caption"><span class="lang">JSON</span><span>datadoc plan output</span></div><code>{
+  "target": "churn",
+  "operations": [
+    {
+      "name": "DropIdentifiers",
+      "columns": ["customer_id", "name"],
+      "rationale": "High-cardinality string IDs overfit models and carry zero predictive signal."
+    },
+    {
+      "name": "ImputeNumeric",
+      "columns": ["age", "salary"],
+      "strategy": "median",
+      "rationale": "Fill missing numerical values with training median (outlier-resistant)."
+    },
+    {
+      "name": "ImputeCategorical",
+      "columns": ["department"],
+      "strategy": "mode",
+      "rationale": "Fill missing categorical entries with the most frequent value."
+    },
+    {
+      "name": "DatetimeExtract",
+      "columns": ["signup_date"],
+      "features": ["month", "day", "dayofweek"],
+      "rationale": "Extract temporal sub-components from date strings."
+    },
+    {
+      "name": "OneHotEncode",
+      "columns": ["department", "city"],
+      "rationale": "Convert categorical strings into numeric binary indicator vectors."
+    }
+  ]
+}</code></pre>
+        </div>
+
+        <!-- TAB 03: FIT -->
+        <div class="tab-panel" data-panel="step3">
+          <h4>Step 3: <code>datadoc fit demo.csv --target churn --scaling standard --clip-outliers --output pipeline.json</code></h4>
+          <p>Learns medians, modes, Z-score parameters, and IQR bounds <strong>strictly from training data</strong> and saves <code>pipeline.json</code>.</p>
+          <pre class="code-block" data-copy><div class="code-caption"><span class="lang">JSON</span><span>pipeline.json artifact</span></div><code>{
+  "artifact_version": 1,
+  "config": {
+    "target": "churn",
+    "drop_identifiers": true,
+    "scaling": "standard",
+    "clip_outliers": true
+  },
+  "state": {
+    "dropped": ["customer_id", "name"],
+    "medians": { "age": 36.0, "salary": 78500.0 },
+    "modes": { "department": "Engineering" },
+    "scaling": {
+      "age": { "mean": 36.4, "std": 11.2 },
+      "salary": { "mean": 79200.0, "std": 31500.0 }
+    },
+    "outliers": {
+      "age": { "lower": 12.0, "upper": 75.0 }
+    }
+  }
+}</code></pre>
+        </div>
+
+        <!-- TAB 04: TRANSFORMED -->
+        <div class="tab-panel" data-panel="step4">
+          <h4>Step 4: <code>datadoc transform demo.csv --pipeline pipeline.json --output clean_demo.csv</code></h4>
+          <p>Before vs After summary showing how dirty features transformed into clean, model-ready numerical columns:</p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Feature Column</th>
+                  <th>Raw Input State</th>
+                  <th>Transformed Output State</th>
+                  <th>Transformation Applied</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>customer_id</code> / <code>name</code></td>
+                  <td>UUIDs &amp; Names</td>
+                  <td><span style="color:var(--danger)">Dropped</span></td>
+                  <td>Identified as string IDs and removed</td>
+                </tr>
+                <tr>
+                  <td><code>age</code></td>
+                  <td>Nulls + Outlier (999)</td>
+                  <td><code>-1.19</code> (Z-score)</td>
+                  <td>Null → Median (36.0), Clipped (75.0), Standardized</td>
+                </tr>
+                <tr>
+                  <td><code>salary</code></td>
+                  <td>Nulls present</td>
+                  <td><code>-0.68</code> (Z-score)</td>
+                  <td>Null → Median (78,500), Standardized</td>
+                </tr>
+                <tr>
+                  <td><code>department</code></td>
+                  <td>"Engineering"</td>
+                  <td><code>dept_Engineering=1</code>, <code>dept_Sales=0</code></td>
+                  <td>One-Hot Encoded into binary indicator vectors</td>
+                </tr>
+                <tr>
+                  <td><code>signup_date</code></td>
+                  <td>"2020-07-10"</td>
+                  <td><code>month=7</code>, <code>day=10</code>, <code>dayofweek=4</code></td>
+                  <td>Extracted numeric temporal features</td>
+                </tr>
+                <tr>
+                  <td><code>churn</code> (Target)</td>
+                  <td><code>0</code> or <code>1</code></td>
+                  <td><code>0</code> or <code>1</code> (<span style="color:var(--accent)">Untouched</span>)</td>
+                  <td>Protected target column preserved exactly</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TAB 05: EVALUATE -->
+        <div class="tab-panel" data-panel="step5">
+          <h4>Step 5: <code>datadoc evaluate demo.csv --target churn --task classification --estimator tree</code></h4>
+          <p>Runs 80/20 train/test evaluation benchmark to measure clean vs raw accuracy improvement:</p>
+          <pre class="code-block" data-copy><div class="code-caption"><span class="lang">JSON &amp; Terminal</span><span>datadoc evaluate benchmark</span></div><code>{
+  "task": "classification",
+  "metric": "balanced_accuracy",
+  "baseline_score": 0.542,
+  "selected_score": 0.815,
+  "improvement": +0.273,
+  "selected_pipeline": "candidate",
+  "feature_count": 16
+}
+
+Baseline Score : ▇▇▇▇▇▇▇▇▇▇▇▇▇ 0.542
+Candidate Score: ▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇ 0.815 (+27.3% boost!)</code></pre>
+        </div>
+      </div>
+    </section>
 
     <!-- SECTION 1: CORE CONCEPTS -->
     <section id="concepts">
@@ -464,7 +736,7 @@ flowchart TD
             <thead><tr><th>Option</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
             <tbody>
               <tr><td><code>file_path</code></td><td>Argument</td><td><em>Required</em></td><td>Dataset file to load in dashboard</td></tr>
-              <tr><td><code>--port</code></td><td>Option</td><td><code>8000</code></td><td>HTTP port for local UI server</td></tr>
+              <tr><td><code>--port</code></td><td>Option</td><td><code>8000</code></td><td>HTTP port for local dashboard server</td></tr>
             </tbody>
           </table>
         </div>
@@ -653,6 +925,7 @@ flowchart TD
   <!-- RIGHT RAIL NAVIGATION -->
   <aside class="right-rail">
     <div class="right-label">On this page</div>
+    <a class="right-link" data-section-link href="#demo-sandbox">Demo CSV Sandbox</a>
     <a class="right-link" data-section-link href="#concepts">Core Concepts</a>
     <a class="right-link" data-section-link href="#workflow">Pipeline Workflow</a>
     <a class="right-link" data-section-link href="#read">Read-only Commands</a>
