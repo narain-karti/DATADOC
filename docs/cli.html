@@ -17,6 +17,17 @@
       margin: 20px 0;
       text-align: center;
     }
+    .math-formula {
+      background: #0d0d0d;
+      padding: 14px 18px;
+      border-radius: 8px;
+      font-family: var(--font-mono);
+      color: #e2e8f0;
+      border-left: 4px solid var(--accent);
+      margin: 16px 0;
+      font-size: 14px;
+      line-height: 1.6;
+    }
   </style>
 </head>
 <body>
@@ -142,17 +153,17 @@
             </tr>
             <tr>
               <td><code>none</code></td>
-              <td>\(X_{out} = X\)</td>
+              <td><code>X<sub>out</sub> = X</code></td>
               <td>Tree-based algorithms (RandomForest, XGBoost, LightGBM)</td>
             </tr>
             <tr>
               <td><code>standard</code></td>
-              <td>\(Z = \frac{X - \mu}{\sigma}\)</td>
+              <td><code>Z = (X - μ) / σ</code></td>
               <td>Linear Regression, Logistic Regression, Neural Networks, SVMs</td>
             </tr>
             <tr>
               <td><code>robust</code></td>
-              <td>\(Z = \frac{X - Q_2}{IQR}\)</td>
+              <td><code>Z = (X - Q<sub>2</sub>) / IQR</code></td>
               <td>Datasets containing unclipped, heavy-tailed outliers</td>
             </tr>
           </tbody>
@@ -161,8 +172,10 @@
 
       <h3>Outlier Clipping (<code>--clip-outliers</code>)</h3>
       <p>When enabled, DATADOC calculates upper and lower Interquartile Range (IQR) bounds during <code>fit</code> and clips extreme values during <code>transform</code>:</p>
-      <pre class="code-block"><code>Lower Bound = Q1 - (1.5 × IQR)
-Upper Bound = Q3 + (1.5 × IQR)</code></pre>
+      <div class="math-formula">
+        Lower Bound = Q<sub>1</sub> - (1.5 × IQR)<br>
+        Upper Bound = Q<sub>3</sub> + (1.5 × IQR)
+      </div>
       <p>Values below the lower bound are clamped to the lower bound; values above the upper bound are clamped to the upper bound.</p>
 
       <h3>Split Strategies (<code>--time-column</code> &amp; <code>--group-column</code>)</h3>
