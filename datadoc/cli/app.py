@@ -257,11 +257,20 @@ def run_pipeline(
         "output_schema": pl.output_schema_,
         "artifact": "pipeline.json",
     }
-    _write_json(directory / "manifest.json", manifest)
     if evaluate_model:
         if not target:
             raise typer.BadParameter("--evaluate requires --target.")
-        _write_json(directory / "evaluation.json", DataDocPipeline(config).evaluate(df).to_dict())
+        eval_report = DataDocPipeline(config).evaluate(df).to_dict()
+        _write_json(directory / "evaluation.json", eval_report)
+        baseline = eval_report["baseline_score"]
+        candidate = eval_report["selected_score"]
+        imp = eval_report["improvement"]
+        console.print(
+            f"[bold cyan]Evaluation Benchmark ({eval_report['metric']}):[/bold cyan] "
+            f"Baseline: [yellow]{baseline:.4f}[/yellow] | "
+            f"Candidate: [green]{candidate:.4f}[/green] "
+            f"([bold green]+{imp:.4f}[/bold green])"
+        )
     console.print(f"[green]Created reproducible DATADOC run in {directory}[/green]")
 
 

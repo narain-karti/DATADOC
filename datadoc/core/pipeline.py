@@ -9,6 +9,7 @@ import json
 from pathlib import Path
 import re
 from typing import Any, Literal
+import warnings
 
 import polars as pl
 
@@ -742,21 +743,23 @@ class DataDocPipeline:
             y_train = fit_df[target].to_numpy()
             x_test = validation_features.to_numpy()
             y_test = validation_df[target].to_numpy()
-            if inferred_task == "classification":
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                if inferred_task == "classification":
+                    model = (
+                        LogisticRegression(max_iter=1_000)
+                        if config.estimator_family == "linear"
+                        else RandomForestClassifier(random_state=config.random_seed)
+                    )
+                    model.fit(x_train, y_train)
+                    return float(balanced_accuracy_score(y_test, model.predict(x_test)))
                 model = (
-                    LogisticRegression(max_iter=1_000)
+                    Ridge()
                     if config.estimator_family == "linear"
-                    else RandomForestClassifier(random_state=config.random_seed)
+                    else RandomForestRegressor(random_state=config.random_seed)
                 )
                 model.fit(x_train, y_train)
-                return float(balanced_accuracy_score(y_test, model.predict(x_test)))
-            model = (
-                Ridge()
-                if config.estimator_family == "linear"
-                else RandomForestRegressor(random_state=config.random_seed)
-            )
-            model.fit(x_train, y_train)
-            return -float(mean_squared_error(y_test, model.predict(x_test)) ** 0.5)
+                return -float(mean_squared_error(y_test, model.predict(x_test)) ** 0.5)
 
         if self.config.time_column:
             folds = TimeSeriesSplit(n_splits=3).split(train_df)
