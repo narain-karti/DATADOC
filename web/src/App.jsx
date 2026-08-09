@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
-import { Activity, ArrowRight, Check, Code2, Database, Download, FileJson, MessageSquare, Play, RefreshCw, ShieldCheck, Terminal, X } from 'lucide-react';
+import { Activity, ArrowRight, Check, Code2, Database, Download, FileJson, Play, RefreshCw, ShieldCheck, X } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_DATADOC_API_URL || `${window.location.origin}/api`;
 const SESSION_HEADERS = { 'X-DATADOC-SESSION': 'local' };
@@ -37,8 +37,7 @@ function App() {
   const [config, setConfig] = useState(defaultConfig);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [chatInput, setChatInput] = useState('');
-  const [chatHistory, setChatHistory] = useState([]);
+
 
   const requestConfig = useMemo(() => ({
     ...config,
@@ -127,19 +126,7 @@ function App() {
     }
   }
 
-  async function sendChatMessage(event) {
-    event.preventDefault();
-    if (!chatInput.trim()) return;
-    const message = chatInput.trim();
-    setChatInput('');
-    setChatHistory((history) => [...history, { role: 'user', content: message }]);
-    try {
-      const response = await axios.post(`${API_BASE}/agent/chat`, { message }, { headers: SESSION_HEADERS });
-      setChatHistory((history) => [...history, { role: 'assistant', content: response.data.response }]);
-    } catch (requestError) {
-      setChatHistory((history) => [...history, { role: 'assistant', content: requestError.response?.data?.detail || 'AI is unavailable. The deterministic pipeline still works offline.' }]);
-    }
-  }
+
 
   const roles = profile?.roles || [];
   const findings = profile?.findings || [];
@@ -230,7 +217,6 @@ function App() {
           </section>
 
           <aside className="min-w-0">
-            <ChatPanel history={chatHistory} input={chatInput} setInput={setChatInput} onSubmit={sendChatMessage} />
             <div className="mt-6 border-2 border-black bg-bg-accent-peach p-5">
               <div className="flex items-center gap-3 border-b-2 border-black pb-3"><FileJson size={19} /><h3 className="font-bold uppercase">Artifact actions</h3></div>
               <p className="mt-3 text-xs leading-5">Once fitted, export the transformed CSV or the reproducible Python wrapper generated from the fitted JSON state.</p>
@@ -279,8 +265,6 @@ function CodeView({ code, onLoad }) {
   return <div className="mt-6 border-2 border-black bg-black p-5 text-green-300"><div className="flex items-center justify-between gap-3 border-b border-green-300/50 pb-3"><h3 className="font-bold uppercase">Reproducible Python export</h3>{!code && <button onClick={onLoad} className="border-2 border-green-300 px-3 py-2 text-xs font-bold uppercase hover:bg-green-300 hover:text-black">Load export</button>}</div><pre className="mt-5 max-h-[62vh] overflow-auto whitespace-pre-wrap text-xs leading-5">{code || 'Fit a pipeline, then load the export.'}</pre></div>;
 }
 
-function ChatPanel({ history, input, setInput, onSubmit }) {
-  return <div className="border-2 border-black bg-white p-5"><div className="flex items-center gap-3 border-b-2 border-black pb-3"><MessageSquare size={19} /><h3 className="font-bold uppercase">Optional AI assistant</h3></div><p className="mt-3 text-xs leading-5 text-gray-600">AI can explain metadata and suggest registered transformations. It never executes generated code.</p><div className="mt-4 max-h-56 space-y-3 overflow-y-auto">{history.map((message, index) => <div key={index} className={`border-2 border-black p-3 text-xs leading-5 ${message.role === 'user' ? 'bg-bg-accent-peach' : 'bg-bg-workspace'}`}><span className="font-bold uppercase">{message.role}</span><p className="mt-1 whitespace-pre-wrap">{message.content}</p></div>)}</div><form onSubmit={onSubmit} className="mt-4 flex gap-2"><input value={input} onChange={(event) => setInput(event.target.value)} placeholder="Ask about the dataset..." className="min-w-0 flex-1 border-2 border-black bg-bg-workspace px-3 py-2 text-xs outline-none focus:bg-yellow-50" /><button className="border-2 border-black bg-black px-3 py-2 text-white hover:bg-gray-700"><Terminal size={15} /></button></form></div>;
-}
+
 
 export default App;

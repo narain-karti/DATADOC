@@ -45,8 +45,6 @@ class SessionState:
 _sessions: dict[str, SessionState] = {}
 
 
-class ChatRequest(BaseModel):
-    message: str
 
 
 class PipelineRequest(BaseModel):
