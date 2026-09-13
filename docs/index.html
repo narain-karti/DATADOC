@@ -105,7 +105,7 @@ datadoc transform .\validation.csv `
           <article class="feature"><div class="number">03 / ARTIFACT</div><h3>Portable state</h3><p>Save the input contract, output schema, configuration, plan, fitted values, and artifact version as JSON.</p></article>
           <article class="feature"><div class="number">04 / EVALUATE</div><h3>Measured outcomes</h3><p>Use classification or regression baselines with stratified, ordered, or group-aware validation.</p></article>
           <article class="feature"><div class="number">05 / UI</div><h3>Local workspace</h3><p>Review findings, approve a plan, preview output, inspect lineage, and download artifacts from the local dashboard (Ctrl+K palette).</p></article>
-          <article class="feature"><div class="number">06 / OPEN SOURCE</div><h3>Inspectable by default</h3><p>No cloud dependency for the core. Optional AI is advisory and cannot execute generated code.</p></article>
+          <article class="feature"><div class="number">06 / AI ADVISORY</div><h3>Semantic Hypotheses</h3><p>Multi-provider AI explainer (OpenAI, Gemini, Anthropic, Ollama) infers hidden sentinels, missingness mechanisms, and domain feature formulas.</p></article>
         </div>
       </section>
 
@@ -113,7 +113,7 @@ datadoc transform .\validation.csv `
         <h2>Choose your path</h2>
         <div class="tabs">
           <div class="tab-list"><button class="tab-button active" data-tab="cli">CLI users</button><button class="tab-button" data-tab="sdk">Python users</button><button class="tab-button" data-tab="ui">Dashboard users</button></div>
-          <div class="tab-panel active" data-panel="cli"><p>Best for repeatable batch jobs and CI.</p><a class="button" href="cli.html">Read the CLI reference →</a></div>
+          <div class="tab-panel active" data-panel="cli"><p>Best for repeatable batch jobs, automated reports, and CI.</p><a class="button" href="cli.html">Read the CLI reference →</a></div>
           <div class="tab-panel" data-panel="sdk"><p>Best for notebooks, services, and custom orchestration.</p><a class="button" href="sdk.html">Read the Python SDK →</a></div>
           <div class="tab-panel" data-panel="ui"><p>Best for exploring a dataset locally with visual feedback.</p><a class="button" href="ui.html">Read the UI guide →</a></div>
         </div>
@@ -121,7 +121,7 @@ datadoc transform .\validation.csv `
 
       <section id="outputs">
         <h2>What you get back</h2>
-        <div class="table-wrap"><table><thead><tr><th>Output</th><th>Purpose</th><th>When it appears</th></tr></thead><tbody><tr><td><code>profile.json</code></td><td>Facts, roles, findings, and schema fingerprint.</td><td><code>profile</code> or <code>run</code></td></tr><tr><td><code>plan.json</code></td><td>Explainable operations and rationales.</td><td><code>plan</code> or <code>run</code></td></tr><tr><td><code>pipeline.json</code></td><td>Frozen train-only transformation state.</td><td><code>fit</code> or <code>run</code></td></tr><tr><td><code>evaluation.json</code></td><td>Baseline, candidate, metric, split, and warnings.</td><td><code>evaluate</code> or <code>run --evaluate</code></td></tr><tr><td><code>manifest.json</code></td><td>Lineage: input fingerprint, config, output schema, and artifact links.</td><td><code>run</code></td></tr></tbody></table></div>
+        <div class="table-wrap"><table><thead><tr><th>Output</th><th>Purpose</th><th>When it appears</th></tr></thead><tbody><tr><td><code>profile.json</code></td><td>Facts, roles, findings, and schema fingerprint.</td><td><code>profile</code> or <code>run</code></td></tr><tr><td><code>plan.json</code></td><td>Explainable operations and rationales.</td><td><code>plan</code> or <code>run</code></td></tr><tr><td><code>pipeline.json</code></td><td>Frozen train-only transformation state.</td><td><code>fit</code> or <code>run</code></td></tr><tr><td><code>report.html</code></td><td>Standalone, shareable interactive HTML health &amp; audit report (with optional AI summary).</td><td><code>report</code> or <code>report --ai</code></td></tr><tr><td><code>comparison.html</code></td><td>Visual side-by-side dataset diff (null resolution, feature lifecycle, shifts).</td><td><code>compare --html</code></td></tr><tr><td><code>evaluation.json</code></td><td>Baseline, candidate, metric, split, and warnings.</td><td><code>evaluate</code> or <code>run --evaluate</code></td></tr><tr><td><code>manifest.json</code></td><td>Lineage: input fingerprint, config, output schema, and artifact links.</td><td><code>run</code></td></tr></tbody></table></div>
       </section>
 
       <section id="errors">

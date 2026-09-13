@@ -1,242 +1,253 @@
-<p align="center">
-  <pre align="center">
- ____    _  _____  _    ____   ___   ____
-|  _ \  / \|_   _|/ \  |  _ \ / _ \ / ___|
-| | | |/ _ \ | | / _ \ | | | | | | | |
-| |_| / ___ \| |/ ___ \| |_| | |_| | |___
-|____/_/   \_\_/_/   \_\____/ \___/ \____|
-  </pre>
-</p>
+# DATADOC
 
-<h3 align="center">The Open Source Operating System for Dataset Engineering.</h3>
+**Local-first, leakage-safe tabular dataset engineering & feature preparation for machine learning.**
 
-<p align="center">
-  <a href="https://narain-karti.github.io/DATADOC/"><b>&#x1F4D6; View Official Documentation Website</b></a>
-</p>
+[![PyPI version](https://img.shields.io/pypi/v/datadoc-cli.svg?color=blue)](https://pypi.org/project/datadoc-cli/)
+[![Python Versions](https://img.shields.io/pypi/pyversions/datadoc-cli.svg)](https://pypi.org/project/datadoc-cli/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/narain-karti/DATADOC/blob/main/LICENSE)
+[![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://narain-karti.github.io/DATADOC/)
 
-<p align="center">
-  <a href="https://pypi.org/project/datadoc-cli/"><img alt="PyPI version" src="https://img.shields.io/pypi/v/datadoc-cli.svg"></a>
-  <a href="https://pypi.org/project/datadoc-cli/"><img alt="Python Versions" src="https://img.shields.io/pypi/pyversions/datadoc-cli.svg"></a>
-  <a href="https://github.com/narain-karti/DATADOC/blob/main/LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg"></a>
-</p>
+[Documentation](https://narain-karti.github.io/DATADOC/) | [Installation](#installation) | [Quickstart](#quickstart) | [Benchmarks](#empirical-benchmarks) | [CLI Reference](#cli-commands-reference) | [Python SDK](#python-sdk) | [Architecture](#architecture--plugins)
 
-<p align="center">
-  <a href="#installation"><b>Install</b></a> &bull;
-  <a href="#why-datadoc"><b>Why DATADOC?</b></a> &bull;
-  <a href="#quick-start"><b>Quick Start</b></a> &bull;
-  <a href="#cli-commands"><b>CLI Commands</b></a> &bull;
-  <a href="#architecture--plugins"><b>Architecture</b></a>
-</p>
+---
 
-<hr>
+## Overview
 
-## 🚀 What is DATADOC?
+**DATADOC** is a high-performance dataset preparation engine and Python library built for applied machine learning. Powered by **Polars**, it inspects raw tabular data, audits quality anomalies, detects potential target leakage, and applies deterministic, mathematically ordered feature transformations.
 
-**DATADOC** is a local-first CLI and Python library for preparing tabular data for machine learning. It profiles dataset risks, creates explainable transformation plans, and saves fitted pipelines that apply the same training-derived rules to validation, test, and inference data.
+Ad-hoc data cleaning scripts in Jupyter notebooks often introduce subtle data leakage, high-cardinality dimensionality explosion, and train/serve skew. DATADOC enforces strict engineering guarantees:
 
-Powered by **Polars**, DATADOC reads CSV and Parquet files, diagnoses missing values, identifiers, schema issues, duplicates, constants, and unsafe feature types. It does not promise model improvement: optional evaluation reports the observed result against a baseline under a reproducible split.
+- **Strict Leakage Prevention**: All imputation medians, categorical vocabularies, outlier boundaries, and scaling parameters are learned exclusively from the training split (`.fit()`) and serialized into an immutable JSON artifact (`pipeline.json`).
+- **High-Throughput Performance**: Vectorized execution on Apache Arrow via Polars handles millions of rows in seconds with minimal memory overhead.
+- **Explainable by Design**: Generates human-readable transformation plans before applying modifications, accompanied by provenance manifests tracking every engineered column.
+- **AI Feature Hypotheses (Advisory Only)**: Leverages multi-provider LLMs (OpenAI, Gemini, Anthropic, Groq, Ollama) via LiteLLM to infer column semantics, audit missingness mechanisms (MCAR vs. MAR vs. MNAR), and generate domain-specific mathematical interaction hypotheses without executing untrusted code.
 
-**DATADOC is NOT just another EDA (Exploratory Data Analysis) tool.** It profiles data quality, lets you review a plan, fits transformations from training data, and hands you a portable artifact and Python wrapper for reuse.
+---
 
-### ⚡ The Impact: Why Industry Professionals Use DATADOC
+## Empirical Benchmarks
 
-Data Scientists and ML Engineers repeatedly rebuild the same preparation steps across projects.
-DATADOC turns those steps into a reviewable, reusable pipeline.
+To quantify the downstream impact of DATADOC's automated feature engineering, we evaluated raw naive preprocessing against DATADOC preparation across 5-fold Stratified Cross-Validation on standard benchmarks:
 
-- **Save boilerplate:** Review recommendations for imputing nulls, encoding categories, and optional scaling or clipping before applying them.
-- **Explainable by default:** The deterministic core records roles, findings, operations, protected columns, and fitted statistics in an inspectable artifact.
-- **Local-first:** The core package works offline. Optional ML, UI, and AI features are separate extras.
-- **Optional AI planning:** AI can help explain or rank a constrained plan; it is never allowed to execute arbitrary generated code.
-- **Leakage-safe workflows:** Fitted statistics for imputation, categorical vocabularies, clipping, and scaling are learned from training data and saved as an artifact.
+### Titanic Survival (Binary Classification)
 
-### 📊 Empirical Proof: Does DATADOC Actually Improve Models?
-
-Yes. We benchmarked naive manual preparation vs. DATADOC automated preprocessing on Kaggle's Titanic dataset under **5-fold Stratified Cross-Validation**:
-
-| Model | Baseline (Naive Prep) | DATADOC Cleaned | Accuracy Δ | Relative Lift |
-|:---|:---:|:---:|:---:|:---:|
+| Model | Baseline (Naive Prep) | DATADOC Cleaned | Accuracy Delta | Relative Lift |
+| :--- | :---: | :---: | :---: | :---: |
 | **Logistic Regression** | 78.90% ± 0.99% | **79.91% ± 1.90%** | **+1.01%** | **+1.28%** |
 | **Random Forest** | 82.15% ± 2.45% | **82.82% ± 2.40%** | **+0.67%** | **+0.82%** |
 
-*Why?* DATADOC extracts informative missingness indicators (`Age__missing`, `Cabin__missing`), frequency-encodes high-cardinality features (`Ticket`, `Cabin`), applies standard scaling, and isolates all statistics strictly to training splits to eliminate target leakage.
+*Why the lift occurs*: DATADOC isolates high-cardinality string identifiers (`Name`, `Ticket`), creates informative missingness flags (`Age__missing`, `Cabin__missing`), extracts title categoricals, applies Tukey-fence outlier stabilization, and enforces train-only standard scaling to eliminate distribution bleed.
 
 ---
 
-## 📦 Installation
+## Installation
 
-DATADOC is published on PyPI. You can install it globally via `pip` or `uv`:
+Install DATADOC via `pip` or `uv`:
 
 ```bash
+# Core package (CLI, Polars engine, plugins, reports)
 pip install datadoc-cli
+
+# With downstream ML evaluation baselines (Scikit-Learn)
+pip install "datadoc-cli[ml]"
+
+# With local interactive web studio (FastAPI, Uvicorn)
+pip install "datadoc-cli[ui]"
+
+# With AI dataset explainer (LiteLLM)
+pip install "datadoc-cli[ai]"
+
+# Full installation (all extras)
+pip install "datadoc-cli[all]"
 ```
 
-*(Requires Python 3.10+)*
+*Requires Python 3.10 or higher.*
 
 ---
 
-## 🛠️ Quick Start (CLI)
+## Quickstart
 
-You don't need to write a single line of Python to clean your data. Just use the CLI.
-New here? Run the guided wizard — it asks for target + preset and runs everything:
+### 1. One-Shot Automated Preparation
+
+Execute the full pipeline—profiling, planning, fitting, transforming, and manifest generation—in a single command:
 
 ```bash
-datadoc wizard train.csv
+datadoc run train.csv --target churn --preset balanced --output clean_train.csv
 ```
 
-Or run the one-shot happy path (profile → plan → fit → transform + manifest):
+### 2. Step-by-Step Auditable Workflow
+
+For production systems requiring inspection at each stage:
 
 ```bash
-datadoc run train.csv --target churn --preset balanced --evaluate
+# Audit data health (0-100 score, letter grade, detected quality issues)
+datadoc health train.csv --target churn
+
+# Deep statistical profile with column roles and leakage alerts
+datadoc profile train.csv --target churn --explain --output profile.json
+
+# AI-driven feature hypotheses and semantic sentinel audit (Optional AI extra)
+datadoc explain train.csv --target churn --model gpt-4o-mini
+
+# Review the explicit transformation plan before execution
+datadoc plan train.csv --target churn --preset balanced --output plan.json
+
+# Fit transformations exclusively on the training split
+datadoc fit train.csv --target churn --preset balanced --output artifacts/pipeline.json
+
+# Transform unseen validation or test data with the frozen artifact
+datadoc transform test.csv --pipeline artifacts/pipeline.json --output clean_test.csv --validate
+
+# Generate standalone, interactive HTML audit report
+datadoc report train.csv --target churn --output report.html
+
+# Side-by-side visual comparison between raw and transformed datasets
+datadoc compare train.csv clean_train.csv --target churn --html comparison.html
+
+# Evaluate model performance against baseline
+datadoc evaluate train.csv --target churn --task classification
 ```
 
-Full step-by-step (auditable) workflow:
+### 3. Interactive Web Studio
+
+Launch the local-first reactive dashboard:
 
 ```bash
-# 0. Optional: save repeatable settings (target, preset, scaling, ...)
-datadoc init --preset balanced  # writes datadoc.toml
-
-# 1. Inspect data-quality findings and column roles
-datadoc health raw_data.csv --target churn
-datadoc profile raw_data.csv --target churn --explain --output profile.json
-
-# 2. AI feature engineering hypotheses & data quality audit (Optional AI extra)
-datadoc explain raw_data.csv --target churn --model gpt-4o-mini  # or gemini/gemini-2.0-flash, ollama/llama3
-
-# 3. Review the proposed transformations before applying them
-datadoc plan raw_data.csv --target churn --explain --output plan.json
-
-# 4. Fit only on a training dataset, then save a reusable artifact
-datadoc fit train.csv --target churn --preset balanced --rare-frequency 0.02 --output artifacts/churn-pipeline.json
-
-# 5. Apply the fitted artifact to validation, test, or new data
-datadoc transform validation.csv --pipeline artifacts/churn-pipeline.json --output validation-features.parquet --validate
-
-# 6. Optionally benchmark a safe candidate pipeline against a baseline
-pip install "datadoc-cli[ml]"
-datadoc evaluate train.csv --target churn --task classification --ablation
-
-# 7. Export a small executable wrapper around the fitted artifact
-datadoc export --pipeline artifacts/churn-pipeline.json --output pipeline.py
-# or: datadoc export --pipeline artifacts/churn-pipeline.json --format joblib --output pipeline.joblib
-
-# 8. Generate a standalone, shareable HTML audit report (with optional AI summary)
-datadoc report train.csv --target churn --ai --output report.html
-
-# 9. Visually compare raw vs transformed datasets side-by-side
-datadoc compare train.csv validation-features.parquet --target churn --html compare.html
-
-# 10. Lint for leakage risks / diff two plans
-datadoc lint train.csv --target churn
-datadoc diff plan-v1.json plan-v2.json
-```
-
-### 🖥️ Web dashboard (same pipeline, visual)
-
-```bash
-pip install "datadoc-cli[ui]"
 datadoc ui train.csv --port 8000
 ```
 
-The local dashboard calls the same `DataDocPipeline` behind the CLI: profile findings and roles, preparation settings (target, scaling, identifiers, dedup, clipping, cyclical datetime, rare frequency), reviewable plan, fit with output-schema preview, lineage/provenance panel, transformed-CSV download, and an executable Python export. Press `Ctrl+K`/`Cmd+K` for the command palette. Full guide: [docs/ui.html](https://narain-karti.github.io/DATADOC/ui.html).
+Includes an interactive transformation sandbox, live distribution charts, provenance viewer, one-click HTML report generation, and code export (`Ctrl+K` for command palette).
 
 ---
 
-## 🐍 Python SDK (Library Usage)
+## Python SDK
 
-DATADOC is also a Python library. The stable workflow is `profile → plan → fit → transform`; the same fitted artifact can be used in notebooks, services, and batch jobs:
+DATADOC can be embedded directly into existing machine learning workflows, Airflow tasks, or inference microservices:
 
 ```python
-from datadoc import DataDocPipeline, PipelineConfig
 import polars as pl
+from datadoc.core.pipeline import DataDocPipeline, PipelineConfig
 
-# Fit only on the training split. The target is protected from feature transforms.
+# 1. Load data
 train_df = pl.read_csv("train.csv")
-pipeline = DataDocPipeline(PipelineConfig(target="churn")).fit(train_df)
-pipeline.save("artifacts/churn-pipeline.json")
+test_df = pl.read_csv("test.csv")
 
-# Transform data that was never used to fit statistics.
-validation_df = pl.read_csv("validation.csv")
-validation_features = pipeline.transform(validation_df)
+# 2. Configure pipeline
+config = PipelineConfig(
+    target="churn",
+    drop_identifiers=True,
+    deduplicate=True,
+    clip_outliers=True,
+    scaling="standard",
+    rare_category_min_frequency=0.01,
+)
+
+# 3. Fit strictly on training split
+pipeline = DataDocPipeline(config).fit(train_df)
+
+# 4. Transform training and unseen inference data
+clean_train = pipeline.transform(train_df)
+clean_test = pipeline.transform(test_df)
+
+# 5. Serialize frozen state for production serving
+pipeline.save("artifacts/pipeline.json")
+
+# 6. Load and serve in production API
+production_pipeline = DataDocPipeline.load("artifacts/pipeline.json")
+scored_features = production_pipeline.transform(incoming_batch_df)
 ```
 
-For an observed model comparison, install the optional ML extra and call `pipeline.evaluate(train_df)` or `datadoc evaluate`. Evaluation is evidence for the declared task and split strategy; it is not a promise that cleaning always improves a model.
+---
+
+## CLI Commands Reference
+
+| Command | Purpose | Key Flags |
+| :--- | :--- | :--- |
+| `datadoc health <file>` | Quick health scan with 0–100 score and quality findings | `--target` |
+| `datadoc profile <file>` | Full statistical profile and column role inference | `--target`, `--explain`, `--compare <file2>` |
+| `datadoc explain <file>` | AI semantic inference, missingness analysis, and feature hypotheses | `--target`, `--model`, `--recommend-config`, `--output` |
+| `datadoc plan <file>` | Generates reviewable transformation plan before modifying data | `--target`, `--preset`, `--explain`, `--diff <plan2>` |
+| `datadoc fit <train>` | Learns transformations from train split; serializes `pipeline.json` | `--target`, `--preset`, `--deduplicate`, `--rare-frequency` |
+| `datadoc transform <file>` | Applies fitted `pipeline.json` to unseen test or inference data | `--pipeline`, `--output`, `--validate` |
+| `datadoc run <file>` | One-shot end-to-end preparation with artifacts and manifests | `--target`, `--preset`, `--output`, `--evaluate` |
+| `datadoc report <file>` | Standalone interactive HTML health and audit report | `--target`, `--output`, `--ai`, `--ai-model`, `--open` |
+| `datadoc compare <raw> <clean>` | Visual side-by-side comparison of dataset changes | `--target`, `--html`, `--json`, `--open` |
+| `datadoc evaluate <file>` | Cross-validated ML benchmark (raw vs. DATADOC prepared) | `--target`, `--task`, `--ablation` |
+| `datadoc export` | Exports pipeline to standalone executable Python script or Joblib | `--pipeline`, `--output`, `--format python\|joblib` |
+| `datadoc lint <file>` | Audits dataset for target leakage, infinities, and invalid values | `--target` |
+| `datadoc diff <f1> <f2>` | Diffs two JSON artifacts (`profile.json`, `plan.json`, `pipeline.json`) | |
+| `datadoc wizard <file>` | Guided terminal assistant for interactive configuration | |
+| `datadoc init` | Scaffolds a starter `datadoc.toml` configuration | `--preset` |
+| `datadoc ui <file>` | Launches local-first FastAPI web studio | `--port`, `--no-browser` |
+| `datadoc plugins list` | Lists all 9 registered transformation plugins and priorities | |
+| `datadoc version` | Displays version and active environment details | |
 
 ---
 
-## 💻 CLI Commands Reference
+## Architecture & Plugins
 
-| Command | Description |
-|---------|-------------|
-| `datadoc wizard <file>` | Guided TUI: asks target/preset/scaling, writes `datadoc.toml`, runs pipeline |
-| `datadoc init` | Writes a starter `datadoc.toml` (or `pyproject.toml [tool.datadoc]`) config |
-| `datadoc profile <file>` | Data-quality report + roles (`--explain`, `--compare profile2.json`) |
-| `datadoc plan <file>` | Explainable plan (`--explain`, `--diff plan2.json`) |
-| `datadoc fit <train>` | Learns pipeline on train only (`--preset`, `--deduplicate`, `--rare-frequency`, `--cyclical`, `--no-hour`, repeatable `--identifier-column` / `--ignore-column`) |
-| `datadoc transform <file>` | Applies saved artifact (`--validate` for schema + drift checks) |
-| `datadoc evaluate <file>` | Candidate vs baseline (`--ablation` for per-component deltas) |
-| `datadoc export` | Wrapper for artifact (`--format python\|joblib`) |
-| `datadoc run <file>` | One-shot profile→plan→fit→transform + `manifest.json` (+ `--evaluate --ablation`) |
-| `datadoc report <file>` | Generates a standalone, shareable HTML data health and preparation audit report |
-| `datadoc compare <raw> <trans>` | Visual side-by-side dataset comparison (terminal table + HTML export) |
-| `datadoc lint <file>` | Leakage/pitfall lint (target duplication, nulls, infinities, duplicates) |
-| `datadoc diff <a.json> <b.json>` | Diff profile/plan/pipeline artifacts |
-| `datadoc plugins list` | Lists 9 registered plugins (priorities, entry-points) |
-| `datadoc ui <file>` | Local FastAPI dashboard (Ctrl+K palette, lineage panel, HTML report export) |
+DATADOC processes tabular data through an extensible, priority-ordered transformation ladder. The sequence is mathematically ordered to ensure operations do not corrupt downstream dependencies:
 
-Short aliases: `-t/--target`, `-o/--output`, `-p/--pipeline`, `-f/--format`.
-Presets: `--preset quick|balanced|linear|tree|time|robust`. Shell completion: `datadoc --install-completion`.
-
-
-
----
-
-## 🧩 Architecture & Plugins
-
-DATADOC operates as a fitted pipeline. Every transformation learns state only from training data, saves that state to JSON, and reuses it unchanged for later datasets.
+```
+[5: DuplicateRemover] → [10: MissingValueImputer] → [20: OutlierCapper] → [30: DatetimeDecomposer] →
+[40: CategoricalEncoder] → [41: TargetEncoder] → [42: RareCategoryGrouper] → [44: PolynomialFeatures] → [45: StandardScaler]
+```
 
 | Priority | Plugin | Action Performed |
-|----------|--------|-------------|
-| 5 | **DuplicateRemoverPlugin** | Detects duplicate rows; `deduplicate=True` drops them at fit (train-only) |
-| 10 | **MissingValuePlugin** | Imputes missing numeric values with median, categorical with mode |
-| 20 | **OutlierPlugin** | Offers optional IQR clipping; clipping is not forced by default |
-| 30 | **DatetimePlugin** | Detects date strings and extracts year, month, day, day_of_week (+hour when time present, optional cyclical sin/cos) |
-| 40 | **CategoricalEncoderPlugin** | Encodes categories using training vocabularies (threshold 20) and handles unseen values |
-| 41 | **TargetEncoderPlugin** | Empirical Bayes smoothed target encoding: `(n * cat_mean + m * global_mean) / (n + m)` |
-| 42 | **RareCategoryPlugin** | Groups rare categories (< `rare_category_min_frequency`) into `__RARE__` |
-| 44 | **PolynomialFeaturesPlugin** | Generates degree-2 interaction terms (`x1 * x2`) and squared terms (`x^2`) |
-| 45 | **ScalingPlugin** | Applies configured standard or robust scaling, fit on training data only |
+| :---: | :--- | :--- |
+| **5** | `DuplicateRemoverPlugin` | Detects duplicate records; drops them during fit to prevent distribution distortion. |
+| **10** | `MissingValuePlugin` | Imputes numerical nulls with training median; categoricals with training mode. |
+| **20** | `OutlierPlugin` | Calculates Tukey IQR boundaries ($Q_1 - 1.5\text{IQR}$, $Q_3 + 1.5\text{IQR}$) and caps extreme values. |
+| **30** | `DatetimePlugin` | Extracts temporal features (`year`, `month`, `day`, `dayofweek`, `hour`) and cyclical sin/cos components. |
+| **40** | `CategoricalEncoderPlugin` | Applies One-Hot Encoding (`drop_first=True`) to low-cardinality features; handles unseen categories. |
+| **41** | `TargetEncoderPlugin` | Applies Empirical Bayes smoothed target encoding: $\hat{y}_c = \frac{n \cdot \bar{y}_c + m \cdot \bar{y}}{n + m}$. |
+| **42** | `RareCategoryPlugin` | Bins infrequent categories below threshold into `__RARE__` to prevent tree overfitting. |
+| **44** | `PolynomialFeaturesPlugin` | Generates degree-2 interaction terms ($x_1 \cdot x_2$) and squared terms ($x^2$) for continuous features. |
+| **45** | `ScalingPlugin` | Fits and applies StandardScaler ($\frac{x - \mu}{\sigma}$) or RobustScaler ($\frac{x - Q_2}{\text{IQR}}$) to continuous inputs. |
 
-The fitted pipeline is the production source of truth. Plugin work should follow the lifecycle `analyze → recommend → apply`, with fitted state (`median`, `clip`, `vocabularies`, `rare maps`, `hour flags`, `center/spread`) serializable in `pipeline.json` (artifact v2 with `provenance`). External plugins auto-register via `datadoc.plugins` entry-points.
-
-Want to build your own? See [CONTRIBUTING.md](CONTRIBUTING.md) to learn how to create and register custom plugins!
+Custom plugins can be created by subclassing `BasePlugin` and declaring entry-points under `[project.entry-points."datadoc.plugins"]`. See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ---
 
-## 🗺️ Roadmap
+## Configuration (`datadoc.toml`)
 
-- [x] Core Engine with plugin orchestration
-- [x] 9 Built-in deterministic plugins (duplicate, missing, outlier, datetime, encoder, target encoder, rare, polynomial, scaling)
-- [x] Stunning Rich Terminal UI (wizard, presets, `datadoc.toml`, completion)
-- [x] Pipeline export capability (`python` + `joblib`)
-- [x] Polars backend and local-first pipeline artifacts (v2 + provenance)
-- [x] PyPI Release (`pip install datadoc-cli`)
-- [x] Constrained optional AI planning path
-- [x] Session-scoped local FastAPI dashboard (Ctrl+K palette, lineage, drift)
-- [x] Addictive loop: `profile --compare`, `plan --explain/--diff`, `transform --validate`, `evaluate --ablation`
-- [x] Standalone HTML audit reports (`datadoc report`)
-- [x] Visual dataset comparison engine (`datadoc compare`)
-- [x] Notebook widgets (`profile_to_html`, `_repr_html_`)
-- [ ] Export targets for `dbt` and Apache Airflow
-- [x] Local FastAPI dashboard/API companion
+Pipeline settings can be committed to your repository in a `datadoc.toml` file or inside `pyproject.toml`:
+
+```toml
+[tool.datadoc]
+target = "churn"
+task = "classification"
+preset = "balanced"
+drop_identifiers = true
+deduplicate = true
+clip_outliers = true
+categorical_threshold = 20
+rare_category_min_frequency = 0.01
+scaling = "standard"
+strict_schema = true
+```
+
+Generate a starter configuration with:
+
+```bash
+datadoc init --preset balanced
+```
 
 ---
 
-## ⚖️ License
+## Contributing
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on code formatting, running tests, and developing custom plugins.
 
-## 🤝 Contributing
+Run the test suite:
 
-We welcome contributions from the community! If you'd like to add a new plugin or improve the core engine, please see [CONTRIBUTING.md](CONTRIBUTING.md).
+```bash
+python -m pytest tests/ -q
+python -m ruff check datadoc/ tests/
+python -m ruff format --check datadoc/ tests/
+```
 
-See [CHANGELOG.md](CHANGELOG.md) for the 0.6.0 release notes.
+---
+
+## License
+
+DATADOC is licensed under the [MIT License](LICENSE).

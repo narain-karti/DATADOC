@@ -100,9 +100,10 @@
         <a class="side-link active" data-page-link href="architecture.html">Codebase deep dive</a>
         <a class="side-link" data-section-link href="#plugins">Plugins Subsystem</a>
         <a class="side-link" data-section-link href="#cli-commands">CLI Background Logic</a>
-        <a class="side-link" data-section-link href="#core-pipeline">Core: pipeline.py</a>
-        <a class="side-link" data-section-link href="#core-agent">Core: agent.py</a>
-        <a class="side-link" data-section-link href="#core-engine">Core: engine.py</a>
+        <a class="side-link" data-section-link href="#core-pipeline">Core: Pipeline</a>
+        <a class="side-link" data-section-link href="#core-agent">Plugin Registry</a>
+        <a class="side-link" data-section-link href="#ai-subsystem">AI Advisory Engine</a>
+        <a class="side-link" data-section-link href="#core-engine">Removed Legacy</a>
         <a class="side-link" data-section-link href="#dependencies">Dependencies</a>
     </div>
 </aside>
@@ -183,6 +184,20 @@ graph LR
         </div>
         <p><strong>Logic:</strong> If a column has too many unique values (e.g., UUIDs), it's dropped to avoid the "curse of dimensionality". Otherwise, it iterates through unique strings and does <code>(pl.col(c) == val).cast(pl.Int8).alias(f"{c}_{val}")</code>.</p>
 
+        <h3><code>target_encoder.py</code> (Bayesian Target Encoding, priority 41)</h3>
+        <p>For high-cardinality categoricals where one-hot encoding would produce hundreds of sparse columns, target encoding replaces each category with an empirical Bayes smoothed estimate of the target mean.</p>
+        <div class="math-formula">
+            S_i = \frac{n_i \cdot \bar{y}_i + m \cdot \bar{y}_{global}}{n_i + m}
+        </div>
+        <p><strong>Logic:</strong> $n_i$ is category row count, $\bar{y}_i$ is category target mean, $\bar{y}_{global}$ is global target mean, and $m$ is smoothing weight (default 10.0). Categories with few samples shrink toward the global mean to avoid overfitting.</p>
+
+        <h3><code>polynomial.py</code> (Interaction &amp; Polynomial Features, priority 44)</h3>
+        <p>Linear models cannot capture feature interactions without explicit multiplicative terms. This plugin generates pairwise products and quadratic features for top numeric predictors.</p>
+        <div class="math-formula">
+            Interaction = x_i \cdot x_j \qquad \text{Quadratic} = x_i^2
+        </div>
+        <p><strong>Logic:</strong> Detects numeric features with high correlation or non-linear relationship to target, computes pairwise interactions up to <code>max_interaction_terms</code> (default 10) to avoid feature explosion.</p>
+
         <h3><code>datetime_feat.py</code> (Time Series Extraction)</h3>
         <p><strong>Logic:</strong> Takes a string column like "2024-05-12 14:00" and uses <code>str.to_datetime(strict=False)</code>. It then extracts <code>dt.year()</code>, <code>dt.month()</code>, <code>dt.day()</code>, <code>dt.weekday()</code> — plus <code>dt.hour()</code> only when training data has a real time component — and drops the original column. With <code>datetime_cyclical=True</code>, month/day/weekday/hour also get sin/cos pairs.</p>
     </section>
@@ -223,6 +238,34 @@ graph LR
             <li><strong>Holdout:</strong> Refits the CV winner on full train and scores both on the untouched holdout. Classification uses balanced accuracy (LogisticRegression and/or RandomForest); regression uses negative RMSE (Ridge and/or RandomForestRegressor).</li>
             <li><strong>Report:</strong> Emits an <code>EvaluationReport</code> with metric, split strategy, both scores, improvement, selected pipeline, feature count, and warnings. <code>--ablation</code> additionally compares full, no-clip, no-scaling, and minimal variants.</li>
         </ul>
+
+        <h3><code>datadoc report <file></code></h3>
+        <ul class="step-list">
+            <li><strong>Profile &amp; Score:</strong> Calculates dataset profile, transformation plan, and 0–100 data health quality score with letter grade (A+ through F).</li>
+            <li><strong>Optional AI Advisory:</strong> When <code>--ai</code> is passed, queries LiteLLM for executive data summary, missingness etiology, and feature hypotheses.</li>
+            <li><strong>Self-Contained HTML:</strong> Renders an interactive, standalone HTML report with embedded CSS, distribution bars, and health audit findings.</li>
+        </ul>
+
+        <h3><code>datadoc compare <raw> <clean></code></h3>
+        <ul class="step-list">
+            <li><strong>Dual Profiling:</strong> Loads raw and transformed datasets and runs parallel profiling.</li>
+            <li><strong>Differential Delta:</strong> Measures dimension shifts, null resolution percentage (tracking 100% fixes), column lifecycle (retained, dropped, engineered), and numeric distribution shifts.</li>
+            <li><strong>Visual Report:</strong> Outputs an interactive side-by-side HTML comparison or structured JSON summary.</li>
+        </ul>
+
+        <h3><code>datadoc explain <file></code></h3>
+        <ul class="step-list">
+            <li><strong>Grounding:</strong> Profiles data, inspects target, data types, null rates, and high-cardinality signals.</li>
+            <li><strong>Prompt Synthesis:</strong> Builds strict system prompt instructing model on tabular statistics, missingness mechanisms (MCAR/MAR/MNAR), and mathematical transformation syntax.</li>
+            <li><strong>Structured LLM Call:</strong> Calls provider via LiteLLM (OpenAI, Gemini, Anthropic, Ollama) requesting valid JSON adhering to <code>AIExplanation</code> schema.</li>
+            <li><strong>Display &amp; Config:</strong> Renders rich terminal panels with feature hypotheses and can persist a recommended <code>datadoc.toml</code>.</li>
+        </ul>
+
+        <h3><code>datadoc health <file></code></h3>
+        <ul class="step-list">
+            <li><strong>Fast Audit:</strong> Scans dataset for null rates, duplicates, constant columns, and extreme variances.</li>
+            <li><strong>Grade:</strong> Computes 0–100 health score with letter grade (A+ to F) and outputs concise terminal summary.</li>
+        </ul>
     </section>
 
     <hr>
@@ -253,7 +296,7 @@ flowchart TD
 
     <section id="core-agent">
         <h2>4. Plugin Registry: <code>plugins/registry.py</code></h2>
-        <p>Seven deterministic plugins (<code>DuplicateRemover</code> 05, <code>MissingValue</code> 10, <code>Outlier</code> 20, <code>Datetime</code> 30, <code>CategoricalEncoder</code> 40, <code>RareCategory</code> 42, <code>Scaling</code> 45) implement the <code>BasePlugin</code> lifecycle <code>analyze → recommend → apply</code> as stateless advisors. The registry auto-discovers them plus any third-party plugin registered under the <code>datadoc.plugins</code> entry-point group, sorted by priority. The fitted pipeline in <code>core/pipeline.py</code> — not the plugins — is the production source of truth: it re-implements each transformation with frozen train-only state so validation data can never influence fitted statistics.</p>
+        <p>Nine deterministic plugins (<code>DuplicateRemover</code> 05, <code>MissingValue</code> 10, <code>Outlier</code> 20, <code>Datetime</code> 30, <code>CategoricalEncoder</code> 40, <code>TargetEncoder</code> 41, <code>RareCategory</code> 42, <code>PolynomialFeatures</code> 44, <code>Scaling</code> 45) implement the <code>BasePlugin</code> lifecycle <code>analyze → recommend → apply</code> as stateless advisors. The registry auto-discovers them plus any third-party plugin registered under the <code>datadoc.plugins</code> entry-point group, sorted by priority. The fitted pipeline in <code>core/pipeline.py</code> — not the plugins — is the production source of truth: it re-implements each transformation with frozen train-only state so validation data can never influence fitted statistics.</p>
 
         <div class="mermaid">
 sequenceDiagram
@@ -264,21 +307,44 @@ sequenceDiagram
 
     User->>CLI: datadoc plugins list
     CLI->>Registry: list_plugins()
-    Registry->>Registry: built-in 7, sort by priority
+    Registry->>Registry: built-in 9, sort by priority
     Registry->>EntryPts: load datadoc.plugins group
     EntryPts-->>Registry: third-party plugins
     Registry-->>User: priority-ordered table
         </div>
-        <p>Optional LLM help (via <code>litellm</code>) is advisory only: it may explain or rank registered transformations, but generated code is never executed.</p>
+    </section>
+
+    <section id="ai-subsystem">
+        <h2>5. AI Advisory Engine: <code>datadoc/ai/</code></h2>
+        <p>DATADOC integrates a zero-execution AI advisory subsystem that turns raw tabular metrics into actionable modeling recommendations, semantic missingness classification, and domain feature engineering hypotheses.</p>
+
+        <div class="mermaid">
+flowchart LR
+    Data[("DatasetProfile &amp; Plan")] --> Prompt["prompts.py<br/>Schema-governed prompt"]
+    Prompt --> Client["client.py<br/>LiteLLM abstraction"]
+    Client --> LLM["LLM Provider<br/>OpenAI, Gemini, Anthropic, Ollama"]
+    LLM --> Parse["explainer.py<br/>JSON schema validator &amp; repair"]
+    Parse --> Output["Advisory Output<br/>Markdown, Rich terminal, datadoc.toml"]
+        </div>
+
+        <h3>Execution Boundary &amp; Safety</h3>
+        <p>DATADOC maintains a strict <strong>zero-execution security boundary</strong>. The AI advisory engine is purely observational and analytical: it inspects statistical distributions, column headers, and quality findings to generate natural language explanations and mathematical formula hypotheses. It <strong>never</strong> writes or executes arbitrary code inside the transformation pipeline. All transformations applied to data must strictly pass through the deterministic, frozen-state <code>DataDocPipeline</code>.</p>
+
+        <h3>Core AI Modules</h3>
+        <ul class="step-list">
+            <li><strong><code>client.py</code>:</strong> Multi-provider client wrapper. Automatically discovers active environment keys (<code>OPENAI_API_KEY</code>, <code>GEMINI_API_KEY</code>, <code>ANTHROPIC_API_KEY</code>) or connects to local Ollama endpoints (<code>http://localhost:11434</code>).</li>
+            <li><strong><code>prompts.py</code>:</strong> System prompts enforcing structured JSON output for missingness classifications (MCAR, MAR, MNAR), semantic roles, target leakage risks, and domain-specific feature engineering formulas.</li>
+            <li><strong><code>explainer.py</code>:</strong> Houses the <code>AIExplainer</code> class and <code>explain_dataset()</code> function. Extracts tabular signals, orchestrates API calls, validates JSON against expected schema, and generates clean markdown outputs.</li>
+        </ul>
     </section>
 
     <section id="core-engine">
-        <h2>5. Removed Legacy: <code>core/engine.py</code> and <code>core/agent.py</code></h2>
+        <h2>6. Removed Legacy: <code>core/engine.py</code> and <code>core/agent.py</code></h2>
         <p>Earlier versions shipped a <code>DATADOC</code> facade (<code>engine.py</code>) and an LLM code-executing agent (<code>agent.py</code>). Both were deleted in the 0.4.0 leakage-safe refactor: the facade fitted and transformed the same data (a leakage risk), and the agent executed provider-generated Python (a safety risk). New code uses <code>DataDocPipeline</code> directly; see <code>MIGRATION.md</code> for the upgrade path.</p>
     </section>
 
     <section id="dependencies">
-        <h2>6. Dependencies Explained</h2>
+        <h2>7. Dependencies Explained</h2>
         <p>Every dependency in <code>pyproject.toml</code> has a distinct, justified purpose.</p>
         
         <div class="dependency-grid">
@@ -287,15 +353,15 @@ sequenceDiagram
                 <p><strong>Why:</strong> Written in Rust, uses the Apache Arrow memory format, and features a lazy evaluation engine. 10-50x faster than Pandas.</p>
             </div>
             <div class="dep-card">
-                <h3>Typer & Rich</h3>
+                <h3>Typer &amp; Rich</h3>
                 <p><strong>Why:</strong> Typer builds CLI tools using Python type hints, while Rich provides beautiful terminal formatting (tables, progress bars, colored text).</p>
             </div>
             <div class="dep-card">
                 <h3>LiteLLM</h3>
-                <p><strong>Why:</strong> An abstraction layer over LLM APIs. Unifies OpenAI, Anthropic, and Gemini into one interface.</p>
+                <p><strong>Why:</strong> An abstraction layer over LLM APIs. Unifies OpenAI, Anthropic, Gemini, and Ollama into one interface.</p>
             </div>
             <div class="dep-card">
-                <h3>FastAPI & Uvicorn</h3>
+                <h3>FastAPI &amp; Uvicorn</h3>
                 <p><strong>Why:</strong> FastAPI provides a blazing fast ASGI web framework to serve API endpoints for the web dashboard.</p>
             </div>
             <div class="dep-card">
@@ -311,7 +377,8 @@ sequenceDiagram
     <a class="right-link" data-section-link href="#plugins">Plugins Subsystem</a>
     <a class="right-link" data-section-link href="#cli-commands">CLI Background Execution</a>
     <a class="right-link" data-section-link href="#core-pipeline">Core: Pipeline</a>
-    <a class="right-link" data-section-link href="#core-agent">Registry</a>
+    <a class="right-link" data-section-link href="#core-agent">Plugin Registry</a>
+    <a class="right-link" data-section-link href="#ai-subsystem">AI Advisory Engine</a>
     <a class="right-link" data-section-link href="#core-engine">Removed legacy</a>
     <a class="right-link" data-section-link href="#dependencies">Dependencies</a>
 </aside>
