@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Comprehensive DATADOC CLI deep dive: concepts, options, pipeline lifecycle, commands, and step-by-step tutorial.">
   <title>DATADOC Docs | CLI Deep Dive & Reference</title>
-  <link rel="preconnect" href="https://fonts.cdnfonts.com" crossorigin><link rel="preconnect" href="https://api.fontshare.com" crossorigin><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.cdnfonts.com/css/pp-neue-montreal" rel="stylesheet"><link href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet"><link rel="stylesheet" href="css/docs.css">
+  <link rel="preconnect" href="https://fonts.cdnfonts.com" crossorigin><link rel="preconnect" href="https://api.fontshare.com" crossorigin><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.cdnfonts.com/css/pp-neue-montreal" rel="stylesheet"><link href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Quantico:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet"><link rel="stylesheet" href="css/docs.css">
   <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
   <script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
   <style>
@@ -50,7 +50,7 @@
       <span>⌕</span>
       <input data-search-input type="search" placeholder="Search docs (full-text: topics, body, code, tables)" autocomplete="off">
     </label>
-    <span class="version-badge">v0.5.0</span>
+    <span class="version-badge">v0.6.0</span>
     <button class="menu-button" type="button" data-menu-toggle aria-label="Open navigation" aria-expanded="false">☰</button>
   </div>
 </header>
@@ -103,7 +103,7 @@
       <span class="meta-chip accent">datadoc --help</span>
       <span class="meta-chip">Polars Powered</span>
       <span class="meta-chip">Zero Data Leakage</span>
-      <span class="meta-chip">v0.5.0</span>
+      <span class="meta-chip">v0.6.0</span>
     </div>
 
     <div class="page-actions">
@@ -543,6 +543,58 @@ flowchart LR
               <tr><td><code>--task</code></td><td>Option</td><td><code>auto</code></td><td><code>auto</code>, <code>classification</code>, or <code>regression</code></td></tr>
               <tr><td><code>--drop-identifiers</code></td><td>Flag</td><td><code>False</code></td><td>Include identifier dropping in transformation operations</td></tr>
               <tr><td><code>--output</code></td><td>Option</td><td><code>None</code></td><td>Path to save plan JSON file</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="endpoint">
+        <div class="endpoint-head">
+          <span class="method-badge">REPORT</span>
+          <span class="path">datadoc report &lt;file_path&gt;</span>
+        </div>
+        <p>Generates an automated, standalone, interactive HTML data health and preparation audit report for sharing with teammates. Completely self-contained with health grade scoring, distribution histograms, null rates, and transformation plans.</p>
+
+        <pre class="code-block" data-copy>
+<div class="code-caption"><span class="lang">Terminal</span><span>Generate standalone HTML report</span></div><code><span class="tok-command">datadoc report</span> train.csv <span class="tok-flag">--target</span> churn <span class="tok-flag">--output</span> report.html</code></pre>
+
+        <h4>Options</h4>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Option</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>file_path</code></td><td>Argument</td><td><em>Required</em></td><td>Path to CSV or Parquet input dataset</td></tr>
+              <tr><td><code>--target</code></td><td>Option</td><td><code>None</code></td><td>Declare target column for protection and analysis</td></tr>
+              <tr><td><code>--output</code></td><td>Option</td><td><code>&lt;stem&gt;_report.html</code></td><td>Path to write standalone HTML report</td></tr>
+              <tr><td><code>--title</code></td><td>Option</td><td><code>None</code></td><td>Custom title for report header</td></tr>
+              <tr><td><code>--preset</code></td><td>Option</td><td><code>None</code></td><td>Preset to base recommendations on</td></tr>
+              <tr><td><code>--open / --no-open</code></td><td>Flag</td><td><code>True</code></td><td>Open in browser automatically</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="endpoint">
+        <div class="endpoint-head">
+          <span class="method-badge">COMPARE</span>
+          <span class="path">datadoc compare &lt;raw_path&gt; &lt;transformed_path&gt;</span>
+        </div>
+        <p>Visually compares raw vs. transformed datasets side-by-side. Displays dimension changes, missing value reduction (100% resolution tracking), column lifecycle (retained, dropped, engineered), and numeric distribution shifts.</p>
+
+        <pre class="code-block" data-copy>
+<div class="code-caption"><span class="lang">Terminal</span><span>Compare datasets side-by-side</span></div><code><span class="tok-command">datadoc compare</span> raw.csv clean.csv <span class="tok-flag">--target</span> churn <span class="tok-flag">--html</span> comparison.html</code></pre>
+
+        <h4>Options</h4>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Option</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>raw_path</code></td><td>Argument</td><td><em>Required</em></td><td>Path to raw CSV or Parquet file</td></tr>
+              <tr><td><code>transformed_path</code></td><td>Argument</td><td><em>Required</em></td><td>Path to transformed CSV or Parquet file</td></tr>
+              <tr><td><code>--target</code></td><td>Option</td><td><code>None</code></td><td>Target column name</td></tr>
+              <tr><td><code>--html</code></td><td>Option</td><td><code>None</code></td><td>Path to save visual HTML comparison page</td></tr>
+              <tr><td><code>--json</code></td><td>Flag</td><td><code>False</code></td><td>Output comparison data as structured JSON</td></tr>
+              <tr><td><code>--open</code></td><td>Flag</td><td><code>False</code></td><td>Open HTML comparison in browser</td></tr>
             </tbody>
           </table>
         </div>
@@ -1115,7 +1167,7 @@ flowchart TD
 </div>
 
 <footer class="footer">
-  DATADOC v0.5.0 · <a href="index.html">Documentation home</a> · <a href="https://github.com/narain-karti/DATADOC">GitHub</a>
+  DATADOC v0.6.0 · <a href="index.html">Documentation home</a> · <a href="https://github.com/narain-karti/DATADOC">GitHub</a>
 </footer>
 
 <div class="search-results" aria-live="polite"></div>

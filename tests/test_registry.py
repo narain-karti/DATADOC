@@ -6,10 +6,10 @@ from datadoc.plugins.rare import RareCategoryPlugin
 from datadoc.plugins.duplicates import DuplicateRemoverPlugin
 
 
-def test_registry_lists_seven_plugins_sorted():
+def test_registry_lists_nine_plugins_sorted():
     plugs = list_plugins()
     names = [p.name for p in plugs]
-    assert len(plugs) == 7
+    assert len(plugs) == 9
     for expected in BUILTIN_PLUGIN_NAMES:
         assert expected in names
     priorities = [p.priority for p in plugs]

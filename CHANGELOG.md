@@ -2,6 +2,16 @@
 
 All notable changes to DATADOC are documented here. Format follows Keep a Changelog and SemVer.
 
+## [0.6.0] - 2026-09-13
+### Added
+- `datadoc report`: Automated, standalone, high-fidelity HTML report generation (`datadoc report <dataset> [--target] [--output] [--title] [--preset]`). 100% self-contained single-file HTML with embedded responsive CSS, health grade scoring (A+ to F), column role classification, distribution statistics, and transformation plan.
+- `datadoc compare`: Visual side-by-side dataset comparison command (`datadoc compare <raw> <transformed> [--target] [--html] [--json]`). Computes dimension deltas, missing cell reduction (100% resolution tracking), column lineage/lifecycle (retained, dropped, engineered), and numeric distribution shifts (imputation and scaling effects) with color-coded terminal tables and interactive HTML export.
+- `TargetEncoderPlugin` (Priority 41): Empirical Bayes smoothed target encoding for high-cardinality categoricals: `y_hat = (n * cat_mean + m * global_mean) / (n + m)` to prevent target leakage and dimension explosion.
+- `PolynomialFeaturesPlugin` (Priority 44): Degree-2 interactions (`x1 * x2`) and squared features (`x^2`) for numeric columns to capture non-linear signal for linear models.
+- Dashboard enhancements: Added "View HTML Report" direct action in the header, navigation sidebar, and artifact actions panel.
+- UI Server API: Added `GET /api/dataset/report` (standalone HTML audit report) and `GET /api/dataset/compare` (side-by-side comparison metrics).
+- Standalone execution: Added `if __name__ == "__main__": app()` to `datadoc.cli.app`.
+
 ## [0.5.0] - 2026-09-14
 ### Added
 - `datadoc.toml` / `pyproject.toml [tool.datadoc]` config file support with flag overrides.

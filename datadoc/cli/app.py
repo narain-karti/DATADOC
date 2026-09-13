@@ -1074,6 +1074,148 @@ def diff_cmd(
 
 
 # ──────────────────────────────────────────────────────────────
+# COMMAND: report
+# ──────────────────────────────────────────────────────────────
+@app.command()
+def report(
+    file_path: str = typer.Argument(..., help="CSV or Parquet file to analyze."),
+    target: Optional[str] = typer.Option(
+        None, "--target", "-t", help="Target column name.", rich_help_panel="Data"
+    ),
+    output: Optional[str] = typer.Option(
+        None, "--output", "-o", help="Output HTML report file path.", rich_help_panel="Output"
+    ),
+    title: Optional[str] = typer.Option(
+        None, "--title", help="Custom report title.", rich_help_panel="Display"
+    ),
+    pipeline: Optional[str] = typer.Option(
+        None,
+        "--pipeline",
+        "-p",
+        help="Path to fitted pipeline.json to include lineage.",
+        rich_help_panel="Pipeline",
+    ),
+    preset: Optional[str] = typer.Option(
+        None, "--preset", help=f"Quick preset: {', '.join(PRESETS)}", rich_help_panel="Config"
+    ),
+    config: Optional[str] = typer.Option(
+        None, "--config", help="Path to datadoc.toml", rich_help_panel="Config"
+    ),
+    open_browser: bool = typer.Option(
+        True,
+        "--open/--no-open",
+        help="Open report in browser automatically.",
+        rich_help_panel="Display",
+    ),
+):
+    """Generate an automated, standalone HTML report for sharing."""
+    import webbrowser
+    from datadoc.core.report import generate_html_report
+
+    file_cfg, _ = _find_and_load_config(config)
+    if preset:
+        file_cfg = _resolve_preset(preset, file_cfg)
+    target = file_cfg.get("target", target) if target is None else target
+
+    try:
+        df = read_dataset(file_path)
+    except Exception as e:
+        raise typer.BadParameter(f"Could not load dataset: {e}")
+
+    pipe_instance = None
+    if pipeline:
+        try:
+            pipe_instance = DataDocPipeline.load(pipeline)
+        except Exception as e:
+            console.print(f"[yellow]Warning: Could not load pipeline from {pipeline}: {e}[/yellow]")
+
+    html_content = generate_html_report(
+        df=df,
+        target=target,
+        title=title,
+        pipeline=pipe_instance,
+        dataset_name=Path(file_path).name,
+    )
+
+    out_path = (
+        Path(output)
+        if output
+        else Path(file_path).with_suffix("").with_name(f"{Path(file_path).stem}_report.html")
+    )
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(html_content, encoding="utf-8")
+
+    console.print(f"[bold green]Created standalone report:[/bold green] {out_path.resolve()}")
+    if open_browser:
+        try:
+            webbrowser.open(out_path.resolve().as_uri())
+        except Exception:
+            pass
+
+
+# ──────────────────────────────────────────────────────────────
+# COMMAND: compare
+# ──────────────────────────────────────────────────────────────
+@app.command()
+def compare(
+    raw_path: str = typer.Argument(..., help="Path to raw dataset (CSV or Parquet)."),
+    transformed_path: str = typer.Argument(
+        ..., help="Path to transformed dataset (CSV or Parquet)."
+    ),
+    target: Optional[str] = typer.Option(
+        None, "--target", "-t", help="Target column name.", rich_help_panel="Data"
+    ),
+    html: Optional[str] = typer.Option(
+        None,
+        "--html",
+        help="Path to save interactive HTML comparison report.",
+        rich_help_panel="Output",
+    ),
+    json_output: bool = typer.Option(
+        False, "--json", help="Output comparison metrics as JSON.", rich_help_panel="Output"
+    ),
+    open_browser: bool = typer.Option(
+        False,
+        "--open",
+        help="Open HTML report in browser automatically.",
+        rich_help_panel="Display",
+    ),
+):
+    """Visually compare raw vs. transformed datasets side-by-side."""
+    import webbrowser
+    from datadoc.core.compare import compare_datasets, print_comparison_table, compare_to_html
+
+    try:
+        raw_df = read_dataset(raw_path)
+        trans_df = read_dataset(transformed_path)
+    except Exception as e:
+        raise typer.BadParameter(f"Error reading datasets: {e}")
+
+    comp = compare_datasets(raw_df, trans_df, target=target)
+
+    if json_output:
+        console.print_json(json.dumps(comp.to_dict(), indent=2))
+    else:
+        print_comparison_table(comp, console=console)
+
+    if html:
+        html_content = compare_to_html(
+            comp, title=f"Comparison: {Path(raw_path).name} vs {Path(transformed_path).name}"
+        )
+        out_path = Path(html)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(html_content, encoding="utf-8")
+        console.print(
+            f"[bold green]Saved HTML comparison report:[/bold green] {out_path.resolve()}"
+        )
+        if open_browser:
+            try:
+                webbrowser.open(out_path.resolve().as_uri())
+            except Exception:
+                pass
+
+
+# ──────────────────────────────────────────────────────────────
 # COMMAND: lint
 # ──────────────────────────────────────────────────────────────
 @app.command(name="lint")
@@ -1219,3 +1361,7 @@ def ui(
     if not no_browser:
         webbrowser.open(url)
     uvicorn.run("datadoc.cli.ui_server:app", host="127.0.0.1", port=port, log_level="info")
+
+
+if __name__ == "__main__":
+    app()

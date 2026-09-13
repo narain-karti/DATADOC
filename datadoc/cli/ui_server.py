@@ -249,6 +249,32 @@ def pipeline_drift(session_id: str = Header("local", alias="X-DATADOC-SESSION"))
         raise HTTPException(status_code=422, detail=str(error)) from error
 
 
+@app.get("/api/dataset/report")
+def dataset_report(session_id: str = Header("local", alias="X-DATADOC-SESSION")):
+    state = _state(session_id)
+    from datadoc.core.report import generate_html_report
+
+    html_content = generate_html_report(
+        df=state.df,
+        target=state.pipeline.config.target if state.pipeline else None,
+        pipeline=state.pipeline,
+        dataset_name=Path(state.file_path).name,
+    )
+    return HTMLResponse(content=html_content)
+
+
+@app.get("/api/dataset/compare")
+def dataset_compare(session_id: str = Header("local", alias="X-DATADOC-SESSION")):
+    state = _state(session_id)
+    if not state.pipeline:
+        raise HTTPException(status_code=400, detail="Fit a pipeline before comparing datasets.")
+    from datadoc.core.compare import compare_datasets
+
+    transformed = state.pipeline.transform(state.df)
+    comp = compare_datasets(state.df, transformed, target=state.pipeline.config.target)
+    return comp.to_dict()
+
+
 def _dist_dir() -> Path:
     """Resolve the dashboard bundle.
 

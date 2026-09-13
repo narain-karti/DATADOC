@@ -154,7 +154,9 @@ function App() {
     }
   }
 
-
+  function openReport() {
+    window.open(`${API_BASE}/dataset/report`, '_blank');
+  }
 
   const roles = profile?.roles || [];
   const findings = profile?.findings || [];
@@ -168,6 +170,7 @@ function App() {
     { name: 'Build plan', hint: 'plan', run: () => createPlan() },
     { name: 'Fit pipeline', hint: 'fit', run: () => fitPipeline() },
     { name: 'Refresh profile', hint: 'profile', run: () => refreshProfile() },
+    { name: 'View HTML Report', hint: 'report', run: () => openReport() },
     { name: 'Download transformed CSV', hint: 'csv', run: () => downloadCsv() },
     { name: 'Load Python export', hint: 'code', run: () => loadCode() },
   ];
@@ -183,6 +186,7 @@ function App() {
           <NavButton active={view === 'overview'} icon={<Database size={19} />} label="Profile" onClick={() => setView('overview')} />
           <NavButton active={view === 'pipeline'} icon={<Play size={19} />} label="Pipeline" onClick={() => setView('pipeline')} />
           <NavButton active={view === 'code'} icon={<Code2 size={19} />} label="Export" onClick={() => loadCode()} />
+          <NavButton active={false} icon={<Download size={19} />} label="Report" onClick={openReport} />
         </nav>
       </aside>
 
@@ -216,7 +220,10 @@ function App() {
                 <p className="text-xs font-bold uppercase text-gray-600">Dataset workspace</p>
                 <h2 className="mt-1 text-3xl font-bold uppercase tracking-[-0.04em]">{view === 'code' ? 'Exported pipeline' : view === 'pipeline' ? 'Plan and fit' : 'Profile and prepare'}</h2>
               </div>
-              <button onClick={refreshProfile} className="flex items-center gap-2 border-2 border-black bg-white px-3 py-2 text-xs font-bold uppercase hover:bg-black hover:text-white"><RefreshCw size={15} /> Refresh</button>
+              <div className="flex items-center gap-2">
+                <button onClick={openReport} className="flex items-center gap-2 border-2 border-black bg-bg-accent-yellow px-3 py-2 text-xs font-bold uppercase hover:bg-black hover:text-white"><Download size={15} /> HTML Report</button>
+                <button onClick={refreshProfile} className="flex items-center gap-2 border-2 border-black bg-white px-3 py-2 text-xs font-bold uppercase hover:bg-black hover:text-white"><RefreshCw size={15} /> Refresh</button>
+              </div>
             </div>
 
             {view !== 'code' && (
@@ -258,8 +265,13 @@ function App() {
                     <button onClick={createPlan} disabled={busy} className="flex items-center gap-2 border-2 border-black bg-bg-accent-yellow px-4 py-3 text-xs font-bold uppercase hover:bg-black hover:text-white disabled:opacity-50"><ArrowRight size={16} /> {busy ? 'Working...' : 'Build plan'}</button>
                     <button onClick={fitPipeline} disabled={busy} className="flex items-center gap-2 border-2 border-black bg-black px-4 py-3 text-xs font-bold uppercase text-white hover:bg-gray-700 disabled:opacity-50"><Play size={16} /> Fit pipeline</button>
                   </div>
-                  <p className="mt-4 text-xs text-gray-600">Fitting learns statistics from the loaded dataset. For model evaluation, fit on a training split and transform validation/test data with the saved artifact.</p>
                 </div>
+
+                {metadata?.metadata && (
+                  <div className="mt-6 border-2 border-black bg-bg-workspace p-4 text-xs font-bold uppercase text-gray-700">
+                    Fingerprint: <span className="font-mono text-black">{metadata.metadata.schema_fingerprint || '—'}</span> | Deduplicated rows: {metadata.metadata.duplicate_rows ?? 0}
+                  </div>
+                )}
               </>
             )}
 
@@ -271,8 +283,9 @@ function App() {
           <aside className="min-w-0">
             <div className="mt-6 border-2 border-black bg-bg-accent-peach p-5">
               <div className="flex items-center gap-3 border-b-2 border-black pb-3"><FileJson size={19} /><h3 className="font-bold uppercase">Artifact actions</h3></div>
-              <p className="mt-3 text-xs leading-5">Once fitted, export the transformed CSV or the reproducible Python wrapper generated from the fitted JSON state.</p>
+              <p className="mt-3 text-xs leading-5">Once fitted, export the transformed CSV, view the standalone HTML report, or load the reproducible Python wrapper.</p>
               <div className="mt-4 grid gap-2">
+                <button onClick={openReport} className="flex items-center justify-between border-2 border-black bg-white px-3 py-3 text-left text-xs font-bold uppercase hover:bg-black hover:text-white">View HTML Report <Download size={15} /></button>
                 <button onClick={downloadCsv} className="flex items-center justify-between border-2 border-black bg-white px-3 py-3 text-left text-xs font-bold uppercase hover:bg-black hover:text-white">Download transformed CSV <Download size={15} /></button>
                 <button onClick={loadCode} className="flex items-center justify-between border-2 border-black bg-white px-3 py-3 text-left text-xs font-bold uppercase hover:bg-black hover:text-white">Load Python export <Code2 size={15} /></button>
                 <button onClick={() => setPaletteOpen(true)} className="flex items-center justify-between border-2 border-black bg-black px-3 py-3 text-left text-xs font-bold uppercase text-white hover:bg-gray-700">Command palette (Ctrl+K) <Play size={15} /></button>

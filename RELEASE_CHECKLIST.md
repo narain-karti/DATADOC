@@ -1,6 +1,6 @@
 # Release Checklist (PyPI)
 
-Use for every `datadoc-cli` release. Current release: **0.5.0**.
+Use for every `datadoc-cli` release. Current release: **0.6.0**.
 
 ## 1. Pre-flight (repo must be green)
 
@@ -59,8 +59,8 @@ and hit `/api/dataset/metadata` (expect 200).
 ## 5. Tag and publish
 
 ```bash
-git tag v0.5.0 && git push origin main v0.5.0
-python -m twine upload dist/datadoc_cli-0.5.0*
+git tag v0.6.0 && git push origin main v0.6.0
+python -m twine upload dist/datadoc_cli-0.6.0*
 ```
 
 Never commit a PyPI token. Prefer trusted publishing; otherwise use a

@@ -20,7 +20,9 @@ def _builtin_plugins() -> list["BasePlugin"]:
     from datadoc.plugins.outliers import OutlierPlugin
     from datadoc.plugins.datetime_feat import DatetimePlugin
     from datadoc.plugins.encoders import CategoricalEncoderPlugin
+    from datadoc.plugins.target_encoder import TargetEncoderPlugin
     from datadoc.plugins.rare import RareCategoryPlugin
+    from datadoc.plugins.polynomial import PolynomialFeaturesPlugin
     from datadoc.plugins.scaling import ScalingPlugin
 
     return [
@@ -29,7 +31,9 @@ def _builtin_plugins() -> list["BasePlugin"]:
         OutlierPlugin(),
         DatetimePlugin(),
         CategoricalEncoderPlugin(),
+        TargetEncoderPlugin(),
         RareCategoryPlugin(),
+        PolynomialFeaturesPlugin(),
         ScalingPlugin(),
     ]
 
@@ -40,7 +44,9 @@ BUILTIN_PLUGIN_NAMES = [
     "OutlierPlugin",
     "DatetimePlugin",
     "CategoricalEncoderPlugin",
+    "TargetEncoderPlugin",
     "RareCategoryPlugin",
+    "PolynomialFeaturesPlugin",
     "ScalingPlugin",
 ]
 

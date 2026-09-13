@@ -1,9 +1,9 @@
 [project]
 name = "datadoc-cli"
-version = "0.5.0"
+version = "0.6.0"
 description = "Leakage-safe, local-first preparation pipelines for tabular machine learning."
 readme = "README.md"
-license = "MIT"
+license = { text = "MIT" }
 requires-python = ">=3.10"
 authors = [
     { name = "narain-karti" },
@@ -70,7 +70,9 @@ missing = "datadoc.plugins.missing_values:MissingValuePlugin"
 outlier = "datadoc.plugins.outliers:OutlierPlugin"
 datetime = "datadoc.plugins.datetime_feat:DatetimePlugin"
 encoder = "datadoc.plugins.encoders:CategoricalEncoderPlugin"
+target_encoder = "datadoc.plugins.target_encoder:TargetEncoderPlugin"
 rare = "datadoc.plugins.rare:RareCategoryPlugin"
+polynomial = "datadoc.plugins.polynomial:PolynomialFeaturesPlugin"
 scaling = "datadoc.plugins.scaling:ScalingPlugin"
 
 [tool.datadoc]
@@ -97,6 +99,7 @@ line-length = 100
 testpaths = ["tests"]
 
 [tool.hatch.build.targets.wheel]
+core-metadata-version = "2.3"
 packages = ["datadoc"]
 
 # Ship the built dashboard so `datadoc ui` works from a plain pip install.
@@ -105,6 +108,7 @@ packages = ["datadoc"]
 "web/dist" = "datadoc/_webui"
 
 [tool.hatch.build.targets.sdist]
+core-metadata-version = "2.3"
 include = [
     "datadoc/**/*",
     "README.md",

@@ -1,9 +1,11 @@
-/* DATADOC docs type system:
-   H1/H2/H3            -> Neue Montreal (PP Neue Montreal CDN, Inter fallback)
-   Body/Nav/UI/Tables  -> Satoshi (Fontshare CDN, Inter fallback)
-   Code/CLI/meta       -> JetBrains Mono (Google Fonts) */
+/* DATADOC docs type system (best-of-options picks):
+   H1/H2/H3 (bold)     -> Quantico 700 (techno sans w/ true bold; Neue Montreal fallback)
+   Body/Nav/UI/Tables  -> Source Sans 3/Pro (only true UI text face in options; Satoshi fallback)
+   Code/CLI/meta       -> JetBrains Mono (kept: no monospace exists in the options) */
 @import url('https://fonts.cdnfonts.com/css/pp-neue-montreal');
 @import url('https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Quantico:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400&display=swap');
 
 :root {
@@ -25,10 +27,10 @@
   --header-height: 66px;
   --topic-height: 48px;
   --content-width: 1460px;
-  /* 1. Headings: Neue Montreal */
-  --font-display: "PP Neue Montreal", "Neue Montreal", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  /* 2. Body / navigation / UI / tables: Satoshi */
-  --font-sans: "Satoshi", "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  /* 1. Headings (bold): Quantico, Neue Montreal fallback */
+  --font-display: "Quantico", "PP Neue Montreal", "Neue Montreal", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* 2. Body / navigation / UI / tables: Source Sans 3/Pro first, Satoshi fallback */
+  --font-sans: "Source Sans 3", "Source Sans Pro", "Satoshi", "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   /* 3. Code / CLI / technical metadata: JetBrains Mono */
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
 }
@@ -101,9 +103,9 @@ pre, code, table { max-width: 100%; }
   width: max-content;
   max-width: 100%;
   font-family: var(--font-display);
-  font-weight: 500;
+  font-weight: 700;
   font-size: 18px;
-  letter-spacing: -.02em;
+  letter-spacing: 0;
 }
 .brand-mark {
   display: grid;
@@ -194,8 +196,8 @@ pre, code, table { max-width: 100%; }
 .main-content { min-width: 0; max-width: 100%; font-family: var(--font-sans); }
 .eyebrow { margin: 0 0 12px; color: var(--accent); font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; overflow-wrap: anywhere; }
 /* Headings use Neue Montreal */
-h1, h2, h3, h4 { margin: 0; color: #fff; line-height: 1.12; letter-spacing: -.02em; font-family: var(--font-display); font-weight: 500; text-wrap: balance; overflow-wrap: break-word; }
-h1 { max-width: 760px; font-size: clamp(32px, 4.6vw, 58px); font-weight: 500; }
+h1, h2, h3, h4 { margin: 0; color: #fff; line-height: 1.2; letter-spacing: 0; font-family: var(--font-display); font-weight: 700; text-wrap: balance; overflow-wrap: break-word; }
+h1 { max-width: 760px; font-size: clamp(32px, 4.6vw, 58px); font-weight: 700; }
 h2 { margin-top: 66px; padding-top: 12px; font-size: clamp(24px, 3vw, 30px); scroll-margin-top: calc(var(--header-height) + var(--topic-height) + 24px); }
 h3 { margin-top: 30px; font-size: clamp(17px, 2.2vw, 19px); }
 h4 { margin-top: 20px; font-size: 15px; }
@@ -367,12 +369,11 @@ mark.search-hit { background: rgba(191,255,98,.4); color: #fff; border-radius: 3
 /* ---------- Responsive: large phones ---------- */
 @media (max-width: 640px) {
   body { font-size: 14px; }
-  .site-header { grid-template-columns: 1fr auto; grid-template-rows: auto auto; padding: 10px 12px; height: auto; min-height: var(--header-height); row-gap: 8px; }
+  .site-header { position: static; grid-template-columns: 1fr auto; grid-template-rows: auto auto; padding: 10px 12px; height: auto; min-height: var(--header-height); row-gap: 8px; }
   .header-tools { grid-column: 1 / -1; order: 3; width: 100%; }
   .search-box { flex: 1 1 auto; width: 100%; }
   .search-box input { display: block; }
   .topic-bar { top: 0; gap: 14px; padding: 0 12px; }
-  .site-header:has(+ .topic-bar) + .topic-bar { position: sticky; }
   .docs-frame { padding: 22px 12px 56px; }
   .feature-grid { grid-template-columns: 1fr; }
   .quickstart { min-height: 0; padding: 20px; }
