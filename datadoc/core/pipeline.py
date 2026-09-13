@@ -144,6 +144,8 @@ class EvaluationReport:
 
 def read_dataset(path: str | Path) -> pl.DataFrame:
     path = Path(path)
+    if not path.exists():
+        raise DataDocError(f"Dataset not found: '{path}'. Please check the file path.")
     suffix = path.suffix.lower()
     if suffix == ".csv":
         return _normalize_numeric_missing(pl.read_csv(path, infer_schema_length=10_000))

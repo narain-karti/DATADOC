@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import html
+import re
 from typing import Any
 import polars as pl
 
@@ -60,12 +61,87 @@ def _compute_health_score(df: pl.DataFrame, profile_dict: dict[str, Any]) -> tup
     return score, grade
 
 
+def _format_markdown_to_html(md: str) -> str:
+    """Converts a subset of markdown (headers, bold, code, lists) into safe HTML."""
+    if not md:
+        return ""
+    lines = md.splitlines()
+    html_lines: list[str] = []
+    in_code_block = False
+    in_list = False
+
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("```"):
+            if in_code_block:
+                html_lines.append("</code></pre>")
+                in_code_block = False
+            else:
+                if in_list:
+                    html_lines.append("</ul>")
+                    in_list = False
+                html_lines.append("<pre class='ai-code-block'><code>")
+                in_code_block = True
+            continue
+
+        if in_code_block:
+            html_lines.append(html.escape(line))
+            continue
+
+        if stripped.startswith("### "):
+            if in_list:
+                html_lines.append("</ul>")
+                in_list = False
+            title_text = html.escape(stripped[4:])
+            html_lines.append(f"<h3 class='ai-section-title'>{title_text}</h3>")
+            continue
+        elif stripped.startswith("## "):
+            if in_list:
+                html_lines.append("</ul>")
+                in_list = False
+            title_text = html.escape(stripped[3:])
+            html_lines.append(f"<h2 class='ai-section-title'>{title_text}</h2>")
+            continue
+
+        if stripped.startswith("- "):
+            if not in_list:
+                html_lines.append("<ul class='ai-list'>")
+                in_list = True
+            item_text = html.escape(stripped[2:])
+            # inline code
+            item_text = re.sub(r"&quot;([^&]+)&quot;", r"&ldquo;\1&rdquo;", item_text)
+            item_text = re.sub(r"`([^`]+)`", r"<code class='ai-code'>\1</code>", item_text)
+            item_text = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", item_text)
+            item_text = re.sub(r"\*([^*]+)\*", r"<em>\1</em>", item_text)
+            html_lines.append(f"<li>{item_text}</li>")
+            continue
+        else:
+            if in_list:
+                html_lines.append("</ul>")
+                in_list = False
+
+        if stripped:
+            para = html.escape(stripped)
+            para = re.sub(r"`([^`]+)`", r"<code class='ai-code'>\1</code>", para)
+            para = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", para)
+            para = re.sub(r"\*([^*]+)\*", r"<em>\1</em>", para)
+            html_lines.append(f"<p class='ai-p'>{para}</p>")
+
+    if in_list:
+        html_lines.append("</ul>")
+    if in_code_block:
+        html_lines.append("</code></pre>")
+
+    return "\n".join(html_lines)
+
+
 def generate_html_report(
     df: pl.DataFrame,
     target: str | None = None,
     title: str | None = None,
     pipeline: Any | None = None,
     dataset_name: str | None = None,
+    ai_explanation: str | None = None,
 ) -> str:
     """Generate a 100% self-contained, responsive, beautiful HTML data health report."""
     cfg = PipelineConfig(target=target)
@@ -470,6 +546,48 @@ def generate_html_report(
         .text-sm {{ font-size: 12px; }}
         .truncate {{ white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
         
+        /* AI Advisory Card */
+        .ai-card {{
+            background: linear-gradient(180deg, rgba(99, 102, 241, 0.08) 0%, rgba(15, 23, 42, 0.6) 100%);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 10px;
+            padding: 20px 24px;
+            color: #cbd5e1;
+            line-height: 1.6;
+        }}
+        .ai-section-title {{
+            font-size: 15px;
+            font-weight: 700;
+            color: #818cf8;
+            margin-top: 18px;
+            margin-bottom: 8px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid rgba(99, 102, 241, 0.2);
+        }}
+        .ai-section-title:first-child {{ margin-top: 0; }}
+        .ai-list {{ margin-left: 20px; margin-bottom: 12px; }}
+        .ai-list li {{ margin-bottom: 6px; color: #cbd5e1; }}
+        .ai-p {{ margin-bottom: 10px; color: #cbd5e1; }}
+        .ai-code {{
+            background: rgba(99, 102, 241, 0.15);
+            color: #a5b4fc;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: var(--font-mono);
+            font-size: 12px;
+        }}
+        .ai-code-block {{
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 12px;
+            overflow-x: auto;
+            margin: 10px 0;
+            font-size: 12px;
+            color: #38bdf8;
+            font-family: var(--font-mono);
+        }}
+
         /* Footer */
         .footer {{
             text-align: center;
@@ -628,6 +746,26 @@ def generate_html_report(
         </section>
         '''
         if categorical_cards_html
+        else ""
+    }
+
+        <!-- AI Executive Data Science Advisory -->
+        {
+        f'''
+        <section class="section">
+            <div class="section-header">
+                <div class="section-title">
+                    <span>🤖</span>
+                    <span>AI Executive Data Science Advisory & Feature Engineering Hypotheses</span>
+                </div>
+                <span class="badge badge-target">AI Insights</span>
+            </div>
+            <div class="ai-card">
+                {_format_markdown_to_html(ai_explanation)}
+            </div>
+        </section>
+        '''
+        if ai_explanation
         else ""
     }
 

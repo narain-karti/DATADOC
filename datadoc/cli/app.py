@@ -486,6 +486,66 @@ def profile(
 
 
 # ──────────────────────────────────────────────────────────────
+# COMMAND: health
+# ──────────────────────────────────────────────────────────────
+@app.command(name="health")
+def health(
+    file_path: str = typer.Argument(..., help="CSV or Parquet dataset file."),
+    target: Optional[str] = typer.Option(
+        None, "--target", "-t", help="Target column; never transformed.", rich_help_panel="Data"
+    ),
+):
+    """Audit data health, calculate 0-100 quality score, and display findings."""
+    from datadoc.core.report import _compute_health_score
+
+    try:
+        df = read_dataset(file_path)
+        pipe_cfg = _pipeline_config(target=target)
+        result = DataDocPipeline(pipe_cfg).profile(df).to_dict()
+    except DataDocError as error:
+        raise typer.BadParameter(str(error)) from error
+
+    score, grade = _compute_health_score(df, result)
+    color = "green" if score >= 85 else ("yellow" if score >= 70 else "red")
+
+    console.print(
+        Panel(
+            f"[bold {color}]Health Score: {score}/100[/bold {color}]  [dim]|[/dim]  "
+            f"[bold {color}]Grade: {grade}[/bold {color}]  [dim]|[/dim]  "
+            f"Rows: [bold]{df.height:,}[/bold]  [dim]|[/dim]  "
+            f"Cols: [bold]{df.width}[/bold]  [dim]|[/dim]  "
+            f"Nulls: [bold]{sum(result.get('null_counts', {}).values()):,}[/bold]",
+            title="DATADOC Health Audit",
+            border_style=color,
+        )
+    )
+
+    findings = result.get("findings", [])
+    if findings:
+        tbl = Table(title="Quality Findings", show_header=True, header_style="bold magenta")
+        tbl.add_column("Severity", style="bold")
+        tbl.add_column("Code")
+        tbl.add_column("Column")
+        tbl.add_column("Message")
+        for f in findings:
+            sev = str(f.get("severity", "info")).lower()
+            sev_color = (
+                "red"
+                if sev in {"high", "critical", "error"}
+                else ("yellow" if sev in {"medium", "warning"} else "cyan")
+            )
+            tbl.add_row(
+                f"[{sev_color}]{f.get('severity')}[/{sev_color}]",
+                str(f.get("code", "")),
+                str(f.get("column", "")),
+                str(f.get("message", "")),
+            )
+        console.print(tbl)
+    else:
+        console.print("[green]No quality findings. Dataset is clean![/green]")
+
+
+# ──────────────────────────────────────────────────────────────
 # COMMAND: plan
 # ──────────────────────────────────────────────────────────────
 @app.command(name="plan")
@@ -1074,6 +1134,91 @@ def diff_cmd(
 
 
 # ──────────────────────────────────────────────────────────────
+# COMMAND: explain
+# ──────────────────────────────────────────────────────────────
+@app.command(name="explain")
+def explain(
+    file_path: str = typer.Argument(..., help="CSV or Parquet dataset file."),
+    target: Optional[str] = typer.Option(
+        None, "--target", "-t", help="Target column for predictive task.", rich_help_panel="Data"
+    ),
+    model: Optional[str] = typer.Option(
+        None,
+        "--model",
+        "-m",
+        help="LLM model (e.g., gpt-4o-mini, gemini/gemini-2.0-flash, ollama/llama3).",
+        rich_help_panel="AI",
+    ),
+    output: Optional[str] = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Save AI explanation to markdown file.",
+        rich_help_panel="Output",
+    ),
+    recommend_config: bool = typer.Option(
+        False,
+        "--recommend-config",
+        help="Write recommended datadoc.toml based on AI analysis.",
+        rich_help_panel="Config",
+    ),
+):
+    """AI-powered dataset feature engineering hypotheses, missingness analysis, and data quality audit."""
+    from rich.markdown import Markdown
+    from datadoc.ai.explainer import explain_dataset
+
+    try:
+        df = read_dataset(file_path)
+    except Exception as e:
+        raise typer.BadParameter(f"Could not load dataset: {e}")
+
+    with console.status(
+        "[bold cyan]Synthesizing feature engineering hypotheses & data quality audit..."
+    ):
+        try:
+            result = explain_dataset(df, target=target, model=model)
+        except Exception as e:
+            console.print(f"[bold red]AI Analysis Failed:[/bold red] {e}")
+            raise typer.Exit(code=1)
+
+    console.print(
+        Panel(
+            f"[bold cyan]DATADOC AI Dataset Explainer[/bold cyan]\n"
+            f"Provider: [bold]{result.provider}[/bold]  [dim]|[/dim]  "
+            f"Model: [bold]{result.model}[/bold]  [dim]|[/dim]  "
+            f"Recommended Preset: [bold green]{result.recommended_preset}[/bold green]",
+            border_style="cyan",
+        )
+    )
+
+    console.print(Markdown(result.raw_markdown))
+
+    if output:
+        out_path = Path(output)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(result.raw_markdown, encoding="utf-8")
+        console.print(f"\n[bold green]Saved AI explanation to:[/bold green] {out_path.resolve()}")
+
+    if recommend_config:
+        cfg_content = f"""# Recommended datadoc.toml generated by DATADOC AI
+task = "{result.recommended_config.get("task", "auto")}"
+preset = "{result.recommended_preset}"
+drop_identifiers = true
+deduplicate = false
+clip_outliers = {str(result.recommended_config.get("clip_outliers", True)).lower()}
+categorical_threshold = 20
+rare_category_min_frequency = 0.01
+strict_schema = true
+"""
+        target_cfg = Path("datadoc.toml")
+        target_cfg.write_text(cfg_content, encoding="utf-8")
+        console.print(
+            f"[bold green]Saved recommended configuration to {target_cfg.resolve()}[/bold green]"
+        )
+        console.print(Panel(cfg_content, title="datadoc.toml", border_style="green"))
+
+
+# ──────────────────────────────────────────────────────────────
 # COMMAND: report
 # ──────────────────────────────────────────────────────────────
 @app.command()
@@ -1100,6 +1245,18 @@ def report(
     ),
     config: Optional[str] = typer.Option(
         None, "--config", help="Path to datadoc.toml", rich_help_panel="Config"
+    ),
+    ai: bool = typer.Option(
+        False,
+        "--ai",
+        help="Include AI Executive Summary & Feature Engineering Hypotheses in report.",
+        rich_help_panel="AI",
+    ),
+    ai_model: Optional[str] = typer.Option(
+        None,
+        "--ai-model",
+        help="Model to use for AI report analysis (e.g. gpt-4o-mini, gemini/gemini-2.0-flash).",
+        rich_help_panel="AI",
     ),
     open_browser: bool = typer.Option(
         True,
@@ -1129,12 +1286,21 @@ def report(
         except Exception as e:
             console.print(f"[yellow]Warning: Could not load pipeline from {pipeline}: {e}[/yellow]")
 
+    ai_explanation = None
+    if ai:
+        with console.status("[bold cyan]Analyzing dataset with AI for report..."):
+            from datadoc.ai.explainer import explain_dataset
+
+            res = explain_dataset(df, target=target, model=ai_model)
+            ai_explanation = res.raw_markdown
+
     html_content = generate_html_report(
         df=df,
         target=target,
         title=title,
         pipeline=pipe_instance,
         dataset_name=Path(file_path).name,
+        ai_explanation=ai_explanation,
     )
 
     out_path = (

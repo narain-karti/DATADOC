@@ -96,32 +96,36 @@ Full step-by-step (auditable) workflow:
 datadoc init --preset balanced  # writes datadoc.toml
 
 # 1. Inspect data-quality findings and column roles
+datadoc health raw_data.csv --target churn
 datadoc profile raw_data.csv --target churn --explain --output profile.json
 
-# 2. Review the proposed transformations before applying them
+# 2. AI feature engineering hypotheses & data quality audit (Optional AI extra)
+datadoc explain raw_data.csv --target churn --model gpt-4o-mini  # or gemini/gemini-2.0-flash, ollama/llama3
+
+# 3. Review the proposed transformations before applying them
 datadoc plan raw_data.csv --target churn --explain --output plan.json
 
-# 3. Fit only on a training dataset, then save a reusable artifact
+# 4. Fit only on a training dataset, then save a reusable artifact
 datadoc fit train.csv --target churn --preset balanced --rare-frequency 0.02 --output artifacts/churn-pipeline.json
 
-# 4. Apply the fitted artifact to validation, test, or new data
+# 5. Apply the fitted artifact to validation, test, or new data
 datadoc transform validation.csv --pipeline artifacts/churn-pipeline.json --output validation-features.parquet --validate
 
-# 5. Optionally benchmark a safe candidate pipeline against a baseline
+# 6. Optionally benchmark a safe candidate pipeline against a baseline
 pip install "datadoc-cli[ml]"
 datadoc evaluate train.csv --target churn --task classification --ablation
 
-# 6. Export a small executable wrapper around the fitted artifact
+# 7. Export a small executable wrapper around the fitted artifact
 datadoc export --pipeline artifacts/churn-pipeline.json --output pipeline.py
 # or: datadoc export --pipeline artifacts/churn-pipeline.json --format joblib --output pipeline.joblib
 
-# 7. Generate a standalone, shareable HTML audit report
-datadoc report train.csv --target churn --output report.html
+# 8. Generate a standalone, shareable HTML audit report (with optional AI summary)
+datadoc report train.csv --target churn --ai --output report.html
 
-# 8. Visually compare raw vs transformed datasets side-by-side
+# 9. Visually compare raw vs transformed datasets side-by-side
 datadoc compare train.csv validation-features.parquet --target churn --html compare.html
 
-# 9. Lint for leakage risks / diff two plans
+# 10. Lint for leakage risks / diff two plans
 datadoc lint train.csv --target churn
 datadoc diff plan-v1.json plan-v2.json
 ```

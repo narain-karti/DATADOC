@@ -568,6 +568,8 @@ flowchart LR
               <tr><td><code>--output</code></td><td>Option</td><td><code>&lt;stem&gt;_report.html</code></td><td>Path to write standalone HTML report</td></tr>
               <tr><td><code>--title</code></td><td>Option</td><td><code>None</code></td><td>Custom title for report header</td></tr>
               <tr><td><code>--preset</code></td><td>Option</td><td><code>None</code></td><td>Preset to base recommendations on</td></tr>
+              <tr><td><code>--ai</code></td><td>Flag</td><td><code>False</code></td><td>Include AI Executive Summary &amp; Feature Hypotheses in report</td></tr>
+              <tr><td><code>--ai-model</code></td><td>Option</td><td><code>None</code></td><td>Model to use for AI report analysis</td></tr>
               <tr><td><code>--open / --no-open</code></td><td>Flag</td><td><code>True</code></td><td>Open in browser automatically</td></tr>
             </tbody>
           </table>
@@ -598,6 +600,42 @@ flowchart LR
             </tbody>
           </table>
         </div>
+      </div>
+
+      <div class="endpoint">
+        <div class="endpoint-head">
+          <span class="method-badge">EXPLAIN</span>
+          <span class="path">datadoc explain &lt;file_path&gt;</span>
+        </div>
+        <p>AI-powered dataset feature engineering hypotheses, semantic role inference, missingness mechanism analysis (MCAR/MAR/MNAR), and target leakage audit using LiteLLM (OpenAI, Gemini, Anthropic, Ollama).</p>
+
+        <pre class="code-block" data-copy>
+<div class="code-caption"><span class="lang">Terminal</span><span>AI Feature Hypotheses &amp; Audit</span></div><code><span class="tok-command">datadoc explain</span> raw.csv <span class="tok-flag">--target</span> churn <span class="tok-flag">--model</span> gpt-4o-mini <span class="tok-flag">--recommend-config</span></code></pre>
+
+        <h4>Options</h4>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Option</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>file_path</code></td><td>Argument</td><td><em>Required</em></td><td>Path to CSV or Parquet file to analyze</td></tr>
+              <tr><td><code>--target</code></td><td>Option</td><td><code>None</code></td><td>Target column for predictive task</td></tr>
+              <tr><td><code>--model</code></td><td>Option</td><td><code>None</code></td><td>LLM model (e.g., <code>gpt-4o-mini</code>, <code>gemini/gemini-2.0-flash</code>, <code>ollama/llama3</code>)</td></tr>
+              <tr><td><code>--output</code></td><td>Option</td><td><code>None</code></td><td>Save AI markdown explanation to file</td></tr>
+              <tr><td><code>--recommend-config</code></td><td>Flag</td><td><code>False</code></td><td>Generate and save recommended <code>datadoc.toml</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="endpoint">
+        <div class="endpoint-head">
+          <span class="method-badge">HEALTH</span>
+          <span class="path">datadoc health &lt;file_path&gt;</span>
+        </div>
+        <p>Fast dataset health audit displaying 0–100 quality score, letter grade (A+ to F), and detected data quality findings.</p>
+
+        <pre class="code-block" data-copy>
+<div class="code-caption"><span class="lang">Terminal</span><span>Quick health check</span></div><code><span class="tok-command">datadoc health</span> demo.csv <span class="tok-flag">--target</span> churn</code></pre>
       </div>
     </section>
 
