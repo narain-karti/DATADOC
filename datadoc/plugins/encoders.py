@@ -3,7 +3,7 @@ from datadoc.plugins.base import BasePlugin
 
 
 class CategoricalEncoderPlugin(BasePlugin):
-    def __init__(self, max_categories: int = 10):
+    def __init__(self, max_categories: int = 20):
         self._max_categories = max_categories
         super().__init__()
 
@@ -59,9 +59,6 @@ class CategoricalEncoderPlugin(BasePlugin):
                 f"Categorical columns found: {detail}. Recommendation: Apply One-Hot Encoding."
             )
         return recs
-
-
-
 
     def apply(self, df: pl.DataFrame) -> pl.DataFrame:
         df_clean = df.clone()

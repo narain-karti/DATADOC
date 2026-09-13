@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="Low-level deep dive into the DATADOC architecture and codebase.">
 <title>DATADOC Docs | Architecture Deep Dive</title>
-<link rel="stylesheet" href="css/docs.css">
+<link rel="preconnect" href="https://fonts.cdnfonts.com" crossorigin><link rel="preconnect" href="https://api.fontshare.com" crossorigin><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.cdnfonts.com/css/pp-neue-montreal" rel="stylesheet"><link href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet"><link rel="stylesheet" href="css/docs.css">
 <!-- Mermaid.js for Diagrams -->
 <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
 <script>
@@ -75,9 +75,9 @@
     <div class="header-tools">
         <label class="search-box" aria-label="Search documentation">
             <span>⌕</span>
-            <input data-search-input type="search" placeholder="Search docs">
+            <input data-search-input type="search" placeholder="Search docs (full-text: topics, body, code, tables)" autocomplete="off">
         </label>
-        <span class="version-badge">v0.4.0</span>
+        <span class="version-badge">v0.5.0</span>
         <button class="menu-button" type="button" data-menu-toggle aria-label="Open navigation" aria-expanded="false">☰</button>
     </div>
 </header>
@@ -115,7 +115,13 @@
     
     <section id="plugins">
         <h2>1. Plugins Subsystem: The Math & Logic</h2>
-        <p>The <code>datadoc/plugins/</code> directory contains isolated, stateless modules that perform specific mathematical and logical transformations using Polars expressions. They inherit from <code>BasePlugin</code>.</p>
+        <p>The <code>datadoc/plugins/</code> directory contains seven isolated, stateless advisor modules using Polars expressions. They inherit from <code>BasePlugin</code> and are discovered via <code>plugins/registry.py</code> (see section 4). The production transforms live in <code>core/pipeline.py</code> with frozen train-only state.</p>
+
+        <h3><code>duplicates.py</code> (Duplicate Detection, priority 05)</h3>
+        <p><strong>Logic:</strong> Counts exact duplicate rows with <code>is_duplicated().sum()</code>. With <code>deduplicate=True</code>, the pipeline drops them from training data at fit time so medians and vocabularies are not skewed. Validation data is never deduplicated.</p>
+
+        <h3><code>rare.py</code> (Rare-Category Grouping, priority 42)</h3>
+        <p><strong>Logic:</strong> Categories below <code>rare_category_min_frequency</code> (e.g. 0.02) are grouped into <code>__RARE__</code> before one-hot encoding, capping output width while keeping the signal. Unseen inference values map to the same token.</p>
 
         <h3><code>outliers.py</code> (IQR Outlier Clipping)</h3>
         <p>This plugin detects and clips extreme values to prevent them from skewing machine learning models (like Linear Regression) that are sensitive to extreme variances.</p>
@@ -178,7 +184,7 @@ graph LR
         <p><strong>Logic:</strong> If a column has too many unique values (e.g., UUIDs), it's dropped to avoid the "curse of dimensionality". Otherwise, it iterates through unique strings and does <code>(pl.col(c) == val).cast(pl.Int8).alias(f"{c}_{val}")</code>.</p>
 
         <h3><code>datetime_feat.py</code> (Time Series Extraction)</h3>
-        <p><strong>Logic:</strong> Takes a string column like "2024-05-12 14:00" and uses <code>str.to_datetime()</code>. It then extracts individual features: <code>dt.year()</code>, <code>dt.month()</code>, <code>dt.day()</code>, <code>dt.weekday()</code>, and <code>dt.hour()</code>. The original string column is then safely dropped.</p>
+        <p><strong>Logic:</strong> Takes a string column like "2024-05-12 14:00" and uses <code>str.to_datetime(strict=False)</code>. It then extracts <code>dt.year()</code>, <code>dt.month()</code>, <code>dt.day()</code>, <code>dt.weekday()</code> — plus <code>dt.hour()</code> only when training data has a real time component — and drops the original column. With <code>datetime_cyclical=True</code>, month/day/weekday/hour also get sin/cos pairs.</p>
     </section>
 
     <hr>
@@ -202,22 +208,20 @@ graph LR
             <li><strong>Serialize:</strong> The plan is printed to the screen as a sequence of deterministic steps.</li>
         </ul>
 
-        <h3><code>datadoc engineer <file></code> (Agentic AI)</h3>
+        <h3><code>datadoc wizard <file></code> (guided entry point)</h3>
         <ul class="step-list">
-            <li><strong>Context Gathering:</strong> Loads the dataset and converts the schema and first 5 rows into a Markdown string to serve as context.</li>
-            <li><strong>LLM Invocation:</strong> Passes the context to <code>litellm</code> (using Gemini/Claude/GPT). The system prompt restricts it to ONLY write Python code orchestrating the DATADOC plugins (e.g., <code>df = MissingValuePlugin().apply(df)</code>).</li>
-            <li><strong>Sandbox Execution:</strong> The CLI extracts the Python code block using regex, compiles it, and executes it in memory against the dataframe.</li>
-            <li><strong>Self-Healing:</strong> If Polars throws an error (e.g., "Column not found"), the CLI catches the stacktrace and automatically sends it back to the LLM to write a fix.</li>
+            <li><strong>Inspect:</strong> Loads the dataset and lists columns, row counts, and detected shape.</li>
+            <li><strong>Ask:</strong> Prompts for target column, preset (<code>quick | balanced | linear | tree | time | robust</code>), identifier policy, scaling, clipping, and rare-category frequency.</li>
+            <li><strong>Persist:</strong> Writes the answers to <code>datadoc.toml</code> so the run is reproducible, then delegates to <code>datadoc run</code>.</li>
         </ul>
+        <p><strong>AI policy:</strong> there is no code-generating agent. The optional <code>datadoc-cli[ai]</code> extra (<code>litellm</code>) is constrained to explaining or ranking already-registered deterministic transformations. Provider-generated Python is never executed by the pipeline.</p>
 
         <h3><code>datadoc evaluate <file></code></h3>
         <ul class="step-list">
-            <li><strong>Split:</strong> Reads the raw data and splits it strictly into 80% Train and 20% Test.</li>
-            <li><strong>Baseline Model:</strong> Trains a naive <code>sklearn.ensemble.RandomForestClassifier</code> on the raw training data (filling nulls with 0 just to make it run) and scores it on the test set.</li>
-            <li><strong>Fit Pipeline:</strong> Calls <code>pipeline.fit(train_df)</code>. This learns medians, vocabularies, and IQR boundaries ONLY from the 80% train set.</li>
-            <li><strong>Transform:</strong> Calls <code>pipeline.transform(train_df)</code> and <code>pipeline.transform(test_df)</code> using the frozen state to prevent data leakage.</li>
-            <li><strong>Candidate Model:</strong> Trains a second Random Forest on the beautifully cleaned train data, scores it against the cleaned test data.</li>
-            <li><strong>Render:</strong> Uses <code>plotext</code> to draw terminal bar charts comparing Baseline R² vs Cleaned R².</li>
+            <li><strong>Split:</strong> Splits 80% train / 20% holdout — stratified for classification, ordered for <code>--time-column</code>, group-aware for <code>--group-column</code>.</li>
+            <li><strong>Cross-validate:</strong> Runs 3-fold CV on the train split comparing a minimal baseline config (no clipping, no scaling) against the configured candidate.</li>
+            <li><strong>Holdout:</strong> Refits the CV winner on full train and scores both on the untouched holdout. Classification uses balanced accuracy (LogisticRegression and/or RandomForest); regression uses negative RMSE (Ridge and/or RandomForestRegressor).</li>
+            <li><strong>Report:</strong> Emits an <code>EvaluationReport</code> with metric, split strategy, both scores, improvement, selected pipeline, feature count, and warnings. <code>--ablation</code> additionally compares full, no-clip, no-scaling, and minimal variants.</li>
         </ul>
     </section>
 
@@ -234,7 +238,7 @@ flowchart TD
     subgraph "pipeline.py Logic"
         Profile["1. profile<br/>Reads schema, detects column roles, calculates nulls"]
         Plan["2. plan<br/>Formulates strategy based on config thresholds"]
-        Fit["3. fit<br/>Executes plugins to learn state medians, bounds"]
+        Fit["3. fit<br/>Learns train-only state: medians, bounds, vocabs"]
         Transform["4. transform<br/>Applies learned state to data via Polars expressions"]
     end
     
@@ -248,37 +252,29 @@ flowchart TD
     </section>
 
     <section id="core-agent">
-        <h2>4. Core Logic: <code>core/agent.py</code></h2>
-        <p>This file defines <code>AgenticEngineer</code>, the LLM orchestration layer that acts as a pair-programmer for data preparation.</p>
+        <h2>4. Plugin Registry: <code>plugins/registry.py</code></h2>
+        <p>Seven deterministic plugins (<code>DuplicateRemover</code> 05, <code>MissingValue</code> 10, <code>Outlier</code> 20, <code>Datetime</code> 30, <code>CategoricalEncoder</code> 40, <code>RareCategory</code> 42, <code>Scaling</code> 45) implement the <code>BasePlugin</code> lifecycle <code>analyze → recommend → apply</code> as stateless advisors. The registry auto-discovers them plus any third-party plugin registered under the <code>datadoc.plugins</code> entry-point group, sorted by priority. The fitted pipeline in <code>core/pipeline.py</code> — not the plugins — is the production source of truth: it re-implements each transformation with frozen train-only state so validation data can never influence fitted statistics.</p>
 
         <div class="mermaid">
 sequenceDiagram
     participant User
-    participant AgenticEngineer (Python)
-    participant LiteLLM (API)
-    participant Sandbox (exec)
+    participant CLI as datadoc plugins list
+    participant Registry
+    participant EntryPts as entry-points
 
-    User->>AgenticEngineer: "I want to predict Churn"
-    AgenticEngineer->>LiteLLM: System Prompt + Dataset Metadata + "I want to predict Churn"
-    LiteLLM-->>AgenticEngineer: Generates plan & Python code
-    AgenticEngineer->>Sandbox: Extracts code block and runs clean_data(df)
-    
-    alt Code Fails
-        Sandbox-->>AgenticEngineer: Stacktrace (e.g., ColumnNotFound)
-        AgenticEngineer->>LiteLLM: "Code failed: [Stacktrace]. Fix it."
-        LiteLLM-->>AgenticEngineer: Corrected code block
-        AgenticEngineer->>Sandbox: Re-run code
-    end
-    
-    Sandbox-->>User: Returns cleaned Polars DataFrame
+    User->>CLI: datadoc plugins list
+    CLI->>Registry: list_plugins()
+    Registry->>Registry: built-in 7, sort by priority
+    Registry->>EntryPts: load datadoc.plugins group
+    EntryPts-->>Registry: third-party plugins
+    Registry-->>User: priority-ordered table
         </div>
-        <p>The Agent is completely restricted from hallucinating fake rows or importing external libraries. It is only allowed to output `import polars` and the DATADOC plugins.</p>
+        <p>Optional LLM help (via <code>litellm</code>) is advisory only: it may explain or rank registered transformations, but generated code is never executed.</p>
     </section>
 
     <section id="core-engine">
-        <h2>5. Core Logic: <code>core/engine.py</code></h2>
-        <p>This file defines the <code>DATADOC</code> object, which serves as a legacy facade. Earlier versions of the library used this object directly to chain commands like <code>doc.analyze()</code> and <code>doc.recommend()</code>. </p>
-        <p>While still present in the codebase to support legacy scripts, all new development utilizes the <code>DataDocPipeline</code> directly. During the major architecture refactor, dead methods like <code>export_agent_pipeline</code> were entirely pruned from <code>engine.py</code> to reduce bloat.</p>
+        <h2>5. Removed Legacy: <code>core/engine.py</code> and <code>core/agent.py</code></h2>
+        <p>Earlier versions shipped a <code>DATADOC</code> facade (<code>engine.py</code>) and an LLM code-executing agent (<code>agent.py</code>). Both were deleted in the 0.4.0 leakage-safe refactor: the facade fitted and transformed the same data (a leakage risk), and the agent executed provider-generated Python (a safety risk). New code uses <code>DataDocPipeline</code> directly; see <code>MIGRATION.md</code> for the upgrade path.</p>
     </section>
 
     <section id="dependencies">
@@ -304,7 +300,7 @@ sequenceDiagram
             </div>
             <div class="dep-card">
                 <h3>Plotext</h3>
-                <p><strong>Why:</strong> Renders graphs (like Feature Importance bar charts) directly inside the user's terminal without external GUI windows.</p>
+                <p><strong>Why:</strong> Declared terminal-plotting dependency for future in-terminal charts. Current CLI output uses Rich tables and JSON; no chart claims are made by any command today.</p>
             </div>
         </div>
     </section>
@@ -315,12 +311,13 @@ sequenceDiagram
     <a class="right-link" data-section-link href="#plugins">Plugins Subsystem</a>
     <a class="right-link" data-section-link href="#cli-commands">CLI Background Execution</a>
     <a class="right-link" data-section-link href="#core-pipeline">Core: Pipeline</a>
-    <a class="right-link" data-section-link href="#core-agent">Core: Agent</a>
-    <a class="right-link" data-section-link href="#core-engine">Core: Engine</a>
+    <a class="right-link" data-section-link href="#core-agent">Registry</a>
+    <a class="right-link" data-section-link href="#core-engine">Removed legacy</a>
     <a class="right-link" data-section-link href="#dependencies">Dependencies</a>
 </aside>
 </div>
-<footer class="footer">DATADOC v0.4.0 · <a href="index.html">Documentation home</a> · <a href="https://github.com/narain-karti/DATADOC">GitHub</a></footer>
+<footer class="footer">DATADOC v0.5.0 · <a href="index.html">Documentation home</a> · <a href="https://github.com/narain-karti/DATADOC">GitHub</a></footer>
+<div class="search-results" aria-live="polite"></div>
 <script src="js/docs.js"></script>
 </body>
 </html>

@@ -14,9 +14,33 @@ import warnings
 import polars as pl
 
 
-ARTIFACT_VERSION = 1
+ARTIFACT_VERSION = 2
 ID_NAME_PATTERN = re.compile(r"(?:^|[_\-\s])(id|index|key|uuid)$", re.IGNORECASE)
 DATETIME_NAME_PATTERN = re.compile(r"(?:date|time|timestamp|_at)$", re.IGNORECASE)
+RARE_TOKEN = "__RARE__"
+
+try:
+    from datadoc import __version__ as _DATADOC_VERSION  # type: ignore
+except Exception:
+    _DATADOC_VERSION = None
+
+
+def _datadoc_version() -> str:
+    if _DATADOC_VERSION:
+        return str(_DATADOC_VERSION)
+    try:
+        from pathlib import Path as _P
+
+        for line in (
+            (_P(__file__).resolve().parents[2] / "pyproject.toml")
+            .read_text(encoding="utf-8")
+            .splitlines()
+        ):
+            if line.strip().startswith("version ="):
+                return line.split('"', 2)[1]
+    except Exception:
+        pass
+    return "0.5.0"
 
 
 class DataDocError(ValueError):
@@ -64,11 +88,15 @@ class PipelineConfig:
     ignored_columns: list[str] = field(default_factory=list)
     identifier_columns: list[str] = field(default_factory=list)
     drop_identifiers: bool = False
+    deduplicate: bool = False
     categorical_threshold: int = 20
     datetime_parse_threshold: float = 0.9
+    datetime_extract_hour: bool = True
+    datetime_cyclical: bool = False
     add_missing_indicators: bool = True
     categorical_missing_value: str = "__MISSING__"
     rare_category_min_frequency: float = 0.0
+    rare_token: str = "__RARE__"
     encode_high_cardinality: bool = True
     clip_outliers: bool = False
     outlier_multiplier: float = 1.5
@@ -82,7 +110,9 @@ class PipelineConfig:
     def resolved_scaling(self) -> Literal["none", "standard", "robust"]:
         if self.scaling != "auto":
             return self.scaling
-        return "standard" if self.estimator_family == "linear" else "none"
+        # "both" evaluates a linear model too, so standard scaling is the safe default
+        # (trees are scale-invariant, linear models are not).
+        return "standard" if self.estimator_family in ("linear", "both") else "none"
 
 
 @dataclass
@@ -140,7 +170,32 @@ def _schema_fingerprint(df: pl.DataFrame) -> str:
     return hashlib.sha256(json.dumps(schema).encode("utf-8")).hexdigest()[:16]
 
 
+def _dataset_provenance(df: pl.DataFrame, schema_fp: str | None = None) -> dict[str, Any]:
+    """Lightweight train provenance: fingerprint + rows + cols + column hash."""
+    fp = schema_fp or _schema_fingerprint(df)
+    col_hash = hashlib.sha256(",".join(df.columns).encode("utf-8")).hexdigest()[:16]
+    return {
+        "schema_fingerprint": fp,
+        "columns_hash": col_hash,
+        "rows": df.height,
+        "columns": df.width,
+        "column_names": list(df.columns),
+    }
 
+
+def _has_time_component_series(series: pl.Series) -> bool:
+    """True if a Date/Datetime series has non-midnight time info."""
+    try:
+        times = series.drop_nulls()
+        if times.len() == 0:
+            return False
+        if times.dtype == pl.Date:
+            return False
+        hours = times.dt.hour()
+        minutes = times.dt.minute()
+        return not ((hours == 0).all() and (minutes == 0).all())
+    except Exception:
+        return False
 
 
 def _normalize_numeric_missing(df: pl.DataFrame) -> pl.DataFrame:
@@ -344,6 +399,7 @@ class DataDocPipeline:
         self.state_: dict[str, Any] = {}
         self.input_schema_: dict[str, str] = {}
         self.output_schema_: dict[str, str] = {}
+        self.train_provenance_: dict[str, Any] = {}
         self.fitted_ = False
 
     def profile(self, df: pl.DataFrame) -> DatasetProfile:
@@ -353,6 +409,15 @@ class DataDocPipeline:
     def plan(self, df: pl.DataFrame) -> TransformPlan:
         profile = self.profile(df)
         operations: list[dict[str, Any]] = []
+        # deduplication is dataset-level, surface first
+        if profile.duplicate_rows and self.config.deduplicate:
+            operations.append(
+                {
+                    "operation": "deduplicate",
+                    "column": "*",
+                    "reason": f"Drop {profile.duplicate_rows} duplicate rows at fit time.",
+                }
+            )
         for role in profile.roles:
             if role.role == "constant":
                 operations.append(
@@ -367,31 +432,71 @@ class DataDocPipeline:
                     }
                 )
             elif role.role == "feature_numeric":
+                detail = "Median learned from training data."
+                if self.config.clip_outliers:
+                    detail += f" IQR clipping (x{self.config.outlier_multiplier}) enabled."
                 operations.append(
                     {
                         "operation": "numeric_imputation",
                         "column": role.name,
-                        "reason": "Median learned from training data.",
+                        "reason": detail,
                     }
                 )
+                if self.config.clip_outliers:
+                    operations.append(
+                        {
+                            "operation": "outlier_clipping",
+                            "column": role.name,
+                            "reason": f"Clip to Q1-{self.config.outlier_multiplier}*IQR / Q3+{self.config.outlier_multiplier}*IQR (train-only).",
+                        }
+                    )
             elif role.role == "feature_categorical":
+                detail = "Vocabulary learned from training data."
+                if self.config.rare_category_min_frequency > 0:
+                    detail += f" Rare < {self.config.rare_category_min_frequency:.1%} grouped into {self.config.rare_token}."
                 operations.append(
                     {
                         "operation": "categorical_encoding",
                         "column": role.name,
-                        "reason": "Vocabulary learned from training data.",
+                        "reason": detail,
                     }
                 )
             elif role.role == "feature_datetime":
+                feats = "year/month/day/weekday"
+                if self.config.datetime_extract_hour:
+                    feats += " (+hour when time present)"
+                if self.config.datetime_cyclical:
+                    feats += " + cyclical sin/cos"
                 operations.append(
                     {
                         "operation": "datetime_features",
                         "column": role.name,
-                        "reason": "Calendar features from parsed timestamps.",
+                        "reason": f"Calendar features ({feats}) from parsed timestamps.",
                     }
                 )
+        scaling = self.config.resolved_scaling()
+        if scaling != "none":
+            operations.append(
+                {
+                    "operation": f"{scaling}_scaling",
+                    "column": "*",
+                    "reason": f"{scaling.title()} scaling (center/spread from train only, binaries excluded).",
+                }
+            )
         self.plan_ = TransformPlan(operations, profile.findings, self.config.protected_columns)
         return self.plan_
+
+    def explain_plan(self, df: pl.DataFrame) -> str:
+        """Human-readable English trace of the plan (for --explain / notebooks)."""
+        plan = self.plan(df)
+        lines = [f"Plan for {df.height} rows x {df.width} cols (target={self.config.target}):"]
+        for i, op in enumerate(plan.operations, 1):
+            lines.append(f"  {i:02d}. {op['operation']:22s} {op['column']:24s} — {op['reason']}")
+        if plan.findings:
+            lines.append(f"Findings ({len(plan.findings)}):")
+            for f in plan.findings[:10]:
+                lines.append(f"  - [{f['severity']}] {f['code']} ({f['column']}): {f['message']}")
+        return "\n".join(lines)
 
     def fit(self, train_df: pl.DataFrame, target: str | None = None) -> "DataDocPipeline":
         train_df = _normalize_numeric_missing(train_df)
@@ -401,10 +506,30 @@ class DataDocPipeline:
             raise DataDocError(
                 f"Target column '{self.config.target}' is not present in training data."
             )
+        # Deduplicate train-only (never touch validation at transform)
+        _deduped = 0
+        if self.config.deduplicate and train_df.height:
+            before = train_df.height
+            train_df = train_df.unique(maintain_order=True)
+            _deduped = before - train_df.height
 
         profile = self.profile(train_df)
         self.plan(train_df)
+        # plan() runs on post-dedup data, so re-inject the op when rows were dropped
+        if _deduped and not any(
+            op.get("operation") == "deduplicate" for op in self.plan_.operations
+        ):
+            self.plan_.operations.insert(
+                0,
+                {
+                    "operation": "deduplicate",
+                    "column": "*",
+                    "reason": f"Dropped {_deduped} duplicate rows at fit time.",
+                },
+            )
         self.input_schema_ = {name: str(dtype) for name, dtype in train_df.schema.items()}
+        self.train_provenance_ = _dataset_provenance(train_df, profile.schema_fingerprint)
+        self.train_provenance_["deduplicated_rows"] = _deduped
         role_map = {role.name: role for role in profile.roles}
         state: dict[str, Any] = {
             "dropped": [],
@@ -451,27 +576,55 @@ class DataDocPipeline:
                 counts = values.value_counts()
                 frequencies = {str(row[0]): int(row[1]) for row in counts.iter_rows()}
                 total = max(values.len(), 1)
-                kept = sorted(
-                    value
-                    for value, count in frequencies.items()
-                    if count / total >= self.config.rare_category_min_frequency
+                rel = {k: c / total for k, c in frequencies.items()}
+                rare_cut = self.config.rare_category_min_frequency
+                # Group rare into token so one-hot width stays capped but signal kept
+                rare_values = (
+                    sorted([k for k, f in rel.items() if f < rare_cut]) if rare_cut > 0 else []
                 )
+                kept = (
+                    sorted([k for k, f in rel.items() if f >= rare_cut])
+                    if rare_cut > 0
+                    else sorted(rel.keys())
+                )
+                if rare_values:
+                    # ensure token present as explicit category
+                    if self.config.rare_token not in kept:
+                        kept = sorted(kept + [self.config.rare_token])
                 if len(kept) <= self.config.categorical_threshold:
                     state["categorical"][name] = {
                         "kind": "one_hot",
                         "categories": kept,
+                        "rare_values": rare_values,
+                        "rare_token": self.config.rare_token,
                         "missing": series.null_count() > 0,
                     }
                 elif self.config.encode_high_cardinality:
                     state["categorical"][name] = {
                         "kind": "frequency",
-                        "frequencies": {key: count / total for key, count in frequencies.items()},
+                        "frequencies": rel,
+                        "rare_values": rare_values,
+                        "rare_token": self.config.rare_token,
                         "missing": series.null_count() > 0,
                     }
                 else:
                     state["dropped"].append(name)
             elif role.role == "feature_datetime":
-                state["datetime"][name] = {"source_dtype": str(series.dtype)}
+                # Detect hour presence on train (parsed if needed)
+                has_hour = False
+                try:
+                    s = series
+                    if s.dtype == pl.String:
+                        s = s.cast(pl.String).str.to_datetime(strict=False)
+                    if s.dtype in (pl.Date, pl.Datetime):
+                        has_hour = _has_time_component_series(s)
+                except Exception:
+                    has_hour = False
+                state["datetime"][name] = {
+                    "source_dtype": str(series.dtype),
+                    "has_hour": bool(has_hour and self.config.datetime_extract_hour),
+                    "cyclical": bool(self.config.datetime_cyclical),
+                }
 
         transformed = self._transform_with_state(train_df, state, validate_schema=False)
         scaling = self.config.resolved_scaling()
@@ -565,19 +718,54 @@ class DataDocPipeline:
                 output = output.with_columns(pl.col(name).str.to_datetime(strict=False).alias(name))
             if output[name].dtype not in (pl.Date, pl.Datetime):
                 raise DataDocError(f"Datetime column '{name}' could not be parsed.")
-            output = output.with_columns(
-                [
-                    pl.col(name).dt.year().alias(f"{name}__year"),
-                    pl.col(name).dt.month().alias(f"{name}__month"),
-                    pl.col(name).dt.day().alias(f"{name}__day"),
-                    pl.col(name).dt.weekday().alias(f"{name}__weekday"),
-                ]
-            ).drop(name)
+            feats = [
+                pl.col(name).dt.year().alias(f"{name}__year"),
+                pl.col(name).dt.month().alias(f"{name}__month"),
+                pl.col(name).dt.day().alias(f"{name}__day"),
+                pl.col(name).dt.weekday().alias(f"{name}__weekday"),
+            ]
+            # Hour only when train had real time info (backwards compat: default True for v1 artifacts)
+            if spec.get("has_hour", True):
+                try:
+                    feats.append(pl.col(name).dt.hour().alias(f"{name}__hour"))
+                except Exception:
+                    pass
+            output = output.with_columns(feats).drop(name)
+            # Optional cyclical encodings (month/day/weekday/hour -> sin/cos)
+            if spec.get("cyclical", False):
+                import math as _math
+
+                cyc_exprs = []
+                periods = {
+                    f"{name}__month": 12.0,
+                    f"{name}__day": 31.0,
+                    f"{name}__weekday": 7.0,
+                }
+                if f"{name}__hour" in output.columns:
+                    periods[f"{name}__hour"] = 24.0
+                for col, period in periods.items():
+                    if col in output.columns:
+                        cyc_exprs.append(
+                            (2.0 * _math.pi * pl.col(col) / period).sin().alias(f"{col}__sin")
+                        )
+                        cyc_exprs.append(
+                            (2.0 * _math.pi * pl.col(col) / period).cos().alias(f"{col}__cos")
+                        )
+                if cyc_exprs:
+                    output = output.with_columns(cyc_exprs)
 
         for name, spec in state["categorical"].items():
             if name not in output.columns or name == target:
                 continue
             values = output[name].cast(pl.String).fill_null(self.config.categorical_missing_value)
+            # Map rare/unseen to token: rare_values learned on train; unseen -> rare token if configured
+            rare_values = spec.get("rare_values", [])
+            rare_token = spec.get("rare_token", self.config.rare_token)
+            if rare_values:
+                rare_set = set(rare_values)
+                values = (
+                    pl.when(values.is_in(list(rare_set))).then(pl.lit(rare_token)).otherwise(values)
+                )
             if self.config.add_missing_indicators and spec["missing"]:
                 output = output.with_columns(
                     pl.col(name).is_null().cast(pl.UInt8).alias(f"{name}__missing")
@@ -590,6 +778,7 @@ class DataDocPipeline:
                 output = output.with_columns(category_exprs).drop(name)
             else:
                 frequencies = spec["frequencies"]
+                # Unseen categories -> 0.0; rare token uses its train frequency if present
                 output = output.with_columns(
                     values.replace_strict(frequencies, default=0.0, return_dtype=pl.Float64).alias(
                         f"{name}__frequency"
@@ -745,17 +934,41 @@ class DataDocPipeline:
             y_test = validation_df[target].to_numpy()
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
+                family = config.estimator_family
                 if inferred_task == "classification":
+                    if family == "both":
+                        # Honest "both": fit linear and tree, keep the stronger validation score.
+                        scores = []
+                        for model in (
+                            LogisticRegression(max_iter=1_000),
+                            RandomForestClassifier(random_state=config.random_seed),
+                        ):
+                            model.fit(x_train, y_train)
+                            scores.append(
+                                float(balanced_accuracy_score(y_test, model.predict(x_test)))
+                            )
+                        return max(scores)
                     model = (
                         LogisticRegression(max_iter=1_000)
-                        if config.estimator_family == "linear"
+                        if family == "linear"
                         else RandomForestClassifier(random_state=config.random_seed)
                     )
                     model.fit(x_train, y_train)
                     return float(balanced_accuracy_score(y_test, model.predict(x_test)))
+                if family == "both":
+                    scores = []
+                    for model in (
+                        Ridge(),
+                        RandomForestRegressor(random_state=config.random_seed),
+                    ):
+                        model.fit(x_train, y_train)
+                        scores.append(
+                            -float(mean_squared_error(y_test, model.predict(x_test)) ** 0.5)
+                        )
+                    return max(scores)
                 model = (
                     Ridge()
-                    if config.estimator_family == "linear"
+                    if family == "linear"
                     else RandomForestRegressor(random_state=config.random_seed)
                 )
                 model.fit(x_train, y_train)
@@ -811,13 +1024,22 @@ class DataDocPipeline:
     def to_dict(self) -> dict[str, Any]:
         if not self.fitted_:
             raise DataDocError("Only fitted pipelines can be saved.")
+        provenance = getattr(self, "train_provenance_", None)
+        if provenance is None and self.profile_ is not None:
+            provenance = _dataset_provenance(
+                pl.DataFrame(schema={k: pl.String for k in self.input_schema_}),
+                self.profile_.schema_fingerprint,
+            )
+            provenance["rows"] = self.profile_.rows
         return {
             "artifact_version": ARTIFACT_VERSION,
             "created_at": datetime.now(timezone.utc).isoformat(),
+            "datadoc_version": _datadoc_version(),
             "config": asdict(self.config),
             "input_schema": self.input_schema_,
             "output_schema": self.output_schema_,
             "state": self.state_,
+            "provenance": provenance or {},
             "profile": self.profile_.to_dict() if self.profile_ else None,
             "plan": self.plan_.to_dict() if self.plan_ else None,
         }
@@ -830,16 +1052,175 @@ class DataDocPipeline:
     @classmethod
     def load(cls, path: str | Path) -> "DataDocPipeline":
         artifact = json.loads(Path(path).read_text(encoding="utf-8"))
-        if artifact.get("artifact_version") != ARTIFACT_VERSION:
+        version = artifact.get("artifact_version")
+        if version not in (1, 2, ARTIFACT_VERSION):
             raise DataDocError(
-                "Pipeline artifact version is not supported by this DATADOC version."
+                f"Pipeline artifact version {version} is not supported by this DATADOC version."
             )
-        pipeline = cls(PipelineConfig(**artifact["config"]))
+        raw_cfg = dict(artifact["config"])
+        # Backwards compat: v1 artifacts lack new fields -> fill defaults
+        cfg = PipelineConfig(
+            **{k: v for k, v in raw_cfg.items() if k in PipelineConfig.__dataclass_fields__}
+        )
+        pipeline = cls(cfg)
         pipeline.input_schema_ = artifact["input_schema"]
         pipeline.output_schema_ = artifact["output_schema"]
         pipeline.state_ = artifact["state"]
+        # Backfill datetime spec defaults for v1 artifacts
+        for _spec in pipeline.state_.get("datetime", {}).values():
+            _spec.setdefault("has_hour", True)
+            _spec.setdefault("cyclical", False)
+        for _spec in pipeline.state_.get("categorical", {}).values():
+            _spec.setdefault("rare_values", [])
+            _spec.setdefault("rare_token", cfg.rare_token)
+        pipeline.train_provenance_ = artifact.get("provenance", {})
         pipeline.fitted_ = True
         return pipeline
+
+    # ── Addictive-loop helpers ──────────────────────────────
+    def drift_report(self, df: pl.DataFrame) -> dict[str, Any]:
+        """Schema + median-shift drift vs train provenance (for --validate)."""
+        if not self.fitted_:
+            raise DataDocError("Pipeline is not fitted.")
+        df = _normalize_numeric_missing(df)
+        issues: list[dict[str, Any]] = []
+        try:
+            self._validate_input_schema(df)
+            schema_ok = True
+        except DataDocError as e:
+            schema_ok = False
+            issues.append({"type": "schema", "message": str(e)})
+        for name, spec in self.state_.get("numeric", {}).items():
+            if name not in df.columns or not df[name].dtype.is_numeric():
+                continue
+            median = spec.get("median")
+            try:
+                cur = df[name].median()
+            except Exception:
+                cur = None
+            if median is not None and cur is not None:
+                drift = abs(float(cur) - float(median)) / (abs(float(median)) + 1e-9)
+                if drift > 0.5:
+                    issues.append(
+                        {
+                            "type": "drift",
+                            "column": name,
+                            "train_median": median,
+                            "current_median": float(cur),
+                            "shift": drift,
+                            "message": f"{name} median shift {drift:.1%} ({median} -> {cur})",
+                        }
+                    )
+        return {
+            "schema_ok": schema_ok,
+            "issues": issues,
+            "provenance": getattr(self, "train_provenance_", {}),
+        }
+
+    def evaluate_ablation(self, df: pl.DataFrame, target: str | None = None) -> dict[str, Any]:
+        """Per-component ablation: baseline vs no-clip vs no-scale vs full candidate."""
+        base_report = self.evaluate(df, target=target).to_dict()
+        variants: dict[str, Any] = {"full": base_report}
+        try:
+            no_clip_cfg = PipelineConfig(**{**asdict(self.config), "clip_outliers": False})
+            variants["no_clip"] = (
+                DataDocPipeline(no_clip_cfg)
+                .evaluate(df, target=target or self.config.target)
+                .to_dict()
+            )
+        except Exception as e:
+            variants["no_clip"] = {"error": str(e)}
+        try:
+            no_scale_cfg = PipelineConfig(**{**asdict(self.config), "scaling": "none"})
+            variants["no_scaling"] = (
+                DataDocPipeline(no_scale_cfg)
+                .evaluate(df, target=target or self.config.target)
+                .to_dict()
+            )
+        except Exception as e:
+            variants["no_scaling"] = {"error": str(e)}
+        try:
+            minimal_cfg = PipelineConfig(
+                **{
+                    **asdict(self.config),
+                    "scaling": "none",
+                    "clip_outliers": False,
+                    "rare_category_min_frequency": 0.0,
+                }
+            )
+            variants["minimal"] = (
+                DataDocPipeline(minimal_cfg)
+                .evaluate(df, target=target or self.config.target)
+                .to_dict()
+            )
+        except Exception as e:
+            variants["minimal"] = {"error": str(e)}
+        return {
+            "metric": base_report.get("metric"),
+            "variants": {
+                k: (
+                    {
+                        "baseline_score": v.get("baseline_score"),
+                        "selected_score": v.get("selected_score"),
+                        "improvement": v.get("improvement"),
+                        "selected_pipeline": v.get("selected_pipeline"),
+                    }
+                    if isinstance(v, dict) and "error" not in v
+                    else v
+                )
+                for k, v in variants.items()
+            },
+        }
+
+    def profile_to_html(self, df: pl.DataFrame | None = None) -> str:
+        """Small HTML widget for notebooks (Polars-native, no heavy deps)."""
+        prof = self.profile_ or (self.profile(df) if df is not None else None)
+        if prof is None:
+            raise DataDocError("No profile available. Call profile(df) first.")
+        rows = "".join(
+            f"<tr><td><b>{r.name}</b></td><td>{r.role}</td><td>{r.confidence:.2f}</td><td>{r.rationale}</td></tr>"
+            for r in prof.roles
+        )
+        findings = (
+            "".join(
+                f"<li><b>[{f['severity']}] {f['code']}</b> ({f['column']}): {f['message']}</li>"
+                for f in prof.findings
+            )
+            or "<li>No findings</li>"
+        )
+        return (
+            f"<div><h3>DATADOC Profile — {prof.rows} rows x {prof.columns} cols</h3>"
+            f"<p><code>{prof.schema_fingerprint}</code></p>"
+            f"<table border='1' cellpadding='4'><tr><th>Column</th><th>Role</th><th>Conf</th><th>Rationale</th></tr>{rows}</table>"
+            f"<h4>Findings</h4><ul>{findings}</ul></div>"
+        )
+
+    def _repr_html_(self) -> str:
+        try:
+            if self.profile_ is not None:
+                return self.profile_to_html()
+        except Exception:
+            pass
+        return (
+            f"<div><b>DataDocPipeline</b> fitted={self.fitted_} target={self.config.target}</div>"
+        )
+
+    def export_sklearn_artifact(self, path: str | Path) -> Path:
+        """Save a joblib artifact (dict) portable without DATADOC at inference.
+
+        Loads via: joblib.load(path) -> dict with config/state/schemas.
+        A tiny loader snippet is returned for docs.
+        """
+        try:
+            import joblib  # type: ignore
+        except ImportError as e:
+            raise DataDocError("pip install 'datadoc-cli[ml]' for joblib export.") from e
+        if not self.fitted_:
+            raise DataDocError("Only fitted pipelines can be exported.")
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        joblib.dump(self.to_dict(), path)
+        return path
 
     def export_python(self, artifact_path: str | Path) -> str:
         artifact_path = str(artifact_path).replace("\\", "/")

@@ -84,9 +84,6 @@ class ScalingPlugin(BasePlugin):
             )
         return recs
 
-
-
-
     def apply(self, df: pl.DataFrame) -> pl.DataFrame:
         df_clean = df.clone()
         cols_to_scale = self.analyze(df_clean).get("columns_to_scale", [])

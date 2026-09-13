@@ -6,6 +6,8 @@ from datadoc.plugins.outliers import OutlierPlugin
 from datadoc.plugins.encoders import CategoricalEncoderPlugin
 from datadoc.plugins.datetime_feat import DatetimePlugin
 from datadoc.plugins.scaling import ScalingPlugin
+from datadoc.plugins.duplicates import DuplicateRemoverPlugin
+from datadoc.plugins.rare import RareCategoryPlugin
 from datadoc.core.pipeline import DataDocPipeline, PipelineConfig, read_dataset
 
 
@@ -187,6 +189,7 @@ class TestCategoricalEncoderPlugin:
         plugin = CategoricalEncoderPlugin()
         assert plugin.name == "CategoricalEncoderPlugin"
         assert plugin.priority == 40
+        assert plugin._max_categories == 20
 
 
 class TestDatetimePlugin:
@@ -270,10 +273,12 @@ class TestBasePluginInterface:
 
     @pytest.fixture(
         params=[
+            DuplicateRemoverPlugin,
             MissingValuePlugin,
             OutlierPlugin,
             CategoricalEncoderPlugin,
             DatetimePlugin,
+            RareCategoryPlugin,
             ScalingPlugin,
         ]
     )

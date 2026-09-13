@@ -1,0 +1,29 @@
+{
+  "metric": "balanced_accuracy",
+  "variants": {
+    "full": {
+      "baseline_score": 0.775098814229249,
+      "selected_score": 0.775098814229249,
+      "improvement": 0.0,
+      "selected_pipeline": "candidate"
+    },
+    "no_clip": {
+      "baseline_score": 0.775098814229249,
+      "selected_score": 0.775098814229249,
+      "improvement": 0.0,
+      "selected_pipeline": "candidate"
+    },
+    "no_scaling": {
+      "baseline_score": 0.775098814229249,
+      "selected_score": 0.775098814229249,
+      "improvement": 0.0,
+      "selected_pipeline": "candidate"
+    },
+    "minimal": {
+      "baseline_score": 0.775098814229249,
+      "selected_score": 0.775098814229249,
+      "improvement": 0.0,
+      "selected_pipeline": "candidate"
+    }
+  }
+}

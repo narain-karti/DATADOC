@@ -1,6 +1,6 @@
 [project]
 name = "datadoc-cli"
-version = "0.4.0"
+version = "0.5.0"
 description = "Leakage-safe, local-first preparation pipelines for tabular machine learning."
 readme = "README.md"
 license = "MIT"
@@ -26,7 +26,7 @@ dependencies = [
     "plotext>=5.2.8",
     "pydantic>=2.0.0",
     "python-dotenv>=1.0.0",
-    "scikit-learn>=1.7.2",
+    "tomli>=2.0.0; python_version < '3.11'",
 ]
 
 [project.optional-dependencies]
@@ -34,7 +34,7 @@ ai = [
     "litellm>=1.40.0",
 ]
 ml = [
-    "scikit-learn>=1.4.0",
+    "scikit-learn>=1.7.2",
 ]
 ui = [
     "fastapi>=0.115.0",
@@ -46,7 +46,14 @@ dev = [
     "hatchling>=1.25.0",
     "pytest>=8.0.0",
     "ruff>=0.4.0",
-    "scikit-learn>=1.4.0",
+    "scikit-learn>=1.7.2",
+]
+all = [
+    "scikit-learn>=1.7.2",
+    "fastapi>=0.115.0",
+    "uvicorn>=0.30.0",
+    "python-multipart>=0.0.20",
+    "litellm>=1.40.0",
 ]
 
 [project.urls]
@@ -56,6 +63,27 @@ Issues = "https://github.com/narain-karti/DATADOC/issues"
 
 [project.scripts]
 datadoc = "datadoc.cli.app:app"
+
+[project.entry-points."datadoc.plugins"]
+duplicate = "datadoc.plugins.duplicates:DuplicateRemoverPlugin"
+missing = "datadoc.plugins.missing_values:MissingValuePlugin"
+outlier = "datadoc.plugins.outliers:OutlierPlugin"
+datetime = "datadoc.plugins.datetime_feat:DatetimePlugin"
+encoder = "datadoc.plugins.encoders:CategoricalEncoderPlugin"
+rare = "datadoc.plugins.rare:RareCategoryPlugin"
+scaling = "datadoc.plugins.scaling:ScalingPlugin"
+
+[tool.datadoc]
+task = "auto"
+drop_identifiers = false
+deduplicate = false
+scaling = "auto"
+clip_outliers = false
+categorical_threshold = 20
+rare_category_min_frequency = 0.0
+datetime_cyclical = false
+datetime_extract_hour = true
+strict_schema = true
 
 [build-system]
 requires = ["hatchling"]
@@ -71,11 +99,23 @@ testpaths = ["tests"]
 [tool.hatch.build.targets.wheel]
 packages = ["datadoc"]
 
+# Ship the built dashboard so `datadoc ui` works from a plain pip install.
+# Requires `web/dist` to exist at build time (see RELEASE_CHECKLIST.md).
+[tool.hatch.build.targets.wheel.force-include]
+"web/dist" = "datadoc/_webui"
+
 [tool.hatch.build.targets.sdist]
 include = [
     "datadoc/**/*",
     "README.md",
     "LICENSE",
     "MIGRATION.md",
+    "CHANGELOG.md",
+    "RELEASE_CHECKLIST.md",
     "pyproject.toml",
 ]
+
+# web/dist is gitignored, so it needs force-include (not just include)
+# to survive into the sdist; the wheel is then built from the sdist.
+[tool.hatch.build.targets.sdist.force-include]
+"web/dist" = "web/dist"

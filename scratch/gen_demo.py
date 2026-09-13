@@ -1,4 +1,4 @@
-"""Generate a realistic demo dataset for testing DATADOC CLI."""
+"""Generate a realistic demo dataset with true statistical signal for testing DATADOC CLI."""
 import random, csv, uuid
 from datetime import datetime, timedelta
 
@@ -19,7 +19,17 @@ with open("demo.csv", "w", newline="") as f:
         yrs = random.randint(0, 30) if random.random() > 0.02 else None
         score = round(random.uniform(1, 10), 1) if random.random() > 0.06 else None
         signup = (datetime(2020, 1, 1) + timedelta(days=random.randint(0, 1500))).strftime("%Y-%m-%d")
-        churn = random.choice([0, 1])
+
+        # Inject realistic predictive signal for churn
+        prob = 0.2
+        if score is not None and score < 4.0:
+            prob += 0.4
+        if salary is not None and salary < 45000:
+            prob += 0.25
+        if age is not None and age > 50:
+            prob += 0.15
+
+        churn = 1 if random.random() < min(prob, 0.95) else 0
 
         # Inject a few extreme outliers
         if random.random() < 0.02:
@@ -29,4 +39,4 @@ with open("demo.csv", "w", newline="") as f:
 
         w.writerow([str(uuid.uuid4()), f"Person_{i}", age, salary, dept, city, yrs, score, signup, churn])
 
-print("Created demo.csv with 500 rows.")
+print("Created demo.csv with 500 rows and realistic predictive signal.")

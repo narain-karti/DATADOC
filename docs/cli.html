@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Comprehensive DATADOC CLI deep dive: concepts, options, pipeline lifecycle, commands, and step-by-step tutorial.">
   <title>DATADOC Docs | CLI Deep Dive & Reference</title>
-  <link rel="stylesheet" href="css/docs.css">
+  <link rel="preconnect" href="https://fonts.cdnfonts.com" crossorigin><link rel="preconnect" href="https://api.fontshare.com" crossorigin><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.cdnfonts.com/css/pp-neue-montreal" rel="stylesheet"><link href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet"><link rel="stylesheet" href="css/docs.css">
   <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
   <script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
   <style>
@@ -48,9 +48,9 @@
   <div class="header-tools">
     <label class="search-box" aria-label="Search documentation">
       <span>⌕</span>
-      <input data-search-input type="search" placeholder="Search docs">
+      <input data-search-input type="search" placeholder="Search docs (full-text: topics, body, code, tables)" autocomplete="off">
     </label>
-    <span class="version-badge">v0.4.0</span>
+    <span class="version-badge">v0.5.0</span>
     <button class="menu-button" type="button" data-menu-toggle aria-label="Open navigation" aria-expanded="false">☰</button>
   </div>
 </header>
@@ -103,7 +103,7 @@
       <span class="meta-chip accent">datadoc --help</span>
       <span class="meta-chip">Polars Powered</span>
       <span class="meta-chip">Zero Data Leakage</span>
-      <span class="meta-chip">v0.4.0</span>
+      <span class="meta-chip">v0.5.0</span>
     </div>
 
     <div class="page-actions">
@@ -752,12 +752,78 @@ flowchart TD
         <pre class="code-block" data-copy>
 <div class="code-caption"><span class="lang">Terminal</span><span>Check DATADOC version</span></div><code><span class="tok-command">datadoc version</span></code></pre>
       </div>
+
+      <div class="endpoint">
+        <div class="endpoint-head">
+          <span class="method-badge">WIZARD</span>
+          <span class="path">datadoc wizard &lt;file_path&gt;</span>
+        </div>
+        <p>Guided setup: asks for target, preset, identifier/dedup policy, scaling, clipping, and rare-category frequency, writes <code>datadoc.toml</code>, then runs the full pipeline.</p>
+
+        <pre class="code-block" data-copy>
+<div class="code-caption"><span class="lang">Terminal</span><span>Guided first run</span></div><code><span class="tok-command">datadoc wizard</span> train.csv <span class="tok-flag">--output-dir</span> datadoc-run</code></pre>
+
+        <h4>Options</h4>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Option</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>file_path</code></td><td>Argument</td><td><em>Required</em></td><td>Training CSV or Parquet file</td></tr>
+              <tr><td><code>--output-dir</code></td><td>Option</td><td><code>datadoc-run</code></td><td>Directory for run outputs</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="endpoint">
+        <div class="endpoint-head">
+          <span class="method-badge">INIT</span>
+          <span class="path">datadoc init</span>
+        </div>
+        <p>Writes a starter <code>datadoc.toml</code> so runs are reproducible without retyping flags. Settings can also live under <code>[tool.datadoc]</code> in <code>pyproject.toml</code>; explicit flags always win.</p>
+
+        <pre class="code-block" data-copy>
+<div class="code-caption"><span class="lang">Terminal</span><span>Repeatable config</span></div><code><span class="tok-command">datadoc init</span> <span class="tok-flag">--preset</span> balanced <span class="tok-flag">--output</span> datadoc.toml</code></pre>
+      </div>
+
+      <div class="endpoint">
+        <div class="endpoint-head">
+          <span class="method-badge">LINT</span>
+          <span class="path">datadoc lint &lt;file_path&gt;</span>
+        </div>
+        <p>Lints a dataset for leakage and prep pitfalls: target duplication, null targets, infinite values, duplicate rows, constants, and profile findings.</p>
+
+        <pre class="code-block" data-copy>
+<div class="code-caption"><span class="lang">Terminal</span><span>Leakage lint</span></div><code><span class="tok-command">datadoc lint</span> train.csv <span class="tok-flag">--target</span> churn</code></pre>
+      </div>
+
+      <div class="endpoint">
+        <div class="endpoint-head">
+          <span class="method-badge">DIFF</span>
+          <span class="path">datadoc diff &lt;file_a&gt; &lt;file_b&gt;</span>
+        </div>
+        <p>Diffs two profile, plan, or pipeline JSON artifacts top-level key by key, plus added/removed plan operations.</p>
+
+        <pre class="code-block" data-copy>
+<div class="code-caption"><span class="lang">Terminal</span><span>Compare artifacts</span></div><code><span class="tok-command">datadoc diff</span> plan-v1.json plan-v2.json</code></pre>
+      </div>
+
+      <div class="endpoint">
+        <div class="endpoint-head">
+          <span class="method-badge">PLUGINS</span>
+          <span class="path">datadoc plugins list</span>
+        </div>
+        <p>Lists the 7 registered deterministic plugins in priority order, including third-party entry-point plugins. Use <code>datadoc plugins show &lt;Name&gt;</code> for detail.</p>
+
+        <pre class="code-block" data-copy>
+<div class="code-caption"><span class="lang">Terminal</span><span>Registry introspection</span></div><code><span class="tok-command">datadoc plugins list</span></code></pre>
+      </div>
     </section>
 
     <!-- SECTION 7: TUTORIAL -->
     <section id="tutorial">
       <h2>7. Step-by-Step Hands-On Tutorial</h2>
-      <p>Follow this 8-step sequence using the generated <code>demo.csv</code> file to test all features of the DATADOC CLI:</p>
+      <p>Follow this sequence using the downloadable <code>demo.csv</code> file to test all features of the DATADOC CLI. Prefer guidance? Start with <code>datadoc wizard demo.csv</code> instead of steps 1–3.</p>
 
       <pre class="code-block" data-copy>
 <div class="code-caption"><span class="lang">Bash</span><span>Full CLI workflow test sequence</span></div><code><span class="tok-comment"># Step 1: Inspect dataset quality and health findings</span>
@@ -779,11 +845,12 @@ flowchart TD
   <span class="tok-flag">--pipeline</span> artifacts/pipeline.json \
   <span class="tok-flag">--output</span> clean_demo.csv
 
-<span class="tok-comment"># Step 5: Benchmark clean vs raw dataset ML performance</span>
+<span class="tok-comment"># Step 5: Benchmark candidate vs baseline ML performance (with ablation)</span>
 <span class="tok-command">datadoc evaluate</span> demo.csv \
   <span class="tok-flag">--target</span> churn \
   <span class="tok-flag">--task</span> classification \
-  <span class="tok-flag">--estimator</span> tree
+  <span class="tok-flag">--estimator</span> tree \
+  <span class="tok-flag">--ablation</span>
 
 <span class="tok-comment"># Step 6: Export executable Python wrapper script</span>
 <span class="tok-command">datadoc export</span> \
@@ -833,21 +900,35 @@ flowchart TD
             </tr>
             <tr>
               <td><code>--drop-identifiers</code></td>
-              <td>plan, fit</td>
+              <td>plan, fit, run</td>
               <td>Boolean Flag</td>
               <td><code>False</code></td>
               <td>Detects and removes high-cardinality string IDs</td>
             </tr>
             <tr>
+              <td><code>--identifier-column</code></td>
+              <td>plan, fit, run</td>
+              <td>Column Name (repeatable)</td>
+              <td><code>None</code></td>
+              <td>Forces a column into the identifier role (e.g. <code>PassengerId</code>)</td>
+            </tr>
+            <tr>
+              <td><code>--ignore-column</code></td>
+              <td>plan, fit, run</td>
+              <td>Column Name (repeatable)</td>
+              <td><code>None</code></td>
+              <td>Excludes a column from features entirely</td>
+            </tr>
+            <tr>
               <td><code>--scaling</code></td>
-              <td>fit</td>
+              <td>fit, run</td>
               <td><code>auto</code>, <code>none</code>, <code>standard</code>, <code>robust</code></td>
               <td><code>auto</code></td>
               <td>Selects numeric feature scaling strategy</td>
             </tr>
             <tr>
               <td><code>--clip-outliers</code></td>
-              <td>fit</td>
+              <td>fit, run</td>
               <td>Boolean Flag</td>
               <td><code>False</code></td>
               <td>Clamps numerical outliers to IQR bounds</td>
@@ -857,7 +938,98 @@ flowchart TD
               <td>evaluate</td>
               <td><code>linear</code>, <code>tree</code>, <code>both</code></td>
               <td><code>linear</code></td>
-              <td>Selects baseline &amp; candidate model family</td>
+              <td>Selects model family; <code>both</code> fits linear and tree and keeps the stronger validation score</td>
+            </tr>
+            <tr>
+              <td><code>--preset</code></td>
+              <td>profile, plan, fit, evaluate, run</td>
+              <td><code>quick</code>, <code>balanced</code>, <code>linear</code>, <code>tree</code>, <code>time</code>, <code>robust</code></td>
+              <td><code>None</code></td>
+              <td>One-word policy bundle for scaling, clipping, threshold, and estimator family</td>
+            </tr>
+            <tr>
+              <td><code>--deduplicate</code></td>
+              <td>fit, run</td>
+              <td>Boolean Flag</td>
+              <td><code>False</code></td>
+              <td>Drops duplicate rows from training data at fit time</td>
+            </tr>
+            <tr>
+              <td><code>--rare-frequency</code></td>
+              <td>fit, run</td>
+              <td>Float 0–1</td>
+              <td><code>0.0</code></td>
+              <td>Groups categories below this frequency into <code>__RARE__</code></td>
+            </tr>
+            <tr>
+              <td><code>--cyclical</code></td>
+              <td>fit, run</td>
+              <td>Boolean Flag</td>
+              <td><code>False</code></td>
+              <td>Adds sin/cos pairs for datetime parts</td>
+            </tr>
+            <tr>
+              <td><code>--no-hour</code></td>
+              <td>fit, run</td>
+              <td>Boolean Flag</td>
+              <td><code>False</code></td>
+              <td>Skips hour extraction even when time data is present</td>
+            </tr>
+            <tr>
+              <td><code>--categorical-threshold</code></td>
+              <td>fit, run</td>
+              <td>Integer</td>
+              <td><code>20</code></td>
+              <td>Max one-hot width before falling back to frequency encoding</td>
+            </tr>
+            <tr>
+              <td><code>--ablation</code></td>
+              <td>evaluate, run</td>
+              <td>Boolean Flag</td>
+              <td><code>False</code></td>
+              <td>Compares full, no-clip, no-scaling, and minimal variants</td>
+            </tr>
+            <tr>
+              <td><code>--validate</code></td>
+              <td>transform</td>
+              <td>Boolean Flag</td>
+              <td><code>False</code></td>
+              <td>Runs schema validation and median-shift drift checks</td>
+            </tr>
+            <tr>
+              <td><code>--explain</code></td>
+              <td>profile, plan</td>
+              <td>Boolean Flag</td>
+              <td><code>False</code></td>
+              <td>Renders human-readable tables instead of raw JSON</td>
+            </tr>
+            <tr>
+              <td><code>--compare</code></td>
+              <td>profile</td>
+              <td>File Path (<code>.json</code>)</td>
+              <td><code>None</code></td>
+              <td>Compares against another profile JSON</td>
+            </tr>
+            <tr>
+              <td><code>--diff</code></td>
+              <td>plan</td>
+              <td>File Path (<code>.json</code>)</td>
+              <td><code>None</code></td>
+              <td>Diffs against another plan JSON</td>
+            </tr>
+            <tr>
+              <td><code>--config</code></td>
+              <td>profile, plan, fit, evaluate, run</td>
+              <td>File Path (<code>.toml</code>)</td>
+              <td>Auto-discovered</td>
+              <td>Explicit <code>datadoc.toml</code> path; explicit flags override it</td>
+            </tr>
+            <tr>
+              <td><code>--format</code></td>
+              <td>export</td>
+              <td><code>python</code>, <code>joblib</code></td>
+              <td><code>python</code></td>
+              <td>Executable wrapper script or portable joblib artifact dict</td>
             </tr>
             <tr>
               <td><code>--time-column</code></td>
@@ -899,7 +1071,7 @@ flowchart TD
               <td>ui</td>
               <td>Integer</td>
               <td><code>8000</code></td>
-              <td>HTTP port for local dashboard server</td>
+              <td>HTTP port for local dashboard server (<code>--no-browser</code> skips auto-open)</td>
             </tr>
           </tbody>
         </table>
@@ -943,10 +1115,10 @@ flowchart TD
 </div>
 
 <footer class="footer">
-  DATADOC v0.4.0 · <a href="index.html">Documentation home</a> · <a href="https://github.com/narain-karti/DATADOC">GitHub</a>
+  DATADOC v0.5.0 · <a href="index.html">Documentation home</a> · <a href="https://github.com/narain-karti/DATADOC">GitHub</a>
 </footer>
 
-<div class="search-results"></div>
+<div class="search-results" aria-live="polite"></div>
 <script src="js/docs.js"></script>
 </body>
 </html>

@@ -1,7 +1,7 @@
 import os
 import json
 from pathlib import Path
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, Response
@@ -45,14 +45,17 @@ class SessionState:
 _sessions: dict[str, SessionState] = {}
 
 
-
-
 class PipelineRequest(BaseModel):
     target: Optional[str] = None
     task: str = "auto"
     drop_identifiers: bool = False
+    deduplicate: bool = False
     scaling: str = "auto"
     clip_outliers: bool = False
+    categorical_threshold: int = 20
+    rare_category_min_frequency: float = 0.0
+    datetime_cyclical: bool = False
+    datetime_extract_hour: bool = True
 
 
 def init_server(file_path: str):
@@ -81,8 +84,13 @@ def _pipeline_config(req: PipelineRequest) -> PipelineConfig:
         target=req.target,
         task=req.task,
         drop_identifiers=req.drop_identifiers,
+        deduplicate=req.deduplicate,
         scaling=req.scaling,
         clip_outliers=req.clip_outliers,
+        categorical_threshold=req.categorical_threshold,
+        rare_category_min_frequency=req.rare_category_min_frequency,
+        datetime_cyclical=req.datetime_cyclical,
+        datetime_extract_hour=req.datetime_extract_hour,
     )
 
 
@@ -106,9 +114,7 @@ def pipeline_profile(
 ):
     state = _state(session_id)
     try:
-        state.profile = (
-            DataDocPipeline(PipelineConfig(target=target)).profile(state.df).to_dict()
-        )
+        state.profile = DataDocPipeline(PipelineConfig(target=target)).profile(state.df).to_dict()
         return state.profile
     except DataDocError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
@@ -180,12 +186,23 @@ def transform_file(input_path: str, output_path: str) -> None:
     pipeline.input_schema_ = ARTIFACT["input_schema"]
     pipeline.output_schema_ = ARTIFACT["output_schema"]
     pipeline.state_ = ARTIFACT["state"]
+    pipeline.train_provenance_ = ARTIFACT.get("provenance", {{}})
     pipeline.fitted_ = True
     transformed = pipeline.transform(read_dataset(input_path))
     if output_path.endswith(".parquet"):
         transformed.write_parquet(output_path)
     else:
         transformed.write_csv(output_path)
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Apply a fitted DATADOC pipeline.")
+    parser.add_argument("input_path")
+    parser.add_argument("output_path")
+    args = parser.parse_args()
+    transform_file(args.input_path, args.output_path)
 """
     return Response(
         content=code,
@@ -206,8 +223,46 @@ def export_csv(session_id: str = Header("local", alias="X-DATADOC-SESSION")):
     )
 
 
+@app.get("/api/pipeline/lineage")
+def pipeline_lineage(session_id: str = Header("local", alias="X-DATADOC-SESSION")):
+    state = _state(session_id)
+    if not state.pipeline:
+        raise HTTPException(status_code=400, detail="Fit a pipeline before requesting lineage.")
+    pipe = state.pipeline
+    return {
+        "provenance": getattr(pipe, "train_provenance_", {}),
+        "input_schema": pipe.input_schema_,
+        "output_schema": pipe.output_schema_,
+        "config": pipe.config.__dict__,
+        "operations": (pipe.plan_.operations if pipe.plan_ else []),
+    }
+
+
+@app.get("/api/pipeline/drift")
+def pipeline_drift(session_id: str = Header("local", alias="X-DATADOC-SESSION")):
+    state = _state(session_id)
+    if not state.pipeline:
+        raise HTTPException(status_code=400, detail="Fit a pipeline before requesting drift.")
+    try:
+        return state.pipeline.drift_report(state.df)
+    except DataDocError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+def _dist_dir() -> Path:
+    """Resolve the dashboard bundle.
+
+    Installed wheels carry it at ``datadoc/_webui`` (see pyproject
+    ``force-include``); source checkouts use ``web/dist``.
+    """
+    installed = Path(__file__).parent.parent / "_webui"
+    if installed.exists():
+        return installed
+    return Path(__file__).parent.parent.parent / "web" / "dist"
+
+
 # Mount React App (if exists)
-dist_dir = Path(__file__).parent.parent.parent / "web" / "dist"
+dist_dir = _dist_dir()
 if dist_dir.exists():
     app.mount("/", StaticFiles(directory=str(dist_dir), html=True), name="web")
 else:

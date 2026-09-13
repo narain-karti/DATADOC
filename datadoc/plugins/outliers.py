@@ -68,8 +68,6 @@ class OutlierPlugin(BasePlugin):
             )
         return recs
 
-
-
     def apply(self, df: pl.DataFrame) -> pl.DataFrame:
         df_clean = df.clone()
         bounds = self._get_iqr_bounds(df_clean)

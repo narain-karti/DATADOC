@@ -40,8 +40,6 @@ class MissingValuePlugin(BasePlugin):
             )
         return recs
 
-
-
     def apply(self, df: pl.DataFrame) -> pl.DataFrame:
         df_clean = df.clone()
         for col in df_clean.columns:

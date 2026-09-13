@@ -1,0 +1,130 @@
+{
+  "rows": 891,
+  "columns": 12,
+  "schema": {
+    "PassengerId": "Int64",
+    "Survived": "Int64",
+    "Pclass": "Int64",
+    "Name": "String",
+    "Sex": "String",
+    "Age": "Float64",
+    "SibSp": "Int64",
+    "Parch": "Int64",
+    "Ticket": "String",
+    "Fare": "Float64",
+    "Cabin": "String",
+    "Embarked": "String"
+  },
+  "null_counts": {
+    "PassengerId": 0,
+    "Survived": 0,
+    "Pclass": 0,
+    "Name": 0,
+    "Sex": 0,
+    "Age": 177,
+    "SibSp": 0,
+    "Parch": 0,
+    "Ticket": 0,
+    "Fare": 0,
+    "Cabin": 687,
+    "Embarked": 2
+  },
+  "cardinality": {
+    "PassengerId": 891,
+    "Survived": 2,
+    "Pclass": 3,
+    "Name": 891,
+    "Sex": 2,
+    "Age": 88,
+    "SibSp": 7,
+    "Parch": 7,
+    "Ticket": 681,
+    "Fare": 248,
+    "Cabin": 147,
+    "Embarked": 3
+  },
+  "roles": [
+    {
+      "name": "PassengerId",
+      "role": "feature_numeric",
+      "confidence": 1.0,
+      "rationale": "Numeric, non-constant feature."
+    },
+    {
+      "name": "Survived",
+      "role": "target",
+      "confidence": 1.0,
+      "rationale": "Explicitly declared target column."
+    },
+    {
+      "name": "Pclass",
+      "role": "feature_numeric",
+      "confidence": 1.0,
+      "rationale": "Numeric, non-constant feature."
+    },
+    {
+      "name": "Name",
+      "role": "identifier",
+      "confidence": 0.9,
+      "rationale": "Unique string with identifier-like name."
+    },
+    {
+      "name": "Sex",
+      "role": "feature_categorical",
+      "confidence": 0.9,
+      "rationale": "String feature suitable for categorical handling."
+    },
+    {
+      "name": "Age",
+      "role": "feature_numeric",
+      "confidence": 1.0,
+      "rationale": "Numeric, non-constant feature."
+    },
+    {
+      "name": "SibSp",
+      "role": "feature_numeric",
+      "confidence": 1.0,
+      "rationale": "Numeric, non-constant feature."
+    },
+    {
+      "name": "Parch",
+      "role": "feature_numeric",
+      "confidence": 1.0,
+      "rationale": "Numeric, non-constant feature."
+    },
+    {
+      "name": "Ticket",
+      "role": "feature_categorical",
+      "confidence": 0.9,
+      "rationale": "String feature suitable for categorical handling."
+    },
+    {
+      "name": "Fare",
+      "role": "feature_numeric",
+      "confidence": 1.0,
+      "rationale": "Numeric, non-constant feature."
+    },
+    {
+      "name": "Cabin",
+      "role": "feature_categorical",
+      "confidence": 0.9,
+      "rationale": "String feature suitable for categorical handling."
+    },
+    {
+      "name": "Embarked",
+      "role": "feature_categorical",
+      "confidence": 0.9,
+      "rationale": "String feature suitable for categorical handling."
+    }
+  ],
+  "findings": [
+    {
+      "severity": "warning",
+      "column": "Name",
+      "code": "identifier",
+      "message": "Identifier-like feature is retained unless drop_identifiers is enabled."
+    }
+  ],
+  "duplicate_rows": 0,
+  "schema_fingerprint": "b6f23b07ff21111e"
+}

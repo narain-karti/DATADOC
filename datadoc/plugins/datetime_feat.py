@@ -68,9 +68,6 @@ class DatetimePlugin(BasePlugin):
             )
         return recs
 
-
-
-
     def apply(self, df: pl.DataFrame) -> pl.DataFrame:
         df_clean = df.clone()
         dt_cols = self.analyze(df_clean).get("datetime_columns", [])

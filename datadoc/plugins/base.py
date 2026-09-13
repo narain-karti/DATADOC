@@ -44,4 +44,3 @@ class BasePlugin(ABC):
     def explain(self) -> str:
         """Return a human-readable explanation of what this plugin does."""
         return f"{self.name} (v{self.version}): {self.description}"
-

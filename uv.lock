@@ -351,7 +351,7 @@ wheels = [
 
 [[package]]
 name = "datadoc-cli"
-version = "0.4.0"
+version = "0.5.0"
 source = { editable = "." }
 dependencies = [
     { name = "plotext" },
@@ -359,14 +359,21 @@ dependencies = [
     { name = "pydantic" },
     { name = "python-dotenv" },
     { name = "rich" },
-    { name = "scikit-learn", version = "1.7.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "scikit-learn", version = "1.9.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "tomli", marker = "python_full_version < '3.11'" },
     { name = "typer" },
 ]
 
 [package.optional-dependencies]
 ai = [
     { name = "litellm" },
+]
+all = [
+    { name = "fastapi" },
+    { name = "litellm" },
+    { name = "python-multipart" },
+    { name = "scikit-learn", version = "1.7.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "scikit-learn", version = "1.9.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "uvicorn" },
 ]
 dev = [
     { name = "build" },
@@ -389,24 +396,29 @@ ui = [
 [package.metadata]
 requires-dist = [
     { name = "build", marker = "extra == 'dev'", specifier = ">=1.2.0" },
+    { name = "fastapi", marker = "extra == 'all'", specifier = ">=0.115.0" },
     { name = "fastapi", marker = "extra == 'ui'", specifier = ">=0.115.0" },
     { name = "hatchling", marker = "extra == 'dev'", specifier = ">=1.25.0" },
     { name = "litellm", marker = "extra == 'ai'", specifier = ">=1.40.0" },
+    { name = "litellm", marker = "extra == 'all'", specifier = ">=1.40.0" },
     { name = "plotext", specifier = ">=5.2.8" },
     { name = "polars", specifier = ">=0.20.0" },
     { name = "pydantic", specifier = ">=2.0.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
+    { name = "python-multipart", marker = "extra == 'all'", specifier = ">=0.0.20" },
     { name = "python-multipart", marker = "extra == 'ui'", specifier = ">=0.0.20" },
     { name = "rich", specifier = ">=13.7.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.4.0" },
-    { name = "scikit-learn", specifier = ">=1.7.2" },
-    { name = "scikit-learn", marker = "extra == 'dev'", specifier = ">=1.4.0" },
-    { name = "scikit-learn", marker = "extra == 'ml'", specifier = ">=1.4.0" },
+    { name = "scikit-learn", marker = "extra == 'all'", specifier = ">=1.7.2" },
+    { name = "scikit-learn", marker = "extra == 'dev'", specifier = ">=1.7.2" },
+    { name = "scikit-learn", marker = "extra == 'ml'", specifier = ">=1.7.2" },
+    { name = "tomli", marker = "python_full_version < '3.11'", specifier = ">=2.0.0" },
     { name = "typer", specifier = ">=0.12.0" },
+    { name = "uvicorn", marker = "extra == 'all'", specifier = ">=0.30.0" },
     { name = "uvicorn", marker = "extra == 'ui'", specifier = ">=0.30.0" },
 ]
-provides-extras = ["ai", "ml", "ui", "dev"]
+provides-extras = ["ai", "ml", "ui", "dev", "all"]
 
 [[package]]
 name = "distro"

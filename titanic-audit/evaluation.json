@@ -1,0 +1,15 @@
+{
+  "task": "classification",
+  "metric": "balanced_accuracy",
+  "estimator_family": "both",
+  "split_strategy": "stratified_holdout",
+  "baseline_score": 0.775098814229249,
+  "selected_score": 0.775098814229249,
+  "improvement": 0.0,
+  "selected_pipeline": "candidate",
+  "feature_count": 18,
+  "warnings": [
+    "Holdout score is an estimate; use an external final test set for production decisions.",
+    "Non-numeric transformed columns excluded from estimator input: Name"
+  ]
+}

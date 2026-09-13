@@ -1,0 +1,525 @@
+{
+  "artifact_version": 2,
+  "created_at": "2026-09-13T07:15:08.300156+00:00",
+  "datadoc_version": "0.5.0",
+  "config": {
+    "target": "Survived",
+    "task": "classification",
+    "protected_columns": [],
+    "ignored_columns": [],
+    "identifier_columns": [
+      "PassengerId",
+      "Ticket"
+    ],
+    "drop_identifiers": true,
+    "deduplicate": false,
+    "categorical_threshold": 20,
+    "datetime_parse_threshold": 0.9,
+    "datetime_extract_hour": true,
+    "datetime_cyclical": false,
+    "add_missing_indicators": true,
+    "categorical_missing_value": "__MISSING__",
+    "rare_category_min_frequency": 0.02,
+    "rare_token": "__RARE__",
+    "encode_high_cardinality": true,
+    "clip_outliers": false,
+    "outlier_multiplier": 1.5,
+    "scaling": "auto",
+    "estimator_family": "tree",
+    "random_seed": 42,
+    "strict_schema": true,
+    "time_column": null,
+    "group_column": null
+  },
+  "input_schema": {
+    "PassengerId": "Int64",
+    "Survived": "Int64",
+    "Pclass": "Int64",
+    "Name": "String",
+    "Sex": "String",
+    "Age": "Float64",
+    "SibSp": "Int64",
+    "Parch": "Int64",
+    "Ticket": "String",
+    "Fare": "Float64",
+    "Cabin": "String",
+    "Embarked": "String"
+  },
+  "output_schema": {
+    "Survived": "Int64",
+    "Pclass": "Float64",
+    "Age": "Float64",
+    "SibSp": "Float64",
+    "Parch": "Float64",
+    "Fare": "Float64",
+    "Age__missing": "UInt8",
+    "Sex__female": "UInt8",
+    "Sex__male": "UInt8",
+    "Cabin__missing": "UInt8",
+    "Cabin____MISSING__": "UInt8",
+    "Cabin____RARE__": "UInt8",
+    "Embarked__missing": "UInt8",
+    "Embarked__C": "UInt8",
+    "Embarked__Q": "UInt8",
+    "Embarked__S": "UInt8",
+    "Embarked____RARE__": "UInt8"
+  },
+  "state": {
+    "dropped": [
+      "PassengerId",
+      "Name",
+      "Ticket"
+    ],
+    "numeric": {
+      "Pclass": {
+        "median": 3.0,
+        "missing": false
+      },
+      "Age": {
+        "median": 28.0,
+        "missing": true
+      },
+      "SibSp": {
+        "median": 0.0,
+        "missing": false
+      },
+      "Parch": {
+        "median": 0.0,
+        "missing": false
+      },
+      "Fare": {
+        "median": 14.4542,
+        "missing": false
+      }
+    },
+    "categorical": {
+      "Sex": {
+        "kind": "one_hot",
+        "categories": [
+          "female",
+          "male"
+        ],
+        "rare_values": [],
+        "rare_token": "__RARE__",
+        "missing": false
+      },
+      "Cabin": {
+        "kind": "one_hot",
+        "categories": [
+          "__MISSING__",
+          "__RARE__"
+        ],
+        "rare_values": [
+          "A10",
+          "A14",
+          "A16",
+          "A19",
+          "A20",
+          "A23",
+          "A24",
+          "A26",
+          "A31",
+          "A32",
+          "A34",
+          "A36",
+          "A5",
+          "A6",
+          "A7",
+          "B101",
+          "B102",
+          "B18",
+          "B19",
+          "B20",
+          "B22",
+          "B28",
+          "B3",
+          "B30",
+          "B35",
+          "B37",
+          "B38",
+          "B39",
+          "B4",
+          "B41",
+          "B42",
+          "B49",
+          "B5",
+          "B50",
+          "B51 B53 B55",
+          "B57 B59 B63 B66",
+          "B58 B60",
+          "B69",
+          "B71",
+          "B73",
+          "B77",
+          "B78",
+          "B79",
+          "B80",
+          "B82 B84",
+          "B86",
+          "B94",
+          "B96 B98",
+          "C101",
+          "C103",
+          "C104",
+          "C106",
+          "C110",
+          "C111",
+          "C118",
+          "C123",
+          "C124",
+          "C125",
+          "C126",
+          "C128",
+          "C148",
+          "C2",
+          "C22 C26",
+          "C23 C25 C27",
+          "C30",
+          "C32",
+          "C45",
+          "C46",
+          "C47",
+          "C49",
+          "C50",
+          "C52",
+          "C54",
+          "C62 C64",
+          "C65",
+          "C68",
+          "C7",
+          "C70",
+          "C78",
+          "C82",
+          "C83",
+          "C85",
+          "C86",
+          "C87",
+          "C90",
+          "C91",
+          "C92",
+          "C93",
+          "C95",
+          "C99",
+          "D",
+          "D10 D12",
+          "D11",
+          "D15",
+          "D17",
+          "D19",
+          "D20",
+          "D21",
+          "D26",
+          "D28",
+          "D30",
+          "D33",
+          "D35",
+          "D36",
+          "D37",
+          "D45",
+          "D46",
+          "D47",
+          "D48",
+          "D49",
+          "D50",
+          "D56",
+          "D6",
+          "D7",
+          "D9",
+          "E10",
+          "E101",
+          "E12",
+          "E121",
+          "E17",
+          "E24",
+          "E25",
+          "E31",
+          "E33",
+          "E34",
+          "E36",
+          "E38",
+          "E40",
+          "E44",
+          "E46",
+          "E49",
+          "E50",
+          "E58",
+          "E63",
+          "E67",
+          "E68",
+          "E77",
+          "E8",
+          "F E69",
+          "F G63",
+          "F G73",
+          "F2",
+          "F33",
+          "F38",
+          "F4",
+          "G6",
+          "T"
+        ],
+        "rare_token": "__RARE__",
+        "missing": true
+      },
+      "Embarked": {
+        "kind": "one_hot",
+        "categories": [
+          "C",
+          "Q",
+          "S",
+          "__RARE__"
+        ],
+        "rare_values": [
+          "__MISSING__"
+        ],
+        "rare_token": "__RARE__",
+        "missing": true
+      }
+    },
+    "datetime": {},
+    "scaling": {}
+  },
+  "provenance": {
+    "schema_fingerprint": "b6f23b07ff21111e",
+    "columns_hash": "9d07fda28c0ef49b",
+    "rows": 891,
+    "columns": 12,
+    "column_names": [
+      "PassengerId",
+      "Survived",
+      "Pclass",
+      "Name",
+      "Sex",
+      "Age",
+      "SibSp",
+      "Parch",
+      "Ticket",
+      "Fare",
+      "Cabin",
+      "Embarked"
+    ],
+    "deduplicated_rows": 0
+  },
+  "profile": {
+    "rows": 891,
+    "columns": 12,
+    "schema": {
+      "PassengerId": "Int64",
+      "Survived": "Int64",
+      "Pclass": "Int64",
+      "Name": "String",
+      "Sex": "String",
+      "Age": "Float64",
+      "SibSp": "Int64",
+      "Parch": "Int64",
+      "Ticket": "String",
+      "Fare": "Float64",
+      "Cabin": "String",
+      "Embarked": "String"
+    },
+    "null_counts": {
+      "PassengerId": 0,
+      "Survived": 0,
+      "Pclass": 0,
+      "Name": 0,
+      "Sex": 0,
+      "Age": 177,
+      "SibSp": 0,
+      "Parch": 0,
+      "Ticket": 0,
+      "Fare": 0,
+      "Cabin": 687,
+      "Embarked": 2
+    },
+    "cardinality": {
+      "PassengerId": 891,
+      "Survived": 2,
+      "Pclass": 3,
+      "Name": 891,
+      "Sex": 2,
+      "Age": 88,
+      "SibSp": 7,
+      "Parch": 7,
+      "Ticket": 681,
+      "Fare": 248,
+      "Cabin": 147,
+      "Embarked": 3
+    },
+    "roles": [
+      {
+        "name": "PassengerId",
+        "role": "identifier",
+        "confidence": 0.95,
+        "rationale": "Name and type indicate identifier semantics."
+      },
+      {
+        "name": "Survived",
+        "role": "target",
+        "confidence": 1.0,
+        "rationale": "Explicitly declared target column."
+      },
+      {
+        "name": "Pclass",
+        "role": "feature_numeric",
+        "confidence": 1.0,
+        "rationale": "Numeric, non-constant feature."
+      },
+      {
+        "name": "Name",
+        "role": "identifier",
+        "confidence": 0.9,
+        "rationale": "Unique string with identifier-like name."
+      },
+      {
+        "name": "Sex",
+        "role": "feature_categorical",
+        "confidence": 0.9,
+        "rationale": "String feature suitable for categorical handling."
+      },
+      {
+        "name": "Age",
+        "role": "feature_numeric",
+        "confidence": 1.0,
+        "rationale": "Numeric, non-constant feature."
+      },
+      {
+        "name": "SibSp",
+        "role": "feature_numeric",
+        "confidence": 1.0,
+        "rationale": "Numeric, non-constant feature."
+      },
+      {
+        "name": "Parch",
+        "role": "feature_numeric",
+        "confidence": 1.0,
+        "rationale": "Numeric, non-constant feature."
+      },
+      {
+        "name": "Ticket",
+        "role": "identifier",
+        "confidence": 0.95,
+        "rationale": "Name and type indicate identifier semantics."
+      },
+      {
+        "name": "Fare",
+        "role": "feature_numeric",
+        "confidence": 1.0,
+        "rationale": "Numeric, non-constant feature."
+      },
+      {
+        "name": "Cabin",
+        "role": "feature_categorical",
+        "confidence": 0.9,
+        "rationale": "String feature suitable for categorical handling."
+      },
+      {
+        "name": "Embarked",
+        "role": "feature_categorical",
+        "confidence": 0.9,
+        "rationale": "String feature suitable for categorical handling."
+      }
+    ],
+    "findings": [
+      {
+        "severity": "warning",
+        "column": "PassengerId",
+        "code": "identifier",
+        "message": "Identifier-like feature is retained unless drop_identifiers is enabled."
+      },
+      {
+        "severity": "warning",
+        "column": "Name",
+        "code": "identifier",
+        "message": "Identifier-like feature is retained unless drop_identifiers is enabled."
+      },
+      {
+        "severity": "warning",
+        "column": "Ticket",
+        "code": "identifier",
+        "message": "Identifier-like feature is retained unless drop_identifiers is enabled."
+      }
+    ],
+    "duplicate_rows": 0,
+    "schema_fingerprint": "b6f23b07ff21111e"
+  },
+  "plan": {
+    "operations": [
+      {
+        "operation": "drop",
+        "column": "PassengerId",
+        "reason": "Identifier dropping explicitly enabled."
+      },
+      {
+        "operation": "numeric_imputation",
+        "column": "Pclass",
+        "reason": "Median learned from training data."
+      },
+      {
+        "operation": "drop",
+        "column": "Name",
+        "reason": "Identifier dropping explicitly enabled."
+      },
+      {
+        "operation": "categorical_encoding",
+        "column": "Sex",
+        "reason": "Vocabulary learned from training data. Rare < 2.0% grouped into __RARE__."
+      },
+      {
+        "operation": "numeric_imputation",
+        "column": "Age",
+        "reason": "Median learned from training data."
+      },
+      {
+        "operation": "numeric_imputation",
+        "column": "SibSp",
+        "reason": "Median learned from training data."
+      },
+      {
+        "operation": "numeric_imputation",
+        "column": "Parch",
+        "reason": "Median learned from training data."
+      },
+      {
+        "operation": "drop",
+        "column": "Ticket",
+        "reason": "Identifier dropping explicitly enabled."
+      },
+      {
+        "operation": "numeric_imputation",
+        "column": "Fare",
+        "reason": "Median learned from training data."
+      },
+      {
+        "operation": "categorical_encoding",
+        "column": "Cabin",
+        "reason": "Vocabulary learned from training data. Rare < 2.0% grouped into __RARE__."
+      },
+      {
+        "operation": "categorical_encoding",
+        "column": "Embarked",
+        "reason": "Vocabulary learned from training data. Rare < 2.0% grouped into __RARE__."
+      }
+    ],
+    "findings": [
+      {
+        "severity": "warning",
+        "column": "PassengerId",
+        "code": "identifier",
+        "message": "Identifier-like feature is retained unless drop_identifiers is enabled."
+      },
+      {
+        "severity": "warning",
+        "column": "Name",
+        "code": "identifier",
+        "message": "Identifier-like feature is retained unless drop_identifiers is enabled."
+      },
+      {
+        "severity": "warning",
+        "column": "Ticket",
+        "code": "identifier",
+        "message": "Identifier-like feature is retained unless drop_identifiers is enabled."
+      }
+    ],
+    "protected_columns": []
+  }
+}

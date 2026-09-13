@@ -27,6 +27,24 @@ clean_*.csv
 pipeline_*.py
 report_*.md
 .release-verify/
+datadoc-run/
+full-run/
+titanic-run/
+telco-run/
+datadoc.toml
+
+# Local audit datasets (re-download from Kaggle; never ship)
+# NOTE: demo.csv and docs/demo.csv are TRACKED fixtures and stay tracked.
+/california_housing.csv
+/telco_churn.csv
+/titanic.csv
+/titanic-audit/*.csv
+/titanic-audit/*.joblib
+/titanic-audit/*.parquet
+/titanic-audit/*.txt
+/titanic-audit/full-run/
+/titanic-audit/wizard-run/
+/titanic-test/
 
 # Scratch / debug (dev-only, never ship)
 scratch_*

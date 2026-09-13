@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
-import { Activity, ArrowRight, Check, Code2, Database, Download, FileJson, Play, RefreshCw, ShieldCheck, X } from 'lucide-react';
+import { ArrowRight, Check, Code2, Database, Download, FileJson, Play, RefreshCw, ShieldCheck, X } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_DATADOC_API_URL || `${window.location.origin}/api`;
 const SESSION_HEADERS = { 'X-DATADOC-SESSION': 'local' };
@@ -10,7 +10,10 @@ const defaultConfig = {
   task: 'auto',
   scaling: 'auto',
   drop_identifiers: false,
+  deduplicate: false,
   clip_outliers: false,
+  datetime_cyclical: false,
+  rare_category_min_frequency: 0,
 };
 
 function Metric({ label, value, tone = 'bg-white' }) {
@@ -37,23 +40,42 @@ function App() {
   const [config, setConfig] = useState(defaultConfig);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [paletteQuery, setPaletteQuery] = useState('');
+  const [lineage, setLineage] = useState(null);
 
   const requestConfig = useMemo(() => ({
     ...config,
     target: config.target.trim() || null,
+    rare_category_min_frequency: Number(config.rare_category_min_frequency) || 0,
   }), [config]);
 
   useEffect(() => {
     refreshProfile();
   }, []);
 
+  useEffect(() => {
+    function onKey(event) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setPaletteOpen((v) => !v);
+      }
+      if (event.key === 'Escape') setPaletteOpen(false);
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   async function refreshProfile() {
     setError('');
     try {
+      const targetParam = config.target.trim() || undefined;
       const [metaResponse, profileResponse] = await Promise.all([
         axios.get(`${API_BASE}/dataset/metadata`, { headers: SESSION_HEADERS }),
-        axios.get(`${API_BASE}/pipeline/profile`, { headers: SESSION_HEADERS }),
+        axios.get(`${API_BASE}/pipeline/profile`, {
+          headers: SESSION_HEADERS,
+          params: targetParam ? { target: targetParam } : {},
+        }),
       ]);
       setMetadata(metaResponse.data);
       setProfile(profileResponse.data);
@@ -86,6 +108,12 @@ function App() {
       setPlan(response.data.plan);
       const previewResponse = await axios.get(`${API_BASE}/pipeline/preview`, { headers: SESSION_HEADERS });
       setPreview(previewResponse.data);
+      try {
+        const lineageResponse = await axios.get(`${API_BASE}/pipeline/lineage`, { headers: SESSION_HEADERS });
+        setLineage(lineageResponse.data);
+      } catch (lineageError) {
+        setLineage(null);
+      }
       setView('pipeline');
     } catch (requestError) {
       setError(requestError.response?.data?.detail || 'Could not fit the pipeline.');
@@ -133,6 +161,20 @@ function App() {
   const operations = plan?.operations || [];
   const outputColumns = fitState ? Object.keys(fitState.output_schema || {}) : [];
 
+  const paletteActions = [
+    { name: 'Go to Profile', hint: 'overview', run: () => setView('overview') },
+    { name: 'Go to Pipeline', hint: 'plan + fit', run: () => setView('pipeline') },
+    { name: 'Go to Export', hint: 'code', run: () => loadCode() },
+    { name: 'Build plan', hint: 'plan', run: () => createPlan() },
+    { name: 'Fit pipeline', hint: 'fit', run: () => fitPipeline() },
+    { name: 'Refresh profile', hint: 'profile', run: () => refreshProfile() },
+    { name: 'Download transformed CSV', hint: 'csv', run: () => downloadCsv() },
+    { name: 'Load Python export', hint: 'code', run: () => loadCode() },
+  ];
+  const filteredActions = paletteActions.filter((a) =>
+    (a.name + ' ' + a.hint).toLowerCase().includes(paletteQuery.toLowerCase())
+  );
+
   return (
     <div className="flex min-h-screen w-full bg-bg-workspace font-mono text-black">
       <aside className="hidden w-[112px] shrink-0 flex-col border-r-2 border-black bg-bg-sidebar py-6 md:flex">
@@ -149,6 +191,11 @@ function App() {
           <div>
             <div className="text-xs font-bold uppercase tracking-[0.2em]">Local data operations desk</div>
             <h1 className="mt-1 text-3xl font-bold uppercase tracking-[-0.06em] md:text-5xl">DATADOC</h1>
+            {metadata?.file && (
+              <p className="mt-2 text-xs font-bold uppercase text-gray-600">
+                {String(metadata.file).split(/[\\/]/).pop()} — {(metadata.rows ?? profile?.rows)?.toLocaleString()} rows × {metadata.columns ?? profile?.columns} cols
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-2 text-xs font-bold uppercase">
             <span className="h-3 w-3 rounded-full border-2 border-black bg-green-400" />
@@ -200,6 +247,11 @@ function App() {
                     <div className="flex flex-col justify-end gap-2 text-xs font-bold uppercase">
                       <label className="flex items-center gap-2"><input type="checkbox" checked={config.drop_identifiers} onChange={(event) => setConfig({ ...config, drop_identifiers: event.target.checked })} /> Drop suspected identifiers</label>
                       <label className="flex items-center gap-2"><input type="checkbox" checked={config.clip_outliers} onChange={(event) => setConfig({ ...config, clip_outliers: event.target.checked })} /> Enable IQR clipping</label>
+                      <label className="flex items-center gap-2"><input type="checkbox" checked={config.deduplicate} onChange={(event) => setConfig({ ...config, deduplicate: event.target.checked })} /> Deduplicate rows at fit</label>
+                      <label className="flex items-center gap-2"><input type="checkbox" checked={config.datetime_cyclical} onChange={(event) => setConfig({ ...config, datetime_cyclical: event.target.checked })} /> Cyclical datetime (sin/cos)</label>
+                      <label className="flex items-center gap-2">Rare freq
+                        <input type="number" min="0" max="0.5" step="0.01" value={config.rare_category_min_frequency} onChange={(event) => setConfig({ ...config, rare_category_min_frequency: event.target.value })} className="ml-2 w-24 border-2 border-black bg-bg-workspace p-1 font-mono text-sm" />
+                      </label>
                     </div>
                   </div>
                   <div className="mt-5 flex flex-wrap gap-3">
@@ -222,12 +274,33 @@ function App() {
               <p className="mt-3 text-xs leading-5">Once fitted, export the transformed CSV or the reproducible Python wrapper generated from the fitted JSON state.</p>
               <div className="mt-4 grid gap-2">
                 <button onClick={downloadCsv} className="flex items-center justify-between border-2 border-black bg-white px-3 py-3 text-left text-xs font-bold uppercase hover:bg-black hover:text-white">Download transformed CSV <Download size={15} /></button>
-                <button onClick={loadCode} className="flex items-center justify-between border-2 border-black bg-white px-3 py-3 text-xs font-bold uppercase hover:bg-black hover:text-white">Load Python export <Code2 size={15} /></button>
+                <button onClick={loadCode} className="flex items-center justify-between border-2 border-black bg-white px-3 py-3 text-left text-xs font-bold uppercase hover:bg-black hover:text-white">Load Python export <Code2 size={15} /></button>
+                <button onClick={() => setPaletteOpen(true)} className="flex items-center justify-between border-2 border-black bg-black px-3 py-3 text-left text-xs font-bold uppercase text-white hover:bg-gray-700">Command palette (Ctrl+K) <Play size={15} /></button>
               </div>
             </div>
+            {lineage && (
+              <div className="mt-6 border-2 border-black bg-white p-5">
+                <h3 className="border-b-2 border-black pb-3 font-bold uppercase">Lineage</h3>
+                <pre className="mt-4 overflow-auto text-xs leading-5">{JSON.stringify({ provenance: lineage.provenance, input: Object.keys(lineage.input_schema || {}).length + ' cols', output: Object.keys(lineage.output_schema || {}).length + ' cols' }, null, 2)}</pre>
+              </div>
+            )}
           </aside>
         </div>
       </main>
+      {paletteOpen && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-6" onClick={() => setPaletteOpen(false)}>
+          <div className="w-full max-w-lg border-2 border-black bg-white p-4" onClick={(e) => e.stopPropagation()}>
+            <input autoFocus value={paletteQuery} onChange={(e) => setPaletteQuery(e.target.value)} placeholder="Type a command... (Esc to close)" className="w-full border-2 border-black p-3 font-mono text-sm outline-none" />
+            <div className="mt-3 max-h-72 overflow-auto">
+              {filteredActions.length ? filteredActions.map((a) => (
+                <button key={a.name} onClick={() => { setPaletteOpen(false); setPaletteQuery(''); a.run(); }} className="flex w-full items-center justify-between border-b border-black/20 px-2 py-3 text-left text-xs font-bold uppercase hover:bg-black hover:text-white">
+                  <span>{a.name}</span><span className="opacity-60">{a.hint}</span>
+                </button>
+              )) : <p className="p-3 text-xs">No matching commands</p>}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

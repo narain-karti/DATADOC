@@ -1,0 +1,68 @@
+{
+  "operations": [
+    {
+      "operation": "numeric_imputation",
+      "column": "PassengerId",
+      "reason": "Median learned from training data."
+    },
+    {
+      "operation": "numeric_imputation",
+      "column": "Pclass",
+      "reason": "Median learned from training data."
+    },
+    {
+      "operation": "categorical_encoding",
+      "column": "Sex",
+      "reason": "Vocabulary learned from training data."
+    },
+    {
+      "operation": "numeric_imputation",
+      "column": "Age",
+      "reason": "Median learned from training data."
+    },
+    {
+      "operation": "numeric_imputation",
+      "column": "SibSp",
+      "reason": "Median learned from training data."
+    },
+    {
+      "operation": "numeric_imputation",
+      "column": "Parch",
+      "reason": "Median learned from training data."
+    },
+    {
+      "operation": "categorical_encoding",
+      "column": "Ticket",
+      "reason": "Vocabulary learned from training data."
+    },
+    {
+      "operation": "numeric_imputation",
+      "column": "Fare",
+      "reason": "Median learned from training data."
+    },
+    {
+      "operation": "categorical_encoding",
+      "column": "Cabin",
+      "reason": "Vocabulary learned from training data."
+    },
+    {
+      "operation": "categorical_encoding",
+      "column": "Embarked",
+      "reason": "Vocabulary learned from training data."
+    },
+    {
+      "operation": "standard_scaling",
+      "column": "*",
+      "reason": "Standard scaling (center/spread from train only, binaries excluded)."
+    }
+  ],
+  "findings": [
+    {
+      "severity": "warning",
+      "column": "Name",
+      "code": "identifier",
+      "message": "Identifier-like feature is retained unless drop_identifiers is enabled."
+    }
+  ],
+  "protected_columns": []
+}
