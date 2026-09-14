@@ -125,3 +125,26 @@ Please structure your response into EXACTLY these 4 sections:
 - Categorical Strategy: Recommend One-Hot Encoding vs. Empirical Bayes Target Encoding vs. Rare Category grouping.
 - Outlier & Scaling Guidance: Specific IQR bounds or standard scaling advice.
 """
+
+
+def build_agent_prompt(digest: str, target: Optional[str] = None, chat_history: str = "") -> str:
+    """Constructs the prompt for the DATADOC Autonomous Agent to propose feature engineering JSON batches."""
+    target_clause = (
+        f"The target variable for machine learning is '{target}'."
+        if target
+        else "No specific target variable was designated."
+    )
+
+    return f"""You are the DATADOC Hypothesis Generator, a Senior ML Engineer.
+Your job is to read a dataset profile and a conversation with the Domain Expert, and then output a batch of specific mathematical feature engineering hypotheses.
+
+{target_clause}
+
+DATASET PROFILE:
+{digest}
+
+CHAT HISTORY:
+{chat_history}
+
+Your output MUST be a valid JSON array of feature engineering actions. Do not write Python code. You can only use the strict action schema provided to you via tools/functions. Propose 5-10 features or global pipeline tweaks based on the domain knowledge discussed in the chat.
+"""

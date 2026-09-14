@@ -108,6 +108,8 @@ class PipelineConfig:
     strict_schema: bool = True
     time_column: str | None = None
     group_column: str | None = None
+    custom_interactions: list[dict[str, str]] = field(default_factory=list)
+    custom_transforms: list[dict[str, str]] = field(default_factory=list)
 
     def resolved_scaling(self) -> Literal["none", "standard", "robust"]:
         if self.scaling != "auto":
@@ -813,6 +815,51 @@ class DataDocPipeline:
                         f"{name}__frequency"
                     )
                 ).drop(name)
+
+        # Apply custom interactions (Agent proposed)
+        for interaction in self.config.custom_interactions:
+            col_a = interaction.get("col_a")
+            col_b = interaction.get("col_b")
+            op = interaction.get("op")
+            if col_a in output.columns and col_b in output.columns:
+                try:
+                    # ensure numeric
+                    expr_a = pl.col(col_a).cast(pl.Float64)
+                    expr_b = pl.col(col_b).cast(pl.Float64)
+                    if op == "add":
+                        expr = expr_a + expr_b
+                    elif op == "sub":
+                        expr = expr_a - expr_b
+                    elif op == "mul":
+                        expr = expr_a * expr_b
+                    elif op == "div":
+                        # avoid div by zero
+                        expr = expr_a / (expr_b.replace(0.0, None))
+                    else:
+                        continue
+                    output = output.with_columns(expr.alias(f"{col_a}_{op}_{col_b}"))
+                except Exception:
+                    pass
+
+        # Apply custom transforms (Agent proposed)
+        for transform in self.config.custom_transforms:
+            col = transform.get("col")
+            op = transform.get("transform")
+            if col in output.columns:
+                try:
+                    expr = pl.col(col).cast(pl.Float64)
+                    if op == "log1p":
+                        # avoid log of negative
+                        expr = pl.when(expr >= -1).then((expr + 1).log()).otherwise(None)
+                    elif op == "sqrt":
+                        expr = pl.when(expr >= 0).then(expr.sqrt()).otherwise(None)
+                    elif op == "square":
+                        expr = expr * expr
+                    else:
+                        continue
+                    output = output.with_columns(expr.alias(f"{col}_{op}"))
+                except Exception:
+                    pass
 
         for name, spec in state["scaling"].items():
             if name in output.columns and name != target:
