@@ -15,7 +15,9 @@ import polars as pl
 
 
 ARTIFACT_VERSION = 2
-ID_NAME_PATTERN = re.compile(r"(?:^|[_\-\s])(id|index|key|uuid)$", re.IGNORECASE)
+ID_NAME_PATTERN = re.compile(
+    r"(?:(?:^|[_\-\s])(id|index|key|uuid)$|(?<=[a-z])(Id|ID)$)", re.IGNORECASE
+)
 DATETIME_NAME_PATTERN = re.compile(r"(?:date|time|timestamp|_at)$", re.IGNORECASE)
 RARE_TOKEN = "__RARE__"
 
@@ -40,7 +42,7 @@ def _datadoc_version() -> str:
                 return line.split('"', 2)[1]
     except Exception:
         pass
-    return "0.5.0"
+    return "unknown"
 
 
 class DataDocError(ValueError):
@@ -267,6 +269,17 @@ def profile_dataset(df: pl.DataFrame, config: PipelineConfig | None = None) -> D
                 }
             )
             continue
+        # High null rate finding (>50%)
+        if df.height and null_count / df.height > 0.5:
+            findings.append(
+                {
+                    "severity": "warning",
+                    "column": name,
+                    "code": "high_null_rate",
+                    "message": f"Column has {null_count / df.height:.0%} missing values.",
+                }
+            )
+        # Identifier detection: explicit list or name-pattern (including camelCase like PassengerId)
         if name in config.identifier_columns or ID_NAME_PATTERN.search(name):
             roles.append(
                 ColumnRole(name, "identifier", 0.95, "Name and type indicate identifier semantics.")
@@ -344,6 +357,16 @@ def profile_dataset(df: pl.DataFrame, config: PipelineConfig | None = None) -> D
                     }
                 )
             else:
+                # High-cardinality warning for categoricals
+                if unique > config.categorical_threshold:
+                    findings.append(
+                        {
+                            "severity": "info",
+                            "column": name,
+                            "code": "high_cardinality",
+                            "message": f"Column has {unique} distinct values (threshold={config.categorical_threshold}); will be frequency-encoded.",
+                        }
+                    )
                 roles.append(
                     ColumnRole(
                         name,
@@ -545,8 +568,10 @@ class DataDocPipeline:
             if role.role == "target" or role.role == "ignored":
                 continue
             series = train_df[name]
-            if role.role == "constant" or (
-                role.role == "identifier" and self.config.drop_identifiers
+            if (
+                role.role == "constant"
+                or role.role == "text"
+                or (role.role == "identifier" and self.config.drop_identifiers)
             ):
                 state["dropped"].append(name)
             elif role.role == "feature_numeric":
@@ -701,14 +726,16 @@ class DataDocPipeline:
         for name, spec in state["numeric"].items():
             if name not in output.columns or name == target:
                 continue
-            expr = pl.col(name)
+            # Build inf→null expression first so missing indicator catches ±inf
+            inf_expr = pl.col(name)
             if output[name].dtype.is_float():
-                expr = pl.when(expr.is_infinite()).then(None).otherwise(expr)
+                inf_expr = pl.when(inf_expr.is_infinite()).then(None).otherwise(inf_expr)
+                output = output.with_columns(inf_expr.alias(name))
             if self.config.add_missing_indicators and spec["missing"]:
                 output = output.with_columns(
                     pl.col(name).is_null().cast(pl.UInt8).alias(f"{name}__missing")
                 )
-            expr = expr.fill_null(spec["median"])
+            expr = pl.col(name).fill_null(spec["median"])
             if "clip" in spec:
                 expr = expr.clip(spec["clip"][0], spec["clip"][1])
             output = output.with_columns(expr.alias(name))

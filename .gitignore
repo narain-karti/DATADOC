@@ -47,6 +47,7 @@ datadoc.toml
 /titanic-test/
 
 # Scratch / debug (dev-only, never ship)
+scratch/
 scratch_*
 diagnose*
 changes.diff

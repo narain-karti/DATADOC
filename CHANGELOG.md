@@ -2,7 +2,16 @@
 
 All notable changes to DATADOC are documented here. Format follows Keep a Changelog and SemVer.
 
-## [0.6.0] - 2026-09-13
+## [0.6.1] - 2026-09-14
+### Fixed
+- Identifier detection: Updated regex to recognize camelCase identifiers (e.g. `PassengerId`, `UserId`) alongside snake_case patterns.
+- Missing indicator evaluation: Reordered transform expressions so float infinities (±inf) are replaced with nulls before missing indicator creation, ensuring infinite values are properly marked in `{col}__missing`.
+- Data quality audits: Implemented active inspection rules in `datadoc lint` for unhandled missing values, float infinities, high-cardinality categoricals, and retained identifiers.
+- Pipeline execution efficiency: Eliminated redundant re-profiling during `run_pipeline` by reusing cached `profile_` and `plan_`.
+- Artifact consistency: Replaced duplicate manifest creation with a single unified manifest save, and dynamicized hardcoded version strings across HTML reports and compare views.
+- Documentation & metadata: Corrected README quickstart flags and aligned AI prompt keys with schema dictionary keys.
+
+## [0.6.0] - 2026-09-14
 ### Added
 - `datadoc report`: Automated, standalone, high-fidelity HTML report generation (`datadoc report <dataset> [--target] [--output] [--title] [--preset]`). 100% self-contained single-file HTML with embedded responsive CSS, health grade scoring (A+ to F), column role classification, distribution statistics, and transformation plan.
 - `datadoc compare`: Visual side-by-side dataset comparison command (`datadoc compare <raw> <transformed> [--target] [--html] [--json]`). Computes dimension deltas, missing cell reduction (100% resolution tracking), column lineage/lifecycle (retained, dropped, engineered), and numeric distribution shifts (imputation and scaling effects) with color-coded terminal tables and interactive HTML export.

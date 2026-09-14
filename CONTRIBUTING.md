@@ -1,6 +1,6 @@
 # Contributing to DATADOC
 
-Thank you for considering contributing to DATADOC! This guide reflects the current **0.4.0+ leakage-safe fitted pipeline** architecture.
+Thank you for considering contributing to DATADOC! This guide reflects the current **0.6.0+ leakage-safe fitted pipeline** architecture.
 
 ## Development Setup
 
@@ -22,8 +22,8 @@ ruff check datadoc/
 
 ## Architecture at a Glance
 
-- **Core engine:** `datadoc/core/pipeline.py` — `DataDocPipeline(PipelineConfig)` with `profile() -> plan() -> fit() -> transform()` and `save()/load()` artifact (`pipeline.json`).
-- **Plugins:** `datadoc/plugins/*.py` inherit `BasePlugin` (`datadoc/plugins/base.py:5`). They are **deterministic, stateless advisors**; the fitted pipeline in `pipeline.py:532` is the production source of truth (frozen `state_` learned only from train).
+- **Core engine:** `datadoc/core/pipeline.py` — `DataDocPipeline(PipelineConfig)` with `profile() -> plan() -> fit() -> transform()` and `save()/load()` artifact (`pipeline.json`). This is the primary leakage-free execution engine.
+- **Plugins:** `datadoc/plugins/*.py` inherit `BasePlugin` (`datadoc/plugins/base.py`). Built-in plugins provide advisory analysis and standalone transformations; core fitted transformations (imputation, scaling, one-hot encoding, datetime extraction) are executed directly via `DataDocPipeline.fit()` and `DataDocPipeline.transform()`.
 - **CLI:** `datadoc/cli/app.py` (Typer + Rich). Commands `profile, plan, fit, transform, evaluate, export, run, ui, wizard, diff, lint, plugins`.
 - **Polars:** All DataFrames are `polars.DataFrame`. We use `polars>=0.20.0` for Rust speed and Arrow zero-copy.
 
