@@ -510,6 +510,31 @@ class DataDocPipeline:
                     "reason": f"{scaling.title()} scaling (center/spread from train only, binaries excluded).",
                 }
             )
+        for interaction in self.config.custom_interactions:
+            col_a = interaction.get("col_a")
+            col_b = interaction.get("col_b")
+            op = interaction.get("op")
+            rationale = interaction.get("rationale") or f"Discovered interaction: {col_a} {op} {col_b}"
+            operations.append(
+                {
+                    "operation": "custom_interaction",
+                    "column": f"{col_a}_{op}_{col_b}",
+                    "reason": rationale,
+                }
+            )
+
+        for transform in self.config.custom_transforms:
+            col = transform.get("col")
+            t_name = transform.get("transform")
+            rationale = transform.get("rationale") or f"Discovered transform: {t_name}({col})"
+            operations.append(
+                {
+                    "operation": "custom_transform",
+                    "column": f"{col}_{t_name}",
+                    "reason": rationale,
+                }
+            )
+
         self.plan_ = TransformPlan(operations, profile.findings, self.config.protected_columns)
         return self.plan_
 

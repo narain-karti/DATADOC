@@ -146,5 +146,14 @@ DATASET PROFILE:
 CHAT HISTORY:
 {chat_history}
 
-Your output MUST be a valid JSON array of feature engineering actions. Do not write Python code. You can only use the strict action schema provided to you via tools/functions. Propose 5-10 features or global pipeline tweaks based on the domain knowledge discussed in the chat.
+CRITICAL RULES:
+1. Propose 4-8 high-impact, non-redundant feature engineering actions or pipeline tweaks.
+2. Every action object MUST include a concise "rationale" string explaining the domain ML hypothesis (why this will boost predictive power).
+3. Allowed actions:
+   - ApplyTransform: {{"type": "ApplyTransform", "col": "<column>", "transform": "log1p"|"sqrt"|"square", "rationale": "<why>"}}
+   - AddInteraction: {{"type": "AddInteraction", "col_a": "<col1>", "col_b": "<col2>", "op": "add"|"sub"|"mul"|"div", "rationale": "<why>"}}
+   - SetScaling: {{"type": "SetScaling", "scaling": "standard"|"robust"|"none", "rationale": "<why>"}}
+   - ToggleFeature: {{"type": "ToggleFeature", "setting": "clip_outliers"|"drop_identifiers"|"deduplicate"|"datetime_cyclical"|"add_missing_indicators", "value": true|false, "rationale": "<why>"}}
+   - IgnoreColumn: {{"type": "IgnoreColumn", "col": "<column>", "rationale": "<why>"}}
+4. Output MUST be ONLY a valid JSON array or object with an "actions" list. Do NOT write Python code or narrative outside the JSON.
 """

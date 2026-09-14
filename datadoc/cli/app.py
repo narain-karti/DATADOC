@@ -1,3 +1,4 @@
+import sys
 import typer
 from rich.console import Console
 from rich.panel import Panel
@@ -25,7 +26,14 @@ app = typer.Typer(
     no_args_is_help=True,
     rich_markup_mode="rich",
 )
-console = Console()
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
+console = Console(legacy_windows=False)
 plugins_app = typer.Typer(help="Inspect and manage plugins.")
 app.add_typer(plugins_app, name="plugins")
 
@@ -198,6 +206,12 @@ def _load_toml_file(path: Path) -> dict[str, Any]:
 def _find_and_load_config(explicit: Optional[str] = None) -> tuple[dict[str, Any], Optional[Path]]:
     if explicit:
         p = Path(explicit)
+        if p.exists() and p.suffix == ".json":
+            try:
+                raw = json.loads(p.read_text(encoding="utf-8"))
+                return raw.get("config", raw), p
+            except Exception:
+                pass
         return _load_toml_file(p), p if p.exists() else None
     # search upward from cwd
     cwd = Path.cwd()
@@ -304,6 +318,9 @@ def _pipeline_config(
         resolved_ignored = list(file_cfg.get("ignored_columns", []) or [])
     strict_schema = choose("strict_schema", strict_schema, True)
 
+    custom_interactions = file_cfg.get("custom_interactions", []) or []
+    custom_transforms = file_cfg.get("custom_transforms", []) or []
+
     return PipelineConfig(
         target=target,
         task=task,  # type: ignore
@@ -321,6 +338,8 @@ def _pipeline_config(
         identifier_columns=resolved_identifiers,
         ignored_columns=resolved_ignored,
         strict_schema=strict_schema,
+        custom_interactions=custom_interactions,
+        custom_transforms=custom_transforms,
     )
 
 
@@ -1532,7 +1551,7 @@ def ui(
 @app.command()
 def agent(
     file_path: str = typer.Argument(..., help="CSV or Parquet dataset file."),
-    target: str = typer.Option(..., "--target", "-t", help="Target column.", rich_help_panel="Data"),
+    target: Optional[str] = typer.Option(None, "--target", "-t", help="Target column. If omitted, agent will prompt or infer.", rich_help_panel="Data"),
     iterations: int = typer.Option(3, "--iterations", "-i", help="Number of auto-research loops.", rich_help_panel="Agent"),
     interactive: bool = typer.Option(False, "--interactive", help="Prompt user for domain knowledge.", rich_help_panel="Agent"),
     model: Optional[str] = typer.Option(None, "--model", help="Preferred LLM to use.", rich_help_panel="Agent"),
@@ -1545,6 +1564,51 @@ def agent(
         raise typer.BadParameter("pip install 'datadoc-cli[ai]' for agent features.") from e
     
     df = read_dataset(file_path)
+
+    # Resolve / auto-detect target column
+    if not target:
+        common_candidates = [
+            "survived", "target", "label", "churn", "status", "class", "price", "sale_price", "outcome", "y"
+        ]
+        detected_col = None
+        for col in df.columns:
+            if col.lower() in common_candidates:
+                detected_col = col
+                break
+
+        if interactive:
+            if detected_col:
+                use_detected = typer.confirm(
+                    f"Agent detected potential target column '{detected_col}'. Use this?", default=True
+                )
+                if use_detected:
+                    target = detected_col
+                else:
+                    console.print(f"[dim]Available columns: {', '.join(df.columns)}[/dim]")
+                    target = typer.prompt("Please specify target column name")
+            else:
+                console.print(f"[dim]Available columns: {', '.join(df.columns)}[/dim]")
+                target = typer.prompt("Please specify target column name")
+        else:
+            if detected_col:
+                console.print(f"[dim]Auto-detected target column: '{detected_col}'[/dim]")
+                target = detected_col
+            else:
+                console.print(
+                    f"[red]Error: Target column must be specified via --target when non-interactive. Available columns: {', '.join(df.columns)}[/red]"
+                )
+                raise typer.Exit(1)
+
+    # Case-insensitive resolution
+    if target not in df.columns:
+        match = next((c for c in df.columns if c.lower() == target.lower()), None)
+        if match:
+            target = match
+        else:
+            console.print(
+                f"[red]Error: Target column '{target}' not found in dataset. Columns: {', '.join(df.columns)}[/red]"
+            )
+            raise typer.Exit(1)
     
     try:
         agent_runner = DataDocAgent(target=target, model=model)
