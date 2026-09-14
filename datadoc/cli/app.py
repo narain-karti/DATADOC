@@ -1526,5 +1526,41 @@ def ui(
     uvicorn.run("datadoc.cli.ui_server:app", host="127.0.0.1", port=port, log_level="info")
 
 
+# ──────────────────────────────────────────────────────────────
+# COMMAND: agent
+# ──────────────────────────────────────────────────────────────
+@app.command()
+def agent(
+    file_path: str = typer.Argument(..., help="CSV or Parquet dataset file."),
+    target: str = typer.Option(..., "--target", "-t", help="Target column.", rich_help_panel="Data"),
+    iterations: int = typer.Option(3, "--iterations", "-i", help="Number of auto-research loops.", rich_help_panel="Agent"),
+    interactive: bool = typer.Option(False, "--interactive", help="Prompt user for domain knowledge.", rich_help_panel="Agent"),
+    model: Optional[str] = typer.Option(None, "--model", help="Preferred LLM to use.", rich_help_panel="Agent"),
+    output: str = typer.Option("pipeline.json", "--output", "-o", help="Output JSON artifact.", rich_help_panel="Output"),
+):
+    """Run the Agentic Auto-Research Loop to discover features."""
+    try:
+        from datadoc.ai.agent_runner import DataDocAgent
+    except ImportError as e:
+        raise typer.BadParameter("pip install 'datadoc-cli[ai]' for agent features.") from e
+    
+    df = read_dataset(file_path)
+    
+    try:
+        agent_runner = DataDocAgent(target=target, model=model)
+    except RuntimeError as e:
+        console.print(f"[red]{e}[/red]")
+        raise typer.Exit(1)
+        
+    final_config = agent_runner.run_interactive(df, iterations=iterations, interactive=interactive)
+    
+    console.print("\n[cyan]Fitting final pipeline with discovered features...[/cyan]")
+    pipeline = DataDocPipeline(final_config).fit(df, target=target)
+    pipeline.save(output)
+    
+    console.print(f"[green]Agent finished. Final leakage-safe pipeline saved to {output}[/green]")
+    console.print(f"[dim]Run `datadoc plan {file_path} --config {output} --explain` to see the full plan.[/dim]")
+
+
 if __name__ == "__main__":
     app()
