@@ -134,3 +134,43 @@ def test_cli_explain_command():
     assert res.exit_code == 0
     assert "DATADOC AI Dataset Explainer" in res.stdout
     assert "Semantic Column Profiling" in res.stdout
+
+
+def test_agent_action_extraction_and_formatting():
+    from datadoc.ai.agent_runner import DataDocAgent, _format_action_details
+
+    agent = DataDocAgent.__new__(DataDocAgent)
+    agent.target = "Survived"
+
+    # Test JSON array parsing
+    raw_json = '[{"type": "AddInteraction", "col_a": "Age", "col_b": "Fare", "op": "div", "rationale": "Age fare ratio"}]'
+    actions = agent._extract_json_array(raw_json)
+    assert len(actions) == 1
+    assert actions[0]["col_a"] == "Age"
+    assert _format_action_details(actions[0]) == "Age ÷ Fare"
+
+    # Test markdown fenced JSON
+    fenced_json = '```json\n[{"type": "ApplyTransform", "col": "Fare", "transform": "log1p", "rationale": "Log fare"}]\n```'
+    actions = agent._extract_json_array(fenced_json)
+    assert len(actions) == 1
+    assert actions[0]["transform"] == "log1p"
+    assert _format_action_details(actions[0]) == "log1p(Fare)"
+
+    # Test action application to PipelineConfig
+    cfg = PipelineConfig(target="Survived")
+    agent._apply_actions(
+        cfg,
+        [
+            {"type": "AddInteraction", "col_a": "Age", "col_b": "Fare", "op": "div"},
+            {"type": "ApplyTransform", "col": "Fare", "transform": "log1p"},
+            {"type": "SetScaling", "scaling": "robust"},
+            {"type": "ToggleFeature", "setting": "clip_outliers", "value": True},
+            {"type": "IgnoreColumn", "col": "PassengerId"},
+        ],
+    )
+    assert len(cfg.custom_interactions) == 1
+    assert len(cfg.custom_transforms) == 1
+    assert cfg.scaling == "robust"
+    assert cfg.clip_outliers is True
+    assert "PassengerId" in cfg.ignored_columns
+
