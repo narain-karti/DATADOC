@@ -938,6 +938,7 @@ def run_pipeline(
     directory = Path(output_dir)
     df = read_dataset(file_path)
     pl = DataDocPipeline(pipe_cfg)
+    # profile + plan first, then fit reuses cached profile_/plan_
     profile_result = pl.profile(df).to_dict()
     plan_result = pl.plan(df).to_dict()
     pl.fit(df)
@@ -958,6 +959,7 @@ def run_pipeline(
             "config": pipe_cfg.__dict__,
             "provenance": getattr(pl, "train_provenance_", {}),
             "datadoc_version": VERSION,
+            "output_dir": str(directory.resolve()),
         },
     )
     console.print(f"[green]Profile->Plan->Fit->Transform done -> {directory}[/green]")
@@ -972,7 +974,6 @@ def run_pipeline(
         baseline = eval_report["baseline_score"]
         candidate = eval_report["selected_score"]
         imp = eval_report["improvement"]
-        # rich abaltion-like bar
         console.print(
             f"[bold cyan]Evaluation Benchmark ({eval_report['metric']}):[/bold cyan] "
             f"Baseline: [yellow]{baseline:.4f}[/yellow] | "
@@ -985,14 +986,6 @@ def run_pipeline(
     console.print(f"[bold green]Created reproducible DATADOC run in {directory}[/bold green]")
     if cfg_path:
         _print_config_used(pipe_cfg, cfg_path)
-    # manifest already written
-    _write_json(
-        directory / "manifest.json",
-        {
-            **json.loads((directory / "manifest.json").read_text(encoding="utf-8")),
-            "output_dir": str(directory.resolve()),
-        },
-    )
 
 
 # ──────────────────────────────────────────────────────────────
@@ -1413,8 +1406,12 @@ def lint_cmd(
             findings.append(f"[yellow]Infinite values in '{name}' will be treated as null[/yellow]")
     # high cardinality identifier risk
     for name in df.columns:
-        if df[name].dtype == df[name].dtype:  # placeholder
-            pass
+        if name != target and df[name].dtype.is_numeric():
+            non_null = df[name].drop_nulls()
+            if non_null.len() > 0 and non_null.n_unique() / non_null.len() > 0.9:
+                findings.append(
+                    f"[yellow]Column '{name}' has >90% unique numeric values — likely an identifier[/yellow]"
+                )
     # duplicate rows
     dup = int(df.is_duplicated().sum()) if df.height else 0
     if dup:

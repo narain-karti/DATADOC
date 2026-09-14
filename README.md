@@ -35,7 +35,7 @@ To quantify the downstream impact of DATADOC's automated feature engineering, we
 | **Logistic Regression** | 78.90% ± 0.99% | **79.91% ± 1.90%** | **+1.01%** | **+1.28%** |
 | **Random Forest** | 82.15% ± 2.45% | **82.82% ± 2.40%** | **+0.67%** | **+0.82%** |
 
-*Why the lift occurs*: DATADOC isolates high-cardinality string identifiers (`Name`, `Ticket`), creates informative missingness flags (`Age__missing`, `Cabin__missing`), extracts title categoricals, applies Tukey-fence outlier stabilization, and enforces train-only standard scaling to eliminate distribution bleed.
+*Why the lift occurs*: DATADOC isolates high-cardinality string identifiers (`Name`, `Ticket`), creates informative missingness flags (`Age__missing`, `Cabin__missing`), applies Tukey-fence outlier stabilization, and enforces train-only standard scaling to eliminate distribution bleed.
 
 ---
 
@@ -71,7 +71,7 @@ pip install "datadoc-cli[all]"
 Execute the full pipeline—profiling, planning, fitting, transforming, and manifest generation—in a single command:
 
 ```bash
-datadoc run train.csv --target churn --preset balanced --output clean_train.csv
+datadoc run train.csv --target churn --preset balanced --output-dir clean_train
 ```
 
 ### 2. Step-by-Step Auditable Workflow
@@ -115,7 +115,7 @@ Launch the local-first reactive dashboard:
 datadoc ui train.csv --port 8000
 ```
 
-Includes an interactive transformation sandbox, live distribution charts, provenance viewer, one-click HTML report generation, and code export (`Ctrl+K` for command palette).
+Includes provenance viewer, one-click HTML report generation, and code export (`Ctrl+K` for command palette).
 
 ---
 
@@ -168,7 +168,7 @@ scored_features = production_pipeline.transform(incoming_batch_df)
 | `datadoc plan <file>` | Generates reviewable transformation plan before modifying data | `--target`, `--preset`, `--explain`, `--diff <plan2>` |
 | `datadoc fit <train>` | Learns transformations from train split; serializes `pipeline.json` | `--target`, `--preset`, `--deduplicate`, `--rare-frequency` |
 | `datadoc transform <file>` | Applies fitted `pipeline.json` to unseen test or inference data | `--pipeline`, `--output`, `--validate` |
-| `datadoc run <file>` | One-shot end-to-end preparation with artifacts and manifests | `--target`, `--preset`, `--output`, `--evaluate` |
+| `datadoc run <file>` | One-shot end-to-end preparation with artifacts and manifests | `--target`, `--preset`, `--output-dir`, `--evaluate` |
 | `datadoc report <file>` | Standalone interactive HTML health and audit report | `--target`, `--output`, `--ai`, `--ai-model`, `--open` |
 | `datadoc compare <raw> <clean>` | Visual side-by-side comparison of dataset changes | `--target`, `--html`, `--json`, `--open` |
 | `datadoc evaluate <file>` | Cross-validated ML benchmark (raw vs. DATADOC prepared) | `--target`, `--task`, `--ablation` |
@@ -189,8 +189,10 @@ DATADOC processes tabular data through an extensible, priority-ordered transform
 
 ```
 [5: DuplicateRemover] → [10: MissingValueImputer] → [20: OutlierCapper] → [30: DatetimeDecomposer] →
-[40: CategoricalEncoder] → [41: TargetEncoder] → [42: RareCategoryGrouper] → [44: PolynomialFeatures] → [45: StandardScaler]
+[40: CategoricalEncoder] → [42: RareCategoryGrouper] → [45: StandardScaler]
 ```
+
+> **Note:** `TargetEncoderPlugin` and `PolynomialFeaturesPlugin` are importable standalone utilities; they are not automatically applied by the core pipeline.
 
 | Priority | Plugin | Action Performed |
 | :---: | :--- | :--- |
@@ -199,9 +201,9 @@ DATADOC processes tabular data through an extensible, priority-ordered transform
 | **20** | `OutlierPlugin` | Calculates Tukey IQR boundaries ($Q_1 - 1.5\text{IQR}$, $Q_3 + 1.5\text{IQR}$) and caps extreme values. |
 | **30** | `DatetimePlugin` | Extracts temporal features (`year`, `month`, `day`, `dayofweek`, `hour`) and cyclical sin/cos components. |
 | **40** | `CategoricalEncoderPlugin` | Applies One-Hot Encoding (`drop_first=True`) to low-cardinality features; handles unseen categories. |
-| **41** | `TargetEncoderPlugin` | Applies Empirical Bayes smoothed target encoding: $\hat{y}_c = \frac{n \cdot \bar{y}_c + m \cdot \bar{y}}{n + m}$. |
+| **41** | `TargetEncoderPlugin` *(standalone)* | Applies Empirical Bayes smoothed target encoding: $\hat{y}_c = \frac{n \cdot \bar{y}_c + m \cdot \bar{y}}{n + m}$. *(Importable utility; not applied by the core pipeline.)* |
 | **42** | `RareCategoryPlugin` | Bins infrequent categories below threshold into `__RARE__` to prevent tree overfitting. |
-| **44** | `PolynomialFeaturesPlugin` | Generates degree-2 interaction terms ($x_1 \cdot x_2$) and squared terms ($x^2$) for continuous features. |
+| **44** | `PolynomialFeaturesPlugin` *(standalone)* | Generates degree-2 interaction terms ($x_1 \cdot x_2$) and squared terms ($x^2$) for continuous features. *(Importable utility; not applied by the core pipeline.)* |
 | **45** | `ScalingPlugin` | Fits and applies StandardScaler ($\frac{x - \mu}{\sigma}$) or RobustScaler ($\frac{x - Q_2}{\text{IQR}}$) to continuous inputs. |
 
 Custom plugins can be created by subclassing `BasePlugin` and declaring entry-points under `[project.entry-points."datadoc.plugins"]`. See [CONTRIBUTING.md](CONTRIBUTING.md) for details.

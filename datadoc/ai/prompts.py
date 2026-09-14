@@ -20,8 +20,8 @@ def build_profile_digest(
     rows = df.height
     cols = df.width
     null_counts = profile_dict.get("null_counts", {})
-    unique_counts = profile_dict.get("unique_counts", {})
-    col_types = profile_dict.get("column_types", {})
+    unique_counts = profile_dict.get("cardinality", {})
+    col_types = profile_dict.get("schema", {})
     findings = profile_dict.get("findings", [])
 
     lines: list[str] = []

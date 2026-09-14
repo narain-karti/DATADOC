@@ -1,6 +1,6 @@
 [project]
 name = "datadoc-cli"
-version = "0.6.0"
+version = "0.6.1"
 description = "Leakage-safe, local-first preparation pipelines for tabular machine learning."
 readme = "README.md"
 license = { text = "MIT" }

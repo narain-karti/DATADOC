@@ -93,7 +93,9 @@ def _generate_heuristic_explanation(
 
     high_null_cols = [c for c, n in null_counts.items() if (n / rows) > 0.20] if rows else []
     id_cols = [f.get("column") for f in findings if f.get("code") == "identifier"]
-    outlier_cols = [f.get("column") for f in findings if f.get("code") == "outliers"]
+    outlier_cols = [
+        f.get("column") for f in findings if f.get("code") in ("outliers", "infinite_values")
+    ]
 
     num_cols = [c for c in df.columns if c != target and df[c].dtype.is_numeric()]
     cat_cols = [
