@@ -1551,24 +1551,47 @@ def ui(
 @app.command()
 def agent(
     file_path: str = typer.Argument(..., help="CSV or Parquet dataset file."),
-    target: Optional[str] = typer.Option(None, "--target", "-t", help="Target column. If omitted, agent will prompt or infer.", rich_help_panel="Data"),
-    iterations: int = typer.Option(3, "--iterations", "-i", help="Number of auto-research loops.", rich_help_panel="Agent"),
-    interactive: bool = typer.Option(False, "--interactive", help="Prompt user for domain knowledge.", rich_help_panel="Agent"),
-    model: Optional[str] = typer.Option(None, "--model", help="Preferred LLM to use.", rich_help_panel="Agent"),
-    output: str = typer.Option("pipeline.json", "--output", "-o", help="Output JSON artifact.", rich_help_panel="Output"),
+    target: Optional[str] = typer.Option(
+        None,
+        "--target",
+        "-t",
+        help="Target column. If omitted, agent will prompt or infer.",
+        rich_help_panel="Data",
+    ),
+    iterations: int = typer.Option(
+        3, "--iterations", "-i", help="Number of auto-research loops.", rich_help_panel="Agent"
+    ),
+    interactive: bool = typer.Option(
+        False, "--interactive", help="Prompt user for domain knowledge.", rich_help_panel="Agent"
+    ),
+    model: Optional[str] = typer.Option(
+        None, "--model", help="Preferred LLM to use.", rich_help_panel="Agent"
+    ),
+    output: str = typer.Option(
+        "pipeline.json", "--output", "-o", help="Output JSON artifact.", rich_help_panel="Output"
+    ),
 ):
     """Run the Agentic Auto-Research Loop to discover features."""
     try:
         from datadoc.ai.agent_runner import DataDocAgent
     except ImportError as e:
         raise typer.BadParameter("pip install 'datadoc-cli[ai]' for agent features.") from e
-    
+
     df = read_dataset(file_path)
 
     # Resolve / auto-detect target column
     if not target:
         common_candidates = [
-            "survived", "target", "label", "churn", "status", "class", "price", "sale_price", "outcome", "y"
+            "survived",
+            "target",
+            "label",
+            "churn",
+            "status",
+            "class",
+            "price",
+            "sale_price",
+            "outcome",
+            "y",
         ]
         detected_col = None
         for col in df.columns:
@@ -1579,7 +1602,8 @@ def agent(
         if interactive:
             if detected_col:
                 use_detected = typer.confirm(
-                    f"Agent detected potential target column '{detected_col}'. Use this?", default=True
+                    f"Agent detected potential target column '{detected_col}'. Use this?",
+                    default=True,
                 )
                 if use_detected:
                     target = detected_col
@@ -1609,21 +1633,23 @@ def agent(
                 f"[red]Error: Target column '{target}' not found in dataset. Columns: {', '.join(df.columns)}[/red]"
             )
             raise typer.Exit(1)
-    
+
     try:
         agent_runner = DataDocAgent(target=target, model=model)
     except RuntimeError as e:
         console.print(f"[red]{e}[/red]")
         raise typer.Exit(1)
-        
+
     final_config = agent_runner.run_interactive(df, iterations=iterations, interactive=interactive)
-    
+
     console.print("\n[cyan]Fitting final pipeline with discovered features...[/cyan]")
     pipeline = DataDocPipeline(final_config).fit(df, target=target)
     pipeline.save(output)
-    
+
     console.print(f"[green]Agent finished. Final leakage-safe pipeline saved to {output}[/green]")
-    console.print(f"[dim]Run `datadoc plan {file_path} --config {output} --explain` to see the full plan.[/dim]")
+    console.print(
+        f"[dim]Run `datadoc plan {file_path} --config {output} --explain` to see the full plan.[/dim]"
+    )
 
 
 if __name__ == "__main__":

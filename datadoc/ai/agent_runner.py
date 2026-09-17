@@ -1,6 +1,6 @@
 import copy
 import json
-import warnings
+import sys
 from typing import Any, Optional
 import polars as pl
 from rich.console import Console
@@ -10,7 +10,9 @@ from rich.prompt import Prompt
 from rich.rule import Rule
 from rich.table import Table
 
-import sys
+from datadoc.core.pipeline import DataDocPipeline, PipelineConfig
+from datadoc.ai.client import get_llm_client, is_ai_configured
+from datadoc.ai.prompts import build_profile_digest, build_agent_prompt
 
 if sys.platform == "win32":
     try:
@@ -20,10 +22,6 @@ if sys.platform == "win32":
         pass
 
 console = Console(legacy_windows=False)
-
-from datadoc.core.pipeline import DataDocPipeline, PipelineConfig
-from datadoc.ai.client import get_llm_client, is_ai_configured
-from datadoc.ai.prompts import build_profile_digest, build_agent_prompt
 
 
 def _format_action_details(action: dict[str, Any]) -> str:
@@ -112,7 +110,11 @@ class DataDocAgent:
         is_classification = not (target_dtype.is_numeric() and df[self.target].n_unique() > 20)
         if is_classification:
             n_classes = df[self.target].n_unique()
-            task_type = f"Binary Classification ({n_classes} classes)" if n_classes == 2 else f"Multiclass Classification ({n_classes} classes)"
+            task_type = (
+                f"Binary Classification ({n_classes} classes)"
+                if n_classes == 2
+                else f"Multiclass Classification ({n_classes} classes)"
+            )
             referee_desc = "RandomForestClassifier (50 trees, 3-Fold Stratified CV)"
         else:
             task_type = "Continuous Regression"
@@ -123,10 +125,17 @@ class DataDocAgent:
         info_table.add_column(style="bold cyan")
         info_table.add_column(style="white")
         info_table.add_row("Dataset:", f"{df.height:,} rows × {df.width} columns")
-        info_table.add_row("Target Column:", f"[bold yellow]{self.target}[/bold yellow] ({task_type})")
+        info_table.add_row(
+            "Target Column:", f"[bold yellow]{self.target}[/bold yellow] ({task_type})"
+        )
         info_table.add_row("Referee Model:", f"[green]{referee_desc}[/green]")
         info_table.add_row("Engine:", "[blue]Declarative Leakage-Safe Polars/Rust Pipeline[/blue]")
-        info_table.add_row("Mode:", "[magenta]Interactive Co-Pilot[/magenta]" if interactive else "[cyan]Autonomous Auto-Research[/cyan]")
+        info_table.add_row(
+            "Mode:",
+            "[magenta]Interactive Co-Pilot[/magenta]"
+            if interactive
+            else "[cyan]Autonomous Auto-Research[/cyan]",
+        )
 
         console.print(
             Panel(
@@ -144,44 +153,63 @@ class DataDocAgent:
 
         # 4. Interactive Confirmation / Domain Intuition Prompt
         if interactive:
-            console.print("\n[bold cyan]Agent:[/bold cyan] I have analyzed the profile. What domain knowledge or column relationships should I investigate?")
-            console.print("[dim]Tip: Press Enter to let the agent auto-explore statistical hypotheses without hints.[/dim]")
+            console.print(
+                "\n[bold cyan]Agent:[/bold cyan] I have analyzed the profile. What domain knowledge or column relationships should I investigate?"
+            )
+            console.print(
+                "[dim]Tip: Press Enter to let the agent auto-explore statistical hypotheses without hints.[/dim]"
+            )
             user_input = Prompt.ask("[bold green]You[/bold green]", default="")
             if user_input.strip():
                 self.chat_history.append(f"Domain Expert guidance: {user_input.strip()}")
                 console.print(f"[dim]✓ Domain guidance recorded: '{user_input.strip()}'[/dim]\n")
             else:
-                self.chat_history.append("Domain Expert: No initial hints. Explore statistical interactions autonomously.")
+                self.chat_history.append(
+                    "Domain Expert: No initial hints. Explore statistical interactions autonomously."
+                )
                 console.print("[dim]✓ Proceeding with autonomous exploration.[/dim]\n")
 
         # 5. Baseline Evaluation Benchmark
         current_config = PipelineConfig(target=self.target, estimator_family="tree")
-        with console.status("[bold yellow]Mathematical Referee: Computing initial baseline benchmark...[/bold yellow]", spinner="dots"):
+        with console.status(
+            "[bold yellow]Mathematical Referee: Computing initial baseline benchmark...[/bold yellow]",
+            spinner="dots",
+        ):
             baseline_report = DataDocPipeline(current_config).evaluate(df, target=self.target)
 
         current_score = baseline_report.selected_score
         initial_score = current_score
         metric_name = baseline_report.metric.replace("_", " ").title()
 
-        console.print(f"[bold]Initial Baseline Benchmark ({metric_name}):[/bold] [bold yellow]{current_score:.4f}[/bold yellow]\n")
+        console.print(
+            f"[bold]Initial Baseline Benchmark ({metric_name}):[/bold] [bold yellow]{current_score:.4f}[/bold yellow]\n"
+        )
 
         # 6. Iterative Auto-Research Loop
         for i in range(1, iterations + 1):
-            console.print(Rule(f"[bold magenta]Iteration {i}/{iterations}[/bold magenta]", style="magenta"))
+            console.print(
+                Rule(f"[bold magenta]Iteration {i}/{iterations}[/bold magenta]", style="magenta")
+            )
 
             # In interactive mode, ask contextual follow-ups after round 1
             if interactive and i > 1:
-                active_count = len(current_config.custom_interactions) + len(current_config.custom_transforms)
+                active_count = len(current_config.custom_interactions) + len(
+                    current_config.custom_transforms
+                )
                 console.print(
                     f"\n[bold cyan]Agent:[/bold cyan] Current best [bold]{metric_name}[/bold] is [green]{current_score:.4f}[/green] ({active_count} custom features active)."
                 )
-                console.print("Do you have any adjustments or new relationships to suggest for this round? [dim](Press Enter to continue auto-discovery)[/dim]")
+                console.print(
+                    "Do you have any adjustments or new relationships to suggest for this round? [dim](Press Enter to continue auto-discovery)[/dim]"
+                )
                 user_followup = Prompt.ask("[bold green]You[/bold green]", default="")
                 if user_followup.strip():
                     self.chat_history.append(f"Domain Expert (Round {i}): {user_followup.strip()}")
                     console.print(f"[dim]✓ Feedback recorded: '{user_followup.strip()}'[/dim]\n")
                 else:
-                    self.chat_history.append(f"Domain Expert (Round {i}): Continue autonomous discovery.")
+                    self.chat_history.append(
+                        f"Domain Expert (Round {i}): Continue autonomous discovery."
+                    )
                     console.print("[dim]✓ Continuing autonomous discovery.[/dim]\n")
 
             # A. Formulate Hypotheses with Live Spinner
@@ -195,7 +223,9 @@ class DataDocAgent:
                 actions = self._extract_json_array(response)
 
             if not actions:
-                console.print("[yellow]Agent proposed no valid actions this round. Skipping.[/yellow]\n")
+                console.print(
+                    "[yellow]Agent proposed no valid actions this round. Skipping.[/yellow]\n"
+                )
                 continue
 
             # B. Display Proposed Actions Table
@@ -229,12 +259,16 @@ class DataDocAgent:
                 "[bold yellow]Mathematical Referee: Running 3-Fold Cross-Validation & Out-of-Fold Evaluation...[/bold yellow]",
                 spinner="bouncingBar",
             ):
-                candidate_report = DataDocPipeline(candidate_config).evaluate(df, target=self.target)
+                candidate_report = DataDocPipeline(candidate_config).evaluate(
+                    df, target=self.target
+                )
 
             cand_score = candidate_report.selected_score
             delta = cand_score - current_score
             pct_change = (delta / abs(current_score) * 100) if current_score != 0 else 0.0
-            total_active_feats = len(candidate_config.custom_interactions) + len(candidate_config.custom_transforms)
+            total_active_feats = len(candidate_config.custom_interactions) + len(
+                candidate_config.custom_transforms
+            )
 
             # E. Render Scorecard Table
             score_table = Table(
@@ -267,7 +301,9 @@ class DataDocAgent:
                     str(total_active_feats),
                 )
                 console.print(score_table)
-                console.print(f"[green]✓ Batch accepted! New baseline {metric_name}: [bold]{current_score:.4f}[/bold][/green]\n")
+                console.print(
+                    f"[green]✓ Batch accepted! New baseline {metric_name}: [bold]{current_score:.4f}[/bold][/green]\n"
+                )
             else:
                 decision_str = "[bold red]❌ REJECTED (Pruned)[/bold red]"
                 lift_str = f"[bold red]{delta:.4f} ({pct_change:.2f}%)[/bold red]"
@@ -280,10 +316,15 @@ class DataDocAgent:
                     f"{cand_score:.4f}",
                     lift_str,
                     decision_str,
-                    str(len(current_config.custom_interactions) + len(current_config.custom_transforms)),
+                    str(
+                        len(current_config.custom_interactions)
+                        + len(current_config.custom_transforms)
+                    ),
                 )
                 console.print(score_table)
-                console.print(f"[red]✗ Batch rejected to protect against overfitting/leakage. Retained baseline: [bold]{current_score:.4f}[/bold][/red]\n")
+                console.print(
+                    f"[red]✗ Batch rejected to protect against overfitting/leakage. Retained baseline: [bold]{current_score:.4f}[/bold][/red]\n"
+                )
 
         # 7. Final Summary
         total_delta = current_score - initial_score

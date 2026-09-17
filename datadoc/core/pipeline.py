@@ -514,7 +514,9 @@ class DataDocPipeline:
             col_a = interaction.get("col_a")
             col_b = interaction.get("col_b")
             op = interaction.get("op")
-            rationale = interaction.get("rationale") or f"Discovered interaction: {col_a} {op} {col_b}"
+            rationale = (
+                interaction.get("rationale") or f"Discovered interaction: {col_a} {op} {col_b}"
+            )
             operations.append(
                 {
                     "operation": "custom_interaction",
