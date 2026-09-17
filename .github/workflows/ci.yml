@@ -19,6 +19,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
         run: pip install uv
+      - name: Setup web dist placeholder
+        run: mkdir -p web/dist && touch web/dist/index.html
       - name: Install deps
         run: uv pip install --system -e ".[dev,ml,ui]"
       - name: Ruff check
