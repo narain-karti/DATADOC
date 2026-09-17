@@ -22,7 +22,7 @@ jobs:
       - name: Setup web dist placeholder
         run: mkdir -p web/dist && touch web/dist/index.html
       - name: Install deps
-        run: uv pip install --system -e ".[dev,ml,ui]"
+        run: uv pip install --system -e ".[all,dev]"
       - name: Ruff check
         run: ruff check datadoc/
       - name: Ruff format check
