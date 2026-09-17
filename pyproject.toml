@@ -44,6 +44,7 @@ ui = [
 dev = [
     "build>=1.2.0",
     "hatchling>=1.25.0",
+    "httpx>=0.27.0",
     "pytest>=8.0.0",
     "ruff>=0.4.0",
     "scikit-learn>=1.7.2",
