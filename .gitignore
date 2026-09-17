@@ -54,6 +54,9 @@ changes.diff
 *_test.csv
 *_output*.txt
 heavy_test.csv
+brag-output/
+REDDIT*.md
+DISTRIBUTION*.md
 
 # Testing
 .pytest_cache/
