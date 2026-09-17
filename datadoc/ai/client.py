@@ -25,7 +25,7 @@ def detect_provider_and_model(preferred_model: Optional[str] = None) -> tuple[st
 
     # Auto-detection from environment
     if os.environ.get("GEMINI_API_KEY"):
-        return "google", "gemini/gemini-2.0-flash"
+        return "google", "gemini/gemini-3.6-flash"
     if os.environ.get("OPENAI_API_KEY"):
         return "openai", "gpt-4o-mini"
     if os.environ.get("ANTHROPIC_API_KEY"):

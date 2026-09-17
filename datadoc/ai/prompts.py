@@ -125,3 +125,35 @@ Please structure your response into EXACTLY these 4 sections:
 - Categorical Strategy: Recommend One-Hot Encoding vs. Empirical Bayes Target Encoding vs. Rare Category grouping.
 - Outlier & Scaling Guidance: Specific IQR bounds or standard scaling advice.
 """
+
+
+def build_agent_prompt(digest: str, target: Optional[str] = None, chat_history: str = "") -> str:
+    """Constructs the prompt for the DATADOC Autonomous Agent to propose feature engineering JSON batches."""
+    target_clause = (
+        f"The target variable for machine learning is '{target}'."
+        if target
+        else "No specific target variable was designated."
+    )
+
+    return f"""You are the DATADOC Hypothesis Generator, a Senior ML Engineer.
+Your job is to read a dataset profile and a conversation with the Domain Expert, and then output a batch of specific mathematical feature engineering hypotheses.
+
+{target_clause}
+
+DATASET PROFILE:
+{digest}
+
+CHAT HISTORY:
+{chat_history}
+
+CRITICAL RULES:
+1. Propose 4-8 high-impact, non-redundant feature engineering actions or pipeline tweaks.
+2. Every action object MUST include a concise "rationale" string explaining the domain ML hypothesis (why this will boost predictive power).
+3. Allowed actions:
+   - ApplyTransform: {{"type": "ApplyTransform", "col": "<column>", "transform": "log1p"|"sqrt"|"square", "rationale": "<why>"}}
+   - AddInteraction: {{"type": "AddInteraction", "col_a": "<col1>", "col_b": "<col2>", "op": "add"|"sub"|"mul"|"div", "rationale": "<why>"}}
+   - SetScaling: {{"type": "SetScaling", "scaling": "standard"|"robust"|"none", "rationale": "<why>"}}
+   - ToggleFeature: {{"type": "ToggleFeature", "setting": "clip_outliers"|"drop_identifiers"|"deduplicate"|"datetime_cyclical"|"add_missing_indicators", "value": true|false, "rationale": "<why>"}}
+   - IgnoreColumn: {{"type": "IgnoreColumn", "col": "<column>", "rationale": "<why>"}}
+4. Output MUST be ONLY a valid JSON array or object with an "actions" list. Do NOT write Python code or narrative outside the JSON.
+"""
