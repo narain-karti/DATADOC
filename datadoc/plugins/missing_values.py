@@ -1,3 +1,4 @@
+from typing import Any
 import polars as pl
 from datadoc.plugins.base import BasePlugin
 
@@ -40,17 +41,37 @@ class MissingValuePlugin(BasePlugin):
             )
         return recs
 
-    def apply(self, df: pl.DataFrame) -> pl.DataFrame:
-        df_clean = df.clone()
-        for col in df_clean.columns:
-            if df_clean[col].null_count() > 0:
-                if df_clean[col].dtype.is_numeric():
-                    df_clean = df_clean.with_columns(pl.col(col).fill_null(pl.col(col).median()))
+    def fit(self, df: pl.DataFrame) -> dict:
+        imputations: dict[str, Any] = {}
+        for col in df.columns:
+            series = df[col]
+            if series.null_count() > 0:
+                if series.dtype.is_numeric():
+                    med = series.median()
+                    if med is not None:
+                        imputations[col] = float(med)
                 else:
-                    df_clean = df_clean.with_columns(
-                        pl.col(col).fill_null(pl.col(col).drop_nulls().mode().first())
-                    )
-        return df_clean
+                    modes = series.drop_nulls().mode()
+                    if len(modes) > 0:
+                        imputations[col] = modes[0]
+        return {"imputations": imputations}
+
+    def transform(self, df: pl.DataFrame, state: dict | None = None) -> pl.DataFrame:
+        state = state or {}
+        imputations = state.get("imputations")
+        if imputations is None:
+            # Fallback to computing on the fly if transform called without prior fit
+            imputations = self.fit(df).get("imputations", {})
+
+        exprs = [
+            pl.col(col).fill_null(val)
+            for col, val in imputations.items()
+            if col in df.columns
+        ]
+        return df.with_columns(exprs) if exprs else df
+
+    def apply(self, df: pl.DataFrame) -> pl.DataFrame:
+        return self.transform(df, state=None)
 
     def explain(self) -> str:
         return (

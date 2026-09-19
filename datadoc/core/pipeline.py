@@ -110,6 +110,8 @@ class PipelineConfig:
     group_column: str | None = None
     custom_interactions: list[dict[str, str]] = field(default_factory=list)
     custom_transforms: list[dict[str, str]] = field(default_factory=list)
+    plugins: list[str] = field(default_factory=list)
+    plugin_options: dict[str, dict[str, Any]] = field(default_factory=dict)
 
     def resolved_scaling(self) -> Literal["none", "standard", "robust"]:
         if self.scaling != "auto":
@@ -537,6 +539,22 @@ class DataDocPipeline:
                 }
             )
 
+        if self.config.plugins:
+            try:
+                from datadoc.plugins.registry import resolve_plugins
+
+                active_plugins = resolve_plugins(self.config.plugins)
+                for plug in active_plugins:
+                    operations.append(
+                        {
+                            "operation": f"plugin_{plug.name}",
+                            "column": "*",
+                            "reason": plug.explain(),
+                        }
+                    )
+            except Exception:
+                pass
+
         self.plan_ = TransformPlan(operations, profile.findings, self.config.protected_columns)
         return self.plan_
 
@@ -591,6 +609,7 @@ class DataDocPipeline:
             "categorical": {},
             "datetime": {},
             "scaling": {},
+            "plugins": {},
         }
 
         for name, role in role_map.items():
@@ -705,6 +724,17 @@ class DataDocPipeline:
                         "center": float(center),
                         "spread": float(spread),
                     }
+
+        if self.config.plugins:
+            try:
+                from datadoc.plugins.registry import resolve_plugins
+
+                active_plugins = resolve_plugins(self.config.plugins)
+                for plug in active_plugins:
+                    plug_state = plug.fit(train_df)
+                    state["plugins"][plug.name] = plug_state
+            except Exception as e:
+                warnings.warn(f"Failed to fit plugins: {e}")
 
         transformed = self._transform_with_state(train_df, state, validate_schema=False)
         self.state_ = state
@@ -893,6 +923,21 @@ class DataDocPipeline:
                 output = output.with_columns(
                     ((pl.col(name) - spec["center"]) / spec["spread"]).alias(name)
                 )
+
+        # Apply active plugins with fitted state
+        plugin_states = state.get("plugins", {})
+        if self.config.plugins or plugin_states:
+            try:
+                from datadoc.plugins.registry import resolve_plugins
+
+                plugin_names = self.config.plugins or list(plugin_states.keys())
+                active_plugins = resolve_plugins(plugin_names)
+                for plug in active_plugins:
+                    plug_state = plugin_states.get(plug.name, {})
+                    output = plug.transform(output, plug_state)
+            except Exception as e:
+                warnings.warn(f"Failed to transform plugins: {e}")
+
         return output
 
     def transform(self, df: pl.DataFrame) -> pl.DataFrame:

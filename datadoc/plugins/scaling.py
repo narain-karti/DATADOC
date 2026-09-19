@@ -84,18 +84,32 @@ class ScalingPlugin(BasePlugin):
             )
         return recs
 
-    def apply(self, df: pl.DataFrame) -> pl.DataFrame:
-        df_clean = df.clone()
-        cols_to_scale = self.analyze(df_clean).get("columns_to_scale", [])
-
-        exprs = []
+    def fit(self, df: pl.DataFrame) -> dict:
+        analysis = self.analyze(df)
+        cols_to_scale = analysis.get("columns_to_scale", [])
+        stats: dict[str, dict[str, float]] = {}
         for col in cols_to_scale:
-            exprs.append(((pl.col(col) - pl.col(col).mean()) / pl.col(col).std()).alias(col))
+            mean = df[col].mean()
+            std = df[col].std()
+            if mean is not None and std is not None and std > 0:
+                stats[col] = {"mean": float(mean), "std": float(std)}
+        return {"stats": stats}
 
-        if exprs:
-            df_clean = df_clean.with_columns(exprs)
+    def transform(self, df: pl.DataFrame, state: dict | None = None) -> pl.DataFrame:
+        state = state or {}
+        stats = state.get("stats")
+        if stats is None:
+            stats = self.fit(df).get("stats", {})
 
-        return df_clean
+        exprs = [
+            ((pl.col(col) - spec["mean"]) / spec["std"]).alias(col)
+            for col, spec in stats.items()
+            if col in df.columns
+        ]
+        return df.with_columns(exprs) if exprs else df
+
+    def apply(self, df: pl.DataFrame) -> pl.DataFrame:
+        return self.transform(df, state=None)
 
     def explain(self) -> str:
         return (

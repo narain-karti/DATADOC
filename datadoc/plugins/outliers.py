@@ -68,14 +68,26 @@ class OutlierPlugin(BasePlugin):
             )
         return recs
 
+    def fit(self, df: pl.DataFrame) -> dict:
+        bounds = self._get_iqr_bounds(df)
+        clip_bounds = {col: {"lower": float(lower), "upper": float(upper)} for col, (lower, upper, _count) in bounds.items()}
+        return {"clip_bounds": clip_bounds}
+
+    def transform(self, df: pl.DataFrame, state: dict | None = None) -> pl.DataFrame:
+        state = state or {}
+        clip_bounds = state.get("clip_bounds")
+        if clip_bounds is None:
+            clip_bounds = self.fit(df).get("clip_bounds", {})
+
+        exprs = [
+            pl.col(col).clip(bounds["lower"], bounds["upper"])
+            for col, bounds in clip_bounds.items()
+            if col in df.columns
+        ]
+        return df.with_columns(exprs) if exprs else df
+
     def apply(self, df: pl.DataFrame) -> pl.DataFrame:
-        df_clean = df.clone()
-        bounds = self._get_iqr_bounds(df_clean)
-
-        for col, (lower, upper, _count) in bounds.items():
-            df_clean = df_clean.with_columns(pl.col(col).clip(lower, upper))
-
-        return df_clean
+        return self.transform(df, state=None)
 
     def explain(self) -> str:
         return (

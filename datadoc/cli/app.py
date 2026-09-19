@@ -265,6 +265,7 @@ def _pipeline_config(
     preset: Optional[str] = None,
     config_file: Optional[str] = None,
     config_dict: Optional[dict] = None,
+    plugins: Optional[list[str]] = None,
 ) -> PipelineConfig:
     # load config file if not passed
     file_cfg, _ = _find_and_load_config(config_file) if config_dict is None else (config_dict, None)
@@ -321,6 +322,9 @@ def _pipeline_config(
     custom_interactions = file_cfg.get("custom_interactions", []) or []
     custom_transforms = file_cfg.get("custom_transforms", []) or []
 
+    # plugins list from explicit arg or file config
+    resolved_plugins = list(plugins) if plugins else list(file_cfg.get("plugins", []) or [])
+
     return PipelineConfig(
         target=target,
         task=task,  # type: ignore
@@ -340,6 +344,7 @@ def _pipeline_config(
         strict_schema=strict_schema,
         custom_interactions=custom_interactions,
         custom_transforms=custom_transforms,
+        plugins=resolved_plugins,
     )
 
 
@@ -598,6 +603,9 @@ def pipeline_plan(
     preset: Optional[str] = typer.Option(
         None, "--preset", help=f"Preset: {', '.join(PRESETS)}", rich_help_panel="Config"
     ),
+    plugin: Optional[list[str]] = typer.Option(
+        None, "--plugin", help="Repeatable: include plugin in pipeline (e.g. MissingValuePlugin).", rich_help_panel="Plugins"
+    ),
 ):
     """Create an explainable transformation plan without applying it."""
     file_cfg, cfg_path = _find_and_load_config(config)
@@ -613,6 +621,7 @@ def pipeline_plan(
         config_dict=file_cfg,
         preset=preset,
         config_file=config,
+        plugins=plugin,
     )  # type: ignore
     try:
         result = DataDocPipeline(pipe_cfg).plan(read_dataset(file_path)).to_dict()
@@ -709,6 +718,9 @@ def fit(
     strict_schema: bool = typer.Option(
         True, "--strict-schema/--no-strict-schema", rich_help_panel="Data"
     ),
+    plugin: Optional[list[str]] = typer.Option(
+        None, "--plugin", help="Repeatable: include plugin in pipeline (e.g. MissingValuePlugin).", rich_help_panel="Plugins"
+    ),
 ):
     """Fit a pipeline only on a training dataset and save its artifact."""
     file_cfg, cfg_path = _find_and_load_config(config)
@@ -731,6 +743,7 @@ def fit(
         preset=preset,
         config_file=config,
         config_dict=file_cfg,
+        plugins=plugin,
     )  # type: ignore
     try:
         pipeline = DataDocPipeline(pipe_cfg).fit(read_dataset(file_path))

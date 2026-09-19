@@ -51,7 +51,14 @@ BUILTIN_PLUGIN_NAMES = [
 ]
 
 
+_CACHED_ENTRY_POINTS: list["BasePlugin"] | None = None
+
+
 def _entry_point_plugins() -> list["BasePlugin"]:
+    global _CACHED_ENTRY_POINTS
+    if _CACHED_ENTRY_POINTS is not None:
+        return _CACHED_ENTRY_POINTS
+
     found: list["BasePlugin"] = []
     try:
         eps = entry_points(group="datadoc.plugins")
@@ -60,18 +67,20 @@ def _entry_point_plugins() -> list["BasePlugin"]:
         try:
             eps = entry_points().get("datadoc.plugins", [])  # type: ignore
         except Exception:
-            return []
+            eps = []
     except Exception:
-        return []
+        eps = []
+
     for ep in eps:
         try:
             cls = ep.load()
             inst = cls() if isinstance(cls, type) else cls
             # validate interface duck-typing
-            if hasattr(inst, "name") and hasattr(inst, "analyze") and hasattr(inst, "apply"):
+            if hasattr(inst, "name") and hasattr(inst, "analyze") and (hasattr(inst, "apply") or hasattr(inst, "transform")):
                 found.append(inst)
         except Exception:
             continue
+    _CACHED_ENTRY_POINTS = found
     return found
 
 
@@ -95,3 +104,36 @@ def get_plugin(name: str) -> "BasePlugin | None":
         if p.name == name or p.name.lower() == name.lower():
             return p
     return None
+
+
+def resolve_plugins(plugin_names: list[str]) -> list["BasePlugin"]:
+    """Resolve and order a list of plugin names or alias keywords (e.g. 'all', 'builtin')."""
+    if not plugin_names:
+        return []
+    all_plugins = list_plugins()
+    name_map = {p.name.lower(): p for p in all_plugins}
+
+    resolved: dict[str, "BasePlugin"] = {}
+    for spec in plugin_names:
+        if not spec:
+            continue
+        spec_clean = spec.strip().lower()
+        if spec_clean == "all":
+            for p in all_plugins:
+                resolved[p.name] = p
+        elif spec_clean == "builtin":
+            for p in _builtin_plugins():
+                resolved[p.name] = p
+        elif spec_clean in name_map:
+            p = name_map[spec_clean]
+            resolved[p.name] = p
+        else:
+            # Check prefix / suffix match (e.g. "missing" matching "MissingValuePlugin")
+            matches = [
+                p for p in all_plugins
+                if spec_clean in p.name.lower()
+            ]
+            if len(matches) == 1:
+                resolved[matches[0].name] = matches[0]
+
+    return sorted(resolved.values(), key=lambda p: p.priority)

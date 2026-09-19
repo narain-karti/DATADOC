@@ -36,10 +36,17 @@ class BasePlugin(ABC):
         """Return a list of recommendations based on the analysis."""
         pass
 
-    @abstractmethod
+    def fit(self, df: pl.DataFrame) -> dict:
+        """Fit statistics or parameters from training data to avoid data leakage."""
+        return {}
+
+    def transform(self, df: pl.DataFrame, state: dict | None = None) -> pl.DataFrame:
+        """Apply transformation using fitted state. Defaults to calling apply() for backwards compatibility."""
+        return self.apply(df)
+
     def apply(self, df: pl.DataFrame) -> pl.DataFrame:
-        """Apply the engineering transformation and return the new dataframe."""
-        pass
+        """Single-shot transformation (legacy interface). Defaults to calling transform with empty state."""
+        return self.transform(df, state={})
 
     def explain(self) -> str:
         """Return a human-readable explanation of what this plugin does."""
